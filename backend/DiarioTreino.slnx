@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DiarioTreino.Api/DiarioTreino.Api.csproj" />
+    <Project Path="src/DiarioTreino.Application/DiarioTreino.Application.csproj" />
+    <Project Path="src/DiarioTreino.Domain/DiarioTreino.Domain.csproj" />
+    <Project Path="src/DiarioTreino.Infrastructure/DiarioTreino.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DiarioTreino.IntegrationTests/DiarioTreino.IntegrationTests.csproj" />
+    <Project Path="tests/DiarioTreino.UnitTests/DiarioTreino.UnitTests.csproj" />
+  </Folder>
+</Solution>

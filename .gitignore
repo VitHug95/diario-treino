@@ -1,0 +1,46 @@
+# ---------- .NET ----------
+backend/**/bin/
+backend/**/obj/
+*.user
+*.suo
+.vs/
+[Tt]est[Rr]esults/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+# ---------- Flutter / Dart ----------
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.pub-cache/
+app/.pub/
+app/pubspec.lock
+app/android/.gradle/
+app/ios/Pods/
+app/windows/flutter/ephemeral/
+app/linux/flutter/ephemeral/
+app/macos/Flutter/ephemeral/
+app/web/flutter_service_worker.js
+
+# Firebase config (não versionar credenciais do app)
+app/lib/firebase_options.dart
+app/android/app/google-services.json
+app/ios/Runner/GoogleService-Info.plist
+
+# ---------- Ambiente / segredos ----------
+.env
+.env.*
+!.env.example
+*.pem
+appsettings.*.local.json
+
+# ---------- Sistema operacional ----------
+Thumbs.db
+.DS_Store
+
+# ---------- IDE ----------
+.idea/
+*.iml

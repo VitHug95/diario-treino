@@ -1,0 +1,21 @@
+# Postgres local para desenvolvimento (PBI-03). Produção usa o Neon.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: diariotreino-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: diariotreino
+    ports:
+      - "5432:5432"
+    volumes:
+      - diariotreino-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d diariotreino"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  diariotreino-db-data:

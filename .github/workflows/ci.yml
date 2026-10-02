@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções antigas do mesmo ref quando chega um push novo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Back-end (.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restaurar
+        run: dotnet restore DiarioTreino.slnx
+
+      - name: Build (sem warnings — TreatWarningsAsErrors)
+        run: dotnet build DiarioTreino.slnx --configuration Release --no-restore
+
+      # O runner ubuntu-latest tem Docker, então o Testcontainers sobe o
+      # Postgres real para os testes de integração.
+      - name: Testes unitários e de integração
+        run: dotnet test DiarioTreino.slnx --configuration Release --no-build --verbosity normal
+
+  frontend:
+    name: Front-end (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      - name: Baixar dependências
+        run: flutter pub get
+
+      - name: Análise estática
+        run: flutter analyze
+
+      - name: Testes de widget
+        run: flutter test
+
+      - name: Build web
+        run: flutter build web --release

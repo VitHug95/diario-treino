@@ -1,0 +1,7 @@
+# Arquivos de migration são gerados pelo EF Core. Não aplicamos regras de estilo
+# que exigiriam editar código gerado (ex.: namespace com escopo de arquivo).
+[*.cs]
+dotnet_diagnostic.IDE0161.severity = none
+csharp_style_namespace_declarations = block_scoped:silent
+dotnet_analyzer_diagnostic.category-Style.severity = none
+generated_code = true
