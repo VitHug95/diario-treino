@@ -20,6 +20,9 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext());
 
+    // Traduz RecursoNaoEncontradoException em 404 (MAS 11.3).
+    builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.RecursoNaoEncontradoHandler>();
+
     // Problem Details (RFC 9457) como formato padrão de erro da API.
     builder.Services.AddProblemDetails(options =>
     {
