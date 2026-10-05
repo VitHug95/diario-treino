@@ -1,5 +1,7 @@
+using DiarioTreino.Api.Autenticacao;
 using DiarioTreino.Api.Endpoints;
 using DiarioTreino.Api.Middleware;
+using DiarioTreino.Application;
 using DiarioTreino.Infrastructure;
 using Serilog;
 
@@ -31,8 +33,12 @@ try
     // OpenAPI nativo do ASP.NET Core (documento em /openapi/v1.json).
     builder.Services.AddOpenApi();
 
-    // Persistência (EF Core + Npgsql). Conexão vem da configuração.
+    // Casos de uso e persistência.
+    builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+
+    // Autenticação via token do Firebase (MAS 11.2).
+    builder.Services.AddAutenticacaoFirebase(builder.Configuration);
 
     var app = builder.Build();
 
@@ -44,12 +50,16 @@ try
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging();
 
+    app.UseAuthentication();
+    app.UseAuthorization();
+
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
     }
 
     app.MapHealthEndpoints();
+    app.MapMeEndpoints();
 
     app.Run();
 }
