@@ -1,3 +1,4 @@
+using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ public static class DependencyInjection
                 typeof(DiarioTreinoDbContext).Assembly.GetName().Name)));
 
         services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
+        services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
 
         return services;
     }
