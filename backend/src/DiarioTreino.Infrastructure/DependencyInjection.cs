@@ -1,3 +1,4 @@
+using DiarioTreino.Application.Identidade;
 using DiarioTreino.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,8 @@ public static class DependencyInjection
         services.AddDbContext<DiarioTreinoDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(
                 typeof(DiarioTreinoDbContext).Assembly.GetName().Name)));
+
+        services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
 
         return services;
     }
