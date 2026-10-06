@@ -1,12 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Fonte do ID token a ser anexado nas requisições. No PBI-08 passa a devolver
-/// o token do Firebase; por ora devolve nulo (sem autenticação ainda).
+import '../../features/auth/auth_service.dart';
+
+/// Fonte do ID token a ser anexado nas requisições. Devolve o ID token do
+/// usuário logado no Firebase, ou nulo quando não há sessão.
 typedef ProvedorToken = Future<String?> Function();
 
 final provedorTokenProvider = Provider<ProvedorToken>((ref) {
-  return () async => null;
+  final auth = ref.watch(authServiceProvider);
+  return auth.obterIdToken;
 });
 
 /// URL base da API (prefixo /api/v1 do MAS 12). Ajustável por ambiente.
