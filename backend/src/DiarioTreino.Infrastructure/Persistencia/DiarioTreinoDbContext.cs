@@ -31,9 +31,20 @@ public class DiarioTreinoDbContext : DbContext
     public DbSet<Sessao> Sessoes => Set<Sessao>();
     public DbSet<SerieExecutada> SeriesExecutadas => Set<SerieExecutada>();
 
+    /// <summary>
+    /// Mapeia a função <c>unaccent</c> do Postgres (extensão habilitada por
+    /// migration), para usar em consultas LINQ e buscar sem acento (PBI-10).
+    /// </summary>
+    public static string Unaccent(string texto) =>
+        throw new NotSupportedException("Só pode ser usada em consultas EF.");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DiarioTreinoDbContext).Assembly);
+
+        modelBuilder
+            .HasDbFunction(typeof(DiarioTreinoDbContext).GetMethod(nameof(Unaccent))!)
+            .HasName("unaccent");
     }
 }
