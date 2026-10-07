@@ -13,4 +13,15 @@ public interface IRepositorioExercicio
         string? busca,
         string? modalidade,
         CancellationToken ct);
+
+    /// <summary>
+    /// Já existe exercício com esse nome no catálogo do usuário (comparação sem
+    /// diferenciar maiúsculas)? Considera só os exercícios do próprio usuário.
+    /// </summary>
+    public Task<bool> ExisteNomeNoCatalogoAsync(
+        Guid usuarioId,
+        string nome,
+        CancellationToken ct);
+
+    public Task AdicionarAsync(Domain.Catalogo.Exercicio exercicio, CancellationToken ct);
 }

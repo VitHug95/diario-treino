@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
         services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
         services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
+        services.AddScoped<IRepositorioMetrica, RepositorioMetrica>();
 
         return services;
     }

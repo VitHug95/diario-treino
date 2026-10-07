@@ -57,4 +57,22 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
 
         return await consulta.ToListAsync(ct);
     }
+
+    public async Task<bool> ExisteNomeNoCatalogoAsync(
+        Guid usuarioId,
+        string nome,
+        CancellationToken ct)
+    {
+        var alvo = nome.Trim().ToLower();
+        return await _db.Exercicios
+            .AnyAsync(e => e.CriadoPorId == usuarioId && e.Nome.ToLower() == alvo, ct);
+    }
+
+    public async Task AdicionarAsync(
+        DiarioTreino.Domain.Catalogo.Exercicio exercicio,
+        CancellationToken ct)
+    {
+        _db.Exercicios.Add(exercicio);
+        await _db.SaveChangesAsync(ct);
+    }
 }
