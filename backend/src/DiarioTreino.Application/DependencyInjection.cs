@@ -1,4 +1,5 @@
 using DiarioTreino.Application.Acesso;
+using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Identidade;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddScoped<ServicoPerfil>();
         services.AddScoped<IControleAcesso, ControleAcesso>();
+        services.AddScoped<ServicoCatalogo>();
         return services;
     }
 }

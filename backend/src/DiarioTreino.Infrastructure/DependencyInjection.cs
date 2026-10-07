@@ -1,4 +1,5 @@
 using DiarioTreino.Application.Acesso;
+using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
         services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
+        services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
 
         return services;
     }

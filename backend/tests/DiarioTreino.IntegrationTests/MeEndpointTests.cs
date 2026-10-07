@@ -48,7 +48,10 @@ public sealed class MeEndpointTests
         var client = api.CreateClient();
 
         var uid = $"uid-{Guid.NewGuid():n}";
-        var token = api.Tokens.Gerar(uid, email: "ATLETA@Teste.Local", nome: "Atleta Teste");
+        // E-mail único (evita colisão no banco compartilhado) e com caixa alta,
+        // para também verificar que a API o normaliza para minúsculas.
+        var emailEnviado = $"ATLETA-{uid}@Teste.Local";
+        var token = api.Tokens.Gerar(uid, email: emailEnviado, nome: "Atleta Teste");
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
@@ -58,7 +61,7 @@ public sealed class MeEndpointTests
 
         var perfil = await resposta.Content.ReadFromJsonAsync<PerfilResposta>();
         Assert.NotNull(perfil);
-        Assert.Equal("atleta@teste.local", perfil!.Email);
+        Assert.Equal(emailEnviado.ToLowerInvariant(), perfil!.Email);
         Assert.Equal("Atleta Teste", perfil.Nome);
         Assert.Contains(Papeis.Atleta, perfil.Papeis);
 
@@ -78,7 +81,7 @@ public sealed class MeEndpointTests
         var client = api.CreateClient();
 
         var uid = $"uid-{Guid.NewGuid():n}";
-        var token = api.Tokens.Gerar(uid, email: "repetido@teste.local", nome: "Repetido");
+        var token = api.Tokens.Gerar(uid, email: $"{uid}@teste.local", nome: "Repetido");
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
