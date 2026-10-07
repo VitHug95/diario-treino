@@ -35,7 +35,9 @@ public sealed class ExercicioEndpointTests
         var api = new ApiFactory(postgres.ConnectionString);
         var client = api.CreateClient();
         var uid = $"uid-{Guid.NewGuid():n}";
-        var token = api.Tokens.Gerar(uid, email: "atleta@teste.local", nome: "Atleta");
+        // E-mail único por usuário de teste: evita colisão com a constraint
+        // única de e-mail, já que todos os testes compartilham o mesmo banco.
+        var token = api.Tokens.Gerar(uid, email: $"{uid}@teste.local", nome: "Atleta");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return (api, client, uid);
     }
