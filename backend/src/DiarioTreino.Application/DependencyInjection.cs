@@ -1,6 +1,7 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Identidade;
+using DiarioTreino.Application.Planejamento;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,8 +14,10 @@ public static class DependencyInjection
         services.AddScoped<ServicoPerfil>();
         services.AddScoped<IControleAcesso, ControleAcesso>();
         services.AddScoped<ServicoCatalogo>();
+        services.AddScoped<ServicoPlanejamento>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
+        services.AddScoped<IValidator<SalvarTreinoRequest>, SalvarTreinoValidator>();
 
         return services;
     }

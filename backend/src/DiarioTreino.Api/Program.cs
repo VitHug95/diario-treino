@@ -64,6 +64,7 @@ try
     app.MapHealthEndpoints();
     app.MapMeEndpoints();
     app.MapExercicioEndpoints();
+    app.MapPlanoEndpoints();
 
     app.Run();
 }
