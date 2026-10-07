@@ -1,6 +1,7 @@
 import 'package:diario_treino/features/catalogo/catalogo_repository.dart';
 import 'package:diario_treino/features/catalogo/criar_exercicio_screen.dart';
 import 'package:diario_treino/features/catalogo/metrica.dart';
+import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +18,7 @@ Widget _tela() => ProviderScope(
       overrides: [
         metricasProvider.overrideWith((ref) async => _metricas),
       ],
-      child: const MaterialApp(home: CriarExercicioScreen()),
+      child: MaterialApp(theme: AppTheme.claro, home: const CriarExercicioScreen()),
     );
 
 void main() {
@@ -29,8 +30,8 @@ void main() {
     // Força (padrão) sugere Carga × Repetições — aparece na prévia.
     expect(find.textContaining('Carga × Repetições'), findsOneWidget);
 
-    // Troca para Cardio: sugere Zona × Tempo.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Cardio'));
+    // Troca para Cardio (cartão de tipo): sugere Zona × Tempo.
+    await tester.tap(find.text('Cardio'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Zona × Tempo'), findsOneWidget);

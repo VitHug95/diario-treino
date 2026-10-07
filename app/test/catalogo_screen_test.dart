@@ -1,6 +1,7 @@
 import 'package:diario_treino/features/catalogo/catalogo_repository.dart';
 import 'package:diario_treino/features/catalogo/catalogo_screen.dart';
 import 'package:diario_treino/features/catalogo/exercicio_resumo.dart';
+import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +26,7 @@ ExercicioResumo _ex({
 Widget _appComResultado(Future<List<ExercicioResumo>> Function(Ref ref) resultado) =>
     ProviderScope(
       overrides: [catalogoProvider.overrideWith(resultado)],
-      child: const MaterialApp(home: CatalogoScreen()),
+      child: MaterialApp(theme: AppTheme.claro, home: const CatalogoScreen()),
     );
 
 void main() {

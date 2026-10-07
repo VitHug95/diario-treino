@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
+import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
 import 'metrica.dart';
 
@@ -186,14 +189,18 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
 /// Tipos de exercício para a criação, com a sugestão de métricas (códigos) e o
 /// valor enviado à API.
 enum ModalidadeTipo {
-  forca('Força', 'FORCA', (MetricaCodigos.cargaKg, MetricaCodigos.repeticoes)),
-  isometria('Isometria', 'ISOMETRIA', (MetricaCodigos.pesoCorporal, MetricaCodigos.tempoSeg)),
-  cardio('Cardio', 'CARDIO', (MetricaCodigos.zona, MetricaCodigos.tempoSeg));
+  forca('Força', 'FORCA', 'Carga × repetições. Ex.: supino, agachamento',
+      (MetricaCodigos.cargaKg, MetricaCodigos.repeticoes)),
+  isometria('Isometria', 'ISOMETRIA', 'Segurar por um tempo. Ex.: prancha, equilíbrio',
+      (MetricaCodigos.pesoCorporal, MetricaCodigos.tempoSeg)),
+  cardio('Cardio', 'CARDIO', 'Zona × tempo ou distância. Ex.: corrida, bike',
+      (MetricaCodigos.zona, MetricaCodigos.tempoSeg));
 
-  const ModalidadeTipo(this.rotulo, this.valorApi, this.sugestao);
+  const ModalidadeTipo(this.rotulo, this.valorApi, this.descricao, this.sugestao);
 
   final String rotulo;
   final String valorApi;
+  final String descricao;
 
   /// (código da intensidade sugerida, código do volume sugerido).
   final (String, String) sugestao;
@@ -207,14 +214,51 @@ class _SeletorTipo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
+    final cores = AppColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Column(
       children: [
         for (final t in ModalidadeTipo.values)
-          ChoiceChip(
-            label: Text(t.rotulo),
-            selected: t == selecionado,
-            onSelected: (_) => aoSelecionar(t),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.card),
+              onTap: () => aoSelecionar(t),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.paddingCard),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(
+                    color: t == selecionado ? primary : cores.lineDefault,
+                    width: t == selecionado ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Radio<ModalidadeTipo>(
+                      value: t,
+                      groupValue: selecionado,
+                      onChanged: (v) => v == null ? null : aoSelecionar(v),
+                    ),
+                    const SizedBox(width: AppSpacing.x8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.rotulo, style: AppText.title),
+                          const SizedBox(height: AppSpacing.x4),
+                          Text(t.descricao,
+                              style: AppText.caption
+                                  .copyWith(color: cores.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
       ],
     );
