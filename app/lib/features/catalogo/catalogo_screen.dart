@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/rotas/app_router.dart';
 import 'catalogo_repository.dart';
 import 'exercicio_resumo.dart';
 
@@ -33,6 +35,10 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
     });
   }
 
+  void _abrirCriar(BuildContext context) {
+    context.push(Rotas.criarExercicio);
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtro = ref.watch(catalogoFiltroProvider);
@@ -40,6 +46,11 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Exercícios')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _abrirCriar(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Novo'),
+      ),
       body: Column(
         children: [
           Padding(
@@ -178,9 +189,8 @@ class _EstadoVazio extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            // O cadastro de exercício próprio é o PBI-11.
             OutlinedButton.icon(
-              onPressed: null,
+              onPressed: () => context.push(Rotas.criarExercicio),
               icon: const Icon(Icons.add),
               label: const Text('Criar exercício'),
             ),
