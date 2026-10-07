@@ -6,6 +6,7 @@ import '../../features/auth/auth_service.dart';
 import '../../features/auth/cadastro_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
+import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 
 /// Nomes de rota centralizados, para navegação sem strings mágicas.
@@ -16,6 +17,7 @@ abstract final class Rotas {
   static const login = '/login';
   static const cadastro = '/cadastro';
   static const exercicios = '/exercicios';
+  static const criarExercicio = '/exercicios/novo';
 }
 
 /// Configuração do go_router. O redirecionamento depende do estado de
@@ -70,6 +72,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Rotas.exercicios,
         name: 'exercicios',
         builder: (context, state) => const CatalogoScreen(),
+        routes: [
+          GoRoute(
+            path: 'novo',
+            name: 'criarExercicio',
+            builder: (context, state) => const CriarExercicioScreen(),
+          ),
+        ],
       ),
     ],
   );
