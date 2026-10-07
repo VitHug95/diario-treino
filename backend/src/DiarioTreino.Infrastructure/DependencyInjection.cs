@@ -1,6 +1,7 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Identidade;
+using DiarioTreino.Application.Planejamento;
 using DiarioTreino.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
         services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
         services.AddScoped<IRepositorioMetrica, RepositorioMetrica>();
+        services.AddScoped<IRepositorioPlano, RepositorioPlano>();
 
         return services;
     }
