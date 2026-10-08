@@ -31,6 +31,9 @@ public sealed class ServicoCatalogoTests
             Adicionado = exercicio;
             return Task.CompletedTask;
         }
+
+        public Task<bool> ExisteDisponivelAsync(Guid exercicioId, Guid usuarioId, CancellationToken ct)
+            => Task.FromResult(true);
     }
 
     private sealed class RepositorioMetricaFake : IRepositorioMetrica

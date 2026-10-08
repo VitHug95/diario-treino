@@ -23,5 +23,24 @@ public interface IRepositorioPlano
     /// <summary>Maior ordem entre as fichas ativas do plano (0 se não houver).</summary>
     public Task<short> ObterMaiorOrdemAsync(Guid planoId, CancellationToken ct);
 
+    // ---- Exercícios da ficha (PBI-13) ----
+
+    /// <summary>Treino com os exercícios prescritos (com o exercício carregado),
+    /// na ordem. Nulo se o treino não existe.</summary>
+    public Task<Treino?> ObterTreinoComExerciciosAsync(Guid treinoId, CancellationToken ct);
+
+    public void AdicionarTreinoExercicio(TreinoExercicio treinoExercicio);
+
+    public void RemoverTreinoExercicio(TreinoExercicio treinoExercicio);
+
+    /// <summary>Exercício prescrito por id, ou nulo.</summary>
+    public Task<TreinoExercicio?> ObterTreinoExercicioAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Exercícios prescritos de uma ficha, na ordem.</summary>
+    public Task<List<TreinoExercicio>> ObterExerciciosDaFichaAsync(Guid treinoId, CancellationToken ct);
+
+    /// <summary>Maior ordem entre os exercícios da ficha (0 se não houver).</summary>
+    public Task<short> ObterMaiorOrdemExercicioAsync(Guid treinoId, CancellationToken ct);
+
     public Task SalvarAsync(CancellationToken ct);
 }

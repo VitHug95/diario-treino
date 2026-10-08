@@ -24,4 +24,10 @@ public interface IRepositorioExercicio
         CancellationToken ct);
 
     public Task AdicionarAsync(Domain.Catalogo.Exercicio exercicio, CancellationToken ct);
+
+    /// <summary>
+    /// O exercício existe e está disponível para o usuário (catálogo global ou
+    /// criado por ele próprio)?
+    /// </summary>
+    public Task<bool> ExisteDisponivelAsync(Guid exercicioId, Guid usuarioId, CancellationToken ct);
 }

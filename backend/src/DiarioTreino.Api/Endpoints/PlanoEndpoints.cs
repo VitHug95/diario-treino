@@ -103,6 +103,80 @@ public static class PlanoEndpoints
         })
         .WithName("ArquivarFicha").WithTags("Fichas").WithSummary("Arquiva a ficha");
 
+        // ---- Exercícios da ficha (PBI-13) ----
+
+        // Detalhe da ficha com os exercícios.
+        grupo.MapGet("/treinos/{id:guid}", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var ficha = await planejamento.ObterFichaAsync(perfil.Id, id, ct);
+            return Results.Ok(ficha);
+        })
+        .WithName("DetalheFicha").WithTags("Fichas").WithSummary("Ficha com os exercícios");
+
+        // Adiciona um exercício do catálogo à ficha.
+        grupo.MapPost("/treinos/{id:guid}/exercicios", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            AdicionarExercicioRequest request,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var teId = await planejamento.AdicionarExercicioAsync(
+                perfil.Id, id, request.ExercicioId, ct);
+            return Results.Created($"/api/v1/treinos/{id}/exercicios/{teId}", new { id = teId });
+        })
+        .WithName("AdicionarExercicioFicha").WithTags("Fichas")
+        .WithSummary("Adiciona um exercício do catálogo à ficha");
+
+        // Reordena os exercícios da ficha.
+        grupo.MapPut("/treinos/{id:guid}/exercicios/ordem", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            ReordenarExerciciosRequest request,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.ReordenarExerciciosAsync(
+                perfil.Id, id, request.TreinoExercicioIds, ct);
+            return Results.NoContent();
+        })
+        .WithName("ReordenarExerciciosFicha").WithTags("Fichas")
+        .WithSummary("Reordena os exercícios da ficha");
+
+        // Remove um exercício da ficha (histórico preservado).
+        grupo.MapDelete("/treinos/{id:guid}/exercicios/{treinoExercicioId:guid}", async (
+            Guid id,
+            Guid treinoExercicioId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.RemoverExercicioAsync(perfil.Id, treinoExercicioId, ct);
+            return Results.NoContent();
+        })
+        .WithName("RemoverExercicioFicha").WithTags("Fichas")
+        .WithSummary("Remove um exercício da ficha");
+
         return app;
     }
 
