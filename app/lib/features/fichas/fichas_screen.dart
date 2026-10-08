@@ -6,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
+import 'editar_alvos_screen.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
 
@@ -251,6 +252,17 @@ class _ListaExerciciosFicha extends ConsumerWidget {
     }
   }
 
+  Future<void> _editarAlvos(
+      BuildContext context, WidgetRef ref, TreinoExercicioResumo te) async {
+    final resultado = await Navigator.of(context).push<ResultadoAlvos>(
+      MaterialPageRoute(
+        builder: (_) => EditarAlvosScreen(treinoId: treinoId, exercicio: te),
+      ),
+    );
+    // Salvou ou removeu: recarrega a ficha para refletir os alvos atualizados.
+    if (resultado != null) await _recarregar(ref);
+  }
+
   Future<void> _reordenar(
       WidgetRef ref, List<TreinoExercicioResumo> itens, int de, int para) async {
     final lista = [...itens];
@@ -302,6 +314,7 @@ class _ListaExerciciosFicha extends ConsumerWidget {
                           key: ValueKey(te.id),
                           exercicio: te,
                           indice: i,
+                          aoEditar: () => _editarAlvos(context, ref, te),
                           aoRemover: () => _remover(context, ref, te),
                         );
                       },
@@ -327,11 +340,13 @@ class _CardExercicioFicha extends StatelessWidget {
     super.key,
     required this.exercicio,
     required this.indice,
+    required this.aoEditar,
     required this.aoRemover,
   });
 
   final TreinoExercicioResumo exercicio;
   final int indice;
+  final VoidCallback aoEditar;
   final VoidCallback aoRemover;
 
   @override
@@ -345,45 +360,98 @@ class _CardExercicioFicha extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.entreItens),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.all(color: cores.lineDefault),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: aoEditar,
           borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        padding: const EdgeInsets.all(AppSpacing.paddingCard),
-        child: Row(
-          children: [
-            ReorderableDragStartListener(
-              index: indice,
-              child: Semantics(
-                label: 'Arrastar para reordenar',
-                child: Icon(LucideIcons.gripVertical,
-                    color: cores.iconMuted, size: AppSizes.iconeSm),
-              ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
             ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(exercicio.nome, style: AppText.title),
-                  const SizedBox(height: AppSpacing.x4),
-                  Text(subtitulo,
-                      style: AppText.caption.copyWith(color: cores.textSecondary)),
-                ],
-              ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            child: Row(
+              children: [
+                ReorderableDragStartListener(
+                  index: indice,
+                  child: Semantics(
+                    label: 'Arrastar para reordenar',
+                    child: Icon(LucideIcons.gripVertical,
+                        color: cores.iconMuted, size: AppSizes.iconeSm),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(exercicio.nome, style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(subtitulo,
+                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+                      const SizedBox(height: AppSpacing.x6),
+                      _ResumoAlvo(exercicio: exercicio, cores: cores),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: aoRemover,
+                  icon: Icon(LucideIcons.trash2,
+                      size: AppSizes.iconeSm, color: cores.danger),
+                  tooltip: 'Remover da ficha',
+                ),
+              ],
             ),
-            IconButton(
-              onPressed: aoRemover,
-              icon: Icon(LucideIcons.trash2, size: AppSizes.iconeSm, color: cores.danger),
-              tooltip: 'Remover da ficha',
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Linha-resumo dos alvos no card. Sem alvo definido, convida a configurar.
+class _ResumoAlvo extends StatelessWidget {
+  const _ResumoAlvo({required this.exercicio, required this.cores});
+
+  final TreinoExercicioResumo exercicio;
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    final alvo = exercicio.alvo;
+    if (alvo == null) {
+      return Row(
+        children: [
+          Icon(LucideIcons.sliders, size: AppSizes.iconeSm, color: cores.primaryText),
+          const SizedBox(width: AppSpacing.x6),
+          Flexible(
+            child: Text('Definir séries e alvos',
+                style: AppText.caption.copyWith(color: cores.primaryText)),
+          ),
+        ],
+      );
+    }
+
+    final partes = <String>['${exercicio.rodadas} ${exercicio.rodadas == 1 ? 'série' : 'séries'}'];
+    if (alvo.volumeAlvo != null) {
+      partes.add('${_num(alvo.volumeAlvo!)} ${alvo.volumeMetricaNome.toLowerCase()}');
+    }
+    if (alvo.intensidadeAlvo != null) {
+      partes.add('${_num(alvo.intensidadeAlvo!)} ${alvo.intensidadeMetricaNome.toLowerCase()}');
+    }
+    var texto = partes.join(' · ');
+    if (exercicio.descansoSeg != null) {
+      texto = '$texto · ${exercicio.descansoSeg} s';
+    }
+
+    return Text(texto,
+        style: AppText.caption.copyWith(color: cores.textStrong));
+  }
+
+  static String _num(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString().replaceAll('.', ',');
 }
 
 class _SemExercicios extends StatelessWidget {
