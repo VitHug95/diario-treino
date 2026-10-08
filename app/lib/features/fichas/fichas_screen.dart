@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/rotas/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -205,6 +207,23 @@ class _ConteudoFichas extends ConsumerWidget {
                 tooltip: 'Arquivar ficha',
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+          child: SizedBox(
+            width: double.infinity,
+            height: AppSizes.botaoPrincipal,
+            child: FilledButton.icon(
+              onPressed: () => context.push(
+                Rotas.registrarSessao,
+                extra: RegistrarSessaoArgs(
+                    treinoId: ficha.id, treinoNome: ficha.nome),
+              ),
+              icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
+              label: const Text('REGISTRAR TREINO'),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.x16),
