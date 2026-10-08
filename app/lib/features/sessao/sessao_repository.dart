@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
+import '../catalogo/catalogo_repository.dart';
+import '../catalogo/metrica.dart';
 import 'sessao_edicao.dart';
 import 'sessao_models.dart';
 
@@ -111,3 +113,11 @@ final rascunhoSessaoProvider =
     FutureProvider.autoDispose.family<RascunhoSessao, String>(
   (ref, treinoId) => ref.watch(sessaoRepositoryProvider).obterRascunho(treinoId),
 );
+
+/// Métricas indexadas por código, para montar um exercício fora da ficha
+/// (PBI-17) resolvendo o id/nome a partir do código vindo do catálogo.
+final metricasPorCodigoProvider =
+    FutureProvider.autoDispose<Map<String, Metrica>>((ref) async {
+  final metricas = await ref.watch(catalogoRepositoryProvider).listarMetricas();
+  return {for (final m in metricas) m.codigo: m};
+});

@@ -12,8 +12,14 @@ import 'exercicio_resumo.dart';
 
 /// Tela 8 do protótipo (ESCOLHER EXERCÍCIO): seletor que reaproveita a busca do
 /// catálogo (PBI-10) e devolve o exercício escolhido via `Navigator.pop`.
+///
+/// Por padrão devolve só o id (`String`), como o PBI-13 precisa. Com
+/// [retornarCompleto] devolve o [ExercicioResumo] inteiro (PBI-17, para montar
+/// a série com as métricas do exercício).
 class SelecionarExercicioScreen extends ConsumerStatefulWidget {
-  const SelecionarExercicioScreen({super.key});
+  const SelecionarExercicioScreen({super.key, this.retornarCompleto = false});
+
+  final bool retornarCompleto;
 
   @override
   ConsumerState<SelecionarExercicioScreen> createState() =>
@@ -109,8 +115,10 @@ class _SelecionarExercicioScreenState
                       itemCount: itens.length,
                       separatorBuilder: (_, __) =>
                           const SizedBox(height: AppSpacing.entreItens),
-                      itemBuilder: (context, i) =>
-                          _ItemSelecionavel(exercicio: itens[i]),
+                      itemBuilder: (context, i) => _ItemSelecionavel(
+                        exercicio: itens[i],
+                        retornarCompleto: widget.retornarCompleto,
+                      ),
                     ),
             ),
           ),
@@ -121,9 +129,13 @@ class _SelecionarExercicioScreenState
 }
 
 class _ItemSelecionavel extends StatelessWidget {
-  const _ItemSelecionavel({required this.exercicio});
+  const _ItemSelecionavel({
+    required this.exercicio,
+    required this.retornarCompleto,
+  });
 
   final ExercicioResumo exercicio;
+  final bool retornarCompleto;
 
   @override
   Widget build(BuildContext context) {
@@ -139,8 +151,8 @@ class _ItemSelecionavel extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
-        // Devolve o id do exercício escolhido.
-        onTap: () => Navigator.of(context).pop(e.id),
+        // Devolve o id (PBI-13) ou o exercício completo (PBI-17).
+        onTap: () => Navigator.of(context).pop(retornarCompleto ? e : e.id),
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(color: cores.lineDefault),

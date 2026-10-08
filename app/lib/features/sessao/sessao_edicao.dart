@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../catalogo/exercicio_resumo.dart';
+import '../catalogo/metrica.dart';
 import 'sessao_models.dart';
 
 /// Estado editável de uma série durante o registro (PBI-15/16). A identidade da
@@ -105,15 +107,21 @@ class ExercicioEdicao {
     required this.origemPreenchimento,
     required this.series,
     required this.realizado,
+    this.foraDaFicha = false,
   });
 
-  final String treinoExercicioId;
+  /// Nulo quando o exercício foi adicionado fora da ficha (PBI-17): a série é
+  /// gravada sem vínculo com o prescrito.
+  final String? treinoExercicioId;
   final String exercicioId;
   final String nome;
   final String? grupoMuscular;
   final String modalidade;
   final String? origemPreenchimento;
   final List<SerieEdicao> series;
+
+  /// Exercício adicionado fora da ficha (PBI-17), para rótulo na tela.
+  final bool foraDaFicha;
 
   /// Falso = exercício não realizado (não vira série ao salvar).
   bool realizado;
@@ -132,6 +140,44 @@ class ExercicioEdicao {
         // Começa marcado como realizado quando já há séries sugeridas.
         realizado: e.series.isNotEmpty,
       );
+
+  /// Monta um exercício fora da ficha (PBI-17) a partir do item do catálogo.
+  /// As métricas vêm por código; [porCodigo] resolve o id e o nome via a lista
+  /// de métricas. Começa com uma série vazia para o atleta preencher.
+  factory ExercicioEdicao.foraDaFichaDoCatalogo(
+    ExercicioResumo e,
+    Map<String, Metrica> porCodigo,
+  ) {
+    final intensidade = porCodigo[e.intensidadeMetricaCodigo];
+    final volume = porCodigo[e.volumeMetricaCodigo];
+
+    final serie = SerieEdicao(
+      rodada: 1,
+      ordem: 1,
+      tipo: 'ESFORCO',
+      intensidadeMetricaId: intensidade?.id ?? 0,
+      intensidadeMetricaCodigo: e.intensidadeMetricaCodigo,
+      intensidadeMetricaNome: intensidade?.nome ?? e.intensidadeMetricaNome,
+      intensidadeTexto: '',
+      volumeMetricaId: volume?.id ?? 0,
+      volumeMetricaCodigo: e.volumeMetricaCodigo,
+      volumeMetricaNome: volume?.nome ?? e.volumeMetricaNome,
+      volumeTexto: '',
+      descansoTexto: '',
+    );
+
+    return ExercicioEdicao(
+      treinoExercicioId: null,
+      exercicioId: e.id,
+      nome: e.nome,
+      grupoMuscular: e.grupoMuscular,
+      modalidade: e.modalidade,
+      origemPreenchimento: null,
+      series: [serie],
+      realizado: true,
+      foraDaFicha: true,
+    );
+  }
 
   /// Adiciona uma série copiando a última (ou uma vazia, se não houver nenhuma).
   void adicionarSerie() {

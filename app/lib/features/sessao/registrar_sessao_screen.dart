@@ -8,6 +8,8 @@ import '../../core/rotas/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../catalogo/exercicio_resumo.dart';
+import '../catalogo/selecionar_exercicio_screen.dart';
 import 'sessao_edicao.dart';
 import 'sessao_models.dart';
 import 'sessao_repository.dart';
@@ -92,6 +94,25 @@ class _FormularioState extends ConsumerState<_Formulario> {
     if (escolhida != null) setState(() => _data = escolhida);
   }
 
+  Future<void> _adicionarForaDaFicha() async {
+    final escolhido = await Navigator.of(context).push<ExercicioResumo>(
+      MaterialPageRoute(
+        builder: (_) => const SelecionarExercicioScreen(retornarCompleto: true),
+      ),
+    );
+    if (escolhido == null || !mounted) return;
+
+    // Resolve as métricas (código -> id/nome) para montar a série.
+    final porCodigo = await ref.read(metricasPorCodigoProvider.future);
+    if (!mounted) return;
+
+    setState(() {
+      _exercicios.add(
+        ExercicioEdicao.foraDaFichaDoCatalogo(escolhido, porCodigo),
+      );
+    });
+  }
+
   Future<void> _salvar() async {
     setState(() => _salvando = true);
     try {
@@ -166,12 +187,22 @@ class _FormularioState extends ConsumerState<_Formulario> {
               if (_exercicios.isEmpty)
                 _SemExercicios(cores: cores)
               else
-                for (final ex in _exercicios)
+                for (var i = 0; i < _exercicios.length; i++)
                   _CardExercicio(
-                    key: ValueKey(ex.treinoExercicioId),
-                    exercicio: ex,
+                    key: ValueKey(
+                        _exercicios[i].treinoExercicioId ?? 'avulso-$i-${_exercicios[i].exercicioId}'),
+                    exercicio: _exercicios[i],
                     aoMudar: () => setState(() {}),
                   ),
+              const SizedBox(height: AppSpacing.x4),
+              SizedBox(
+                height: AppSizes.touchMin,
+                child: OutlinedButton.icon(
+                  onPressed: _adicionarForaDaFicha,
+                  icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+                  label: const Text('Adicionar exercício fora da ficha'),
+                ),
+              ),
               const SizedBox(height: AppSpacing.x16),
               TextField(
                 controller: _observacao,
@@ -286,7 +317,15 @@ class _CardExercicio extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(exercicio.nome, style: AppText.title),
+                      Row(
+                        children: [
+                          Flexible(child: Text(exercicio.nome, style: AppText.title)),
+                          if (exercicio.foraDaFicha) ...[
+                            const SizedBox(width: AppSpacing.x8),
+                            _ChipForaDaFicha(cores: cores),
+                          ],
+                        ],
+                      ),
                       if (subtitulo.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.x4),
                         Text(subtitulo,
@@ -390,6 +429,27 @@ class _CorpoSeries extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Selo "Fora da ficha" para exercícios adicionados na hora (PBI-17).
+class _ChipForaDaFicha extends StatelessWidget {
+  const _ChipForaDaFicha({required this.cores});
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x8, vertical: AppSpacing.x4),
+      decoration: BoxDecoration(
+        color: cores.bgInput,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: cores.lineDefault),
+      ),
+      child: Text('Fora da ficha',
+          style: AppText.caption.copyWith(color: cores.textSecondary)),
     );
   }
 }
