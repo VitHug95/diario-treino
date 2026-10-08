@@ -90,6 +90,33 @@ class FichasRepository {
             data: {'treinoExercicioIds': treinoExercicioIds},
           ));
 
+  // ---- Alvos do exercício (PBI-14) ----
+
+  /// Define séries, alvos, descanso e instrução de um exercício da ficha.
+  Future<void> definirAlvos({
+    required String treinoId,
+    required String treinoExercicioId,
+    required int series,
+    required int intensidadeMetricaId,
+    double? intensidadeAlvo,
+    required int volumeMetricaId,
+    double? volumeAlvo,
+    int? descansoSeg,
+    String? instrucao,
+  }) =>
+      _executar(() => _dio.put<void>(
+            '/treinos/$treinoId/exercicios/$treinoExercicioId/alvos',
+            data: {
+              'series': series,
+              'intensidadeMetricaId': intensidadeMetricaId,
+              'intensidadeAlvo': intensidadeAlvo,
+              'volumeMetricaId': volumeMetricaId,
+              'volumeAlvo': volumeAlvo,
+              'descansoSeg': descansoSeg,
+              'instrucao': instrucao,
+            },
+          ));
+
   Future<void> _executar(Future<void> Function() acao) async {
     try {
       await acao();

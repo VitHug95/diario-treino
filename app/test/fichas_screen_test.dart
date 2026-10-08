@@ -23,6 +23,9 @@ TreinoExercicioResumo _ex(String nome, int ordem) => TreinoExercicioResumo(
       modalidade: 'FORCA',
       ordem: ordem,
       rodadas: 1,
+      descansoSeg: null,
+      instrucao: null,
+      alvo: null,
     );
 
 Widget _tela({

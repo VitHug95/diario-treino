@@ -44,7 +44,7 @@ class TreinoDetalhe {
       );
 }
 
-/// Exercício prescrito dentro de uma ficha.
+/// Exercício prescrito dentro de uma ficha, com os alvos (PBI-14).
 class TreinoExercicioResumo {
   const TreinoExercicioResumo({
     required this.id,
@@ -54,6 +54,9 @@ class TreinoExercicioResumo {
     required this.modalidade,
     required this.ordem,
     required this.rodadas,
+    required this.descansoSeg,
+    required this.instrucao,
+    required this.alvo,
   });
 
   final String id;
@@ -64,6 +67,18 @@ class TreinoExercicioResumo {
   final int ordem;
   final int rodadas;
 
+  /// Descanso-alvo entre séries, em segundos. Nulo até definir.
+  final int? descansoSeg;
+
+  /// Instrução livre (ex.: "cadência lenta"). Nula se não houver.
+  final String? instrucao;
+
+  /// Alvos prescritos (intensidade/volume). Nulo até o atleta definir.
+  final AlvoExercicio? alvo;
+
+  /// Já tem alvos definidos (etapa de esforço gravada).
+  bool get temAlvo => alvo != null;
+
   factory TreinoExercicioResumo.doJson(Map<String, dynamic> json) =>
       TreinoExercicioResumo(
         id: json['id'] as String,
@@ -73,6 +88,46 @@ class TreinoExercicioResumo {
         modalidade: json['modalidade'] as String,
         ordem: (json['ordem'] as num).toInt(),
         rodadas: (json['rodadas'] as num).toInt(),
+        descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
+        instrucao: json['instrucao'] as String?,
+        alvo: json['alvo'] == null
+            ? null
+            : AlvoExercicio.doJson(json['alvo'] as Map<String, dynamic>),
+      );
+}
+
+/// Alvos prescritos de um exercício (etapa de esforço). Espelha o
+/// AlvoExercicio da API.
+class AlvoExercicio {
+  const AlvoExercicio({
+    required this.intensidadeMetricaId,
+    required this.intensidadeMetricaCodigo,
+    required this.intensidadeMetricaNome,
+    required this.intensidadeAlvo,
+    required this.volumeMetricaId,
+    required this.volumeMetricaCodigo,
+    required this.volumeMetricaNome,
+    required this.volumeAlvo,
+  });
+
+  final int intensidadeMetricaId;
+  final String intensidadeMetricaCodigo;
+  final String intensidadeMetricaNome;
+  final double? intensidadeAlvo;
+  final int volumeMetricaId;
+  final String volumeMetricaCodigo;
+  final String volumeMetricaNome;
+  final double? volumeAlvo;
+
+  factory AlvoExercicio.doJson(Map<String, dynamic> json) => AlvoExercicio(
+        intensidadeMetricaId: (json['intensidadeMetricaId'] as num).toInt(),
+        intensidadeMetricaCodigo: json['intensidadeMetricaCodigo'] as String,
+        intensidadeMetricaNome: json['intensidadeMetricaNome'] as String,
+        intensidadeAlvo: (json['intensidadeAlvo'] as num?)?.toDouble(),
+        volumeMetricaId: (json['volumeMetricaId'] as num).toInt(),
+        volumeMetricaCodigo: json['volumeMetricaCodigo'] as String,
+        volumeMetricaNome: json['volumeMetricaNome'] as String,
+        volumeAlvo: (json['volumeAlvo'] as num?)?.toDouble(),
       );
 }
 
