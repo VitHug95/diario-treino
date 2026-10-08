@@ -10,6 +10,7 @@ import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
+import '../../features/sessao/registrar_sessao_screen.dart';
 import 'shell_navegacao.dart';
 
 /// Nomes de rota centralizados, para navegação sem strings mágicas.
@@ -23,6 +24,14 @@ abstract final class Rotas {
   static const cadastro = '/cadastro';
   static const exercicios = '/exercicios';
   static const criarExercicio = '/exercicios/novo';
+  static const registrarSessao = '/fichas/registrar';
+}
+
+/// Dados passados ao abrir o registro de sessão (via `extra`).
+class RegistrarSessaoArgs {
+  const RegistrarSessaoArgs({required this.treinoId, required this.treinoNome});
+  final String treinoId;
+  final String treinoNome;
 }
 
 /// go_router com casca de navegação inferior (Início/Fichas/Progresso) e
@@ -95,6 +104,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: Rotas.fichas,
                 name: 'fichas',
                 builder: (context, state) => const FichasScreen(),
+                routes: [
+                  // Registro de sessão empilhado sobre a aba Fichas.
+                  GoRoute(
+                    path: 'registrar',
+                    name: 'registrarSessao',
+                    builder: (context, state) {
+                      final args = state.extra as RegistrarSessaoArgs?;
+                      return RegistrarSessaoScreen(
+                        treinoId: args?.treinoId ?? '',
+                        treinoNome: args?.treinoNome ?? 'treino',
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
