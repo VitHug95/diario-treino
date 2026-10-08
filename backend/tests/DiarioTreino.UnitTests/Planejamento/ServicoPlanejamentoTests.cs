@@ -53,7 +53,35 @@ public sealed class ServicoPlanejamentoTests
         public Task<short> ObterMaiorOrdemExercicioAsync(Guid treinoId, CancellationToken ct)
             => Task.FromResult(MaiorOrdemExercicio);
 
+        public Task<TreinoExercicio?> ObterTreinoExercicioComEtapasAsync(Guid id, CancellationToken ct)
+            => Task.FromResult(TreinoExercicios.FirstOrDefault(te => te.Id == id));
+
+        public Task<(string Codigo, string Nome)?> ObterMetricaAsync(short metricaId, CancellationToken ct)
+            => Task.FromResult<(string, string)?>(("COD", "Métrica"));
+
+        public readonly List<EtapaPrescrita> Etapas = [];
+        public void AdicionarEtapa(EtapaPrescrita etapa) => Etapas.Add(etapa);
+        public void RemoverEtapa(EtapaPrescrita etapa) => Etapas.Remove(etapa);
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    // Métricas: eixo por faixa de id (1-3 intensidade, 10-12 volume).
+    private sealed class RepositorioMetricaFake : IRepositorioMetrica
+    {
+        public Task<IReadOnlyList<MetricaResumo>> ListarAsync(CancellationToken ct)
+            => Task.FromResult<IReadOnlyList<MetricaResumo>>([]);
+
+        public Task<string?> ObterEixoAsync(short metricaId, CancellationToken ct)
+        {
+            string? eixo = metricaId switch
+            {
+                >= 1 and <= 3 => DiarioTreino.Domain.Comum.EixoMetrica.Intensidade,
+                >= 10 and <= 12 => DiarioTreino.Domain.Comum.EixoMetrica.Volume,
+                _ => null,
+            };
+            return Task.FromResult(eixo);
+        }
     }
 
     private sealed class RepositorioVinculoFake : IRepositorioVinculo
@@ -87,7 +115,8 @@ public sealed class ServicoPlanejamentoTests
         => new(
             repo,
             new ControleAcesso(new RepositorioVinculoFake()),
-            exercicios ?? new RepositorioExercicioFake());
+            exercicios ?? new RepositorioExercicioFake(),
+            new RepositorioMetricaFake());
 
     [Fact]
     public async Task Primeira_ficha_cria_plano_com_autor_igual_atleta()
@@ -232,5 +261,76 @@ public sealed class ServicoPlanejamentoTests
 
         await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
             Montar(repo).RemoverExercicioAsync(terceiro, teId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Definir_alvos_grava_series_descanso_instrucao_e_etapa()
+    {
+        var dono = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var te = new TreinoExercicio { Id = teId, TreinoId = treinoId, Rodadas = 1 };
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { te },
+        };
+
+        await Montar(repo).DefinirAlvosAsync(
+            dono, teId,
+            new DefinirAlvosRequest(
+                Series: 3,
+                IntensidadeMetricaId: 1,  // CARGA_KG (intensidade)
+                IntensidadeAlvo: 30,
+                VolumeMetricaId: 10,      // REPETICOES (volume)
+                VolumeAlvo: 10,
+                DescansoSeg: 90,
+                Instrucao: "descer devagar"),
+            CancellationToken.None);
+
+        Assert.Equal((short)3, te.Rodadas);
+        Assert.Equal((short)90, te.DescansoAlvoSeg);
+        Assert.Equal("descer devagar", te.Observacao);
+        var etapa = Assert.Single(repo.Etapas);
+        Assert.Equal(30m, etapa.IntensidadeAlvo);
+        Assert.Equal(10m, etapa.VolumeAlvo);
+    }
+
+    [Fact]
+    public async Task Definir_alvos_com_metrica_de_eixo_errado_lanca_argumento()
+    {
+        var dono = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { new TreinoExercicio { Id = teId, TreinoId = Guid.NewGuid() } },
+        };
+
+        // Intensidade recebendo métrica de VOLUME (10).
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            Montar(repo).DefinirAlvosAsync(
+                dono, teId,
+                new DefinirAlvosRequest(3, 10, null, 10, null, null, null),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Definir_alvos_em_exercicio_de_outro_usuario_lanca_recurso_nao_encontrado()
+    {
+        var dono = Guid.NewGuid();
+        var terceiro = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { new TreinoExercicio { Id = teId, TreinoId = Guid.NewGuid() } },
+        };
+
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
+            Montar(repo).DefinirAlvosAsync(
+                terceiro, teId,
+                new DefinirAlvosRequest(3, 1, 30, 10, 10, 90, null),
+                CancellationToken.None));
     }
 }

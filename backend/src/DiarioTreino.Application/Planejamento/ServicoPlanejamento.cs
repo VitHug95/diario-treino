@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Planejamento;
 
 namespace DiarioTreino.Application.Planejamento;
@@ -14,15 +15,18 @@ public sealed class ServicoPlanejamento
     private readonly IRepositorioPlano _repositorio;
     private readonly IControleAcesso _acesso;
     private readonly IRepositorioExercicio _exercicios;
+    private readonly IRepositorioMetrica _metricas;
 
     public ServicoPlanejamento(
         IRepositorioPlano repositorio,
         IControleAcesso acesso,
-        IRepositorioExercicio exercicios)
+        IRepositorioExercicio exercicios,
+        IRepositorioMetrica metricas)
     {
         _repositorio = repositorio;
         _acesso = acesso;
         _exercicios = exercicios;
+        _metricas = metricas;
     }
 
     /// <summary>Plano ativo do atleta como DTO, ou nulo se ainda não há plano.</summary>
@@ -175,18 +179,54 @@ public sealed class ServicoPlanejamento
         var treino = await _repositorio.ObterTreinoComExerciciosAsync(treinoId, ct)
             ?? throw new RecursoNaoEncontradoException();
 
-        var exercicios = treino.Exercicios
-            .Select(te => new TreinoExercicioResumo(
+        var exercicios = new List<TreinoExercicioResumo>();
+        foreach (var te in treino.Exercicios)
+        {
+            // Musculação/isometria: uma etapa de ESFORÇO guarda os alvos.
+            var etapa = te.Etapas
+                .Where(e => e.Tipo == TipoEtapa.Esforco)
+                .OrderBy(e => e.Ordem)
+                .FirstOrDefault();
+
+            exercicios.Add(new TreinoExercicioResumo(
                 te.Id,
                 te.ExercicioId,
                 te.Exercicio?.Nome ?? string.Empty,
                 te.Exercicio?.GrupoMuscular,
                 te.Exercicio?.Modalidade ?? string.Empty,
                 te.Ordem,
-                te.Rodadas))
-            .ToList();
+                te.Rodadas,
+                te.DescansoAlvoSeg,
+                te.Observacao,
+                await MapearAlvoAsync(etapa, ct)));
+        }
 
         return new TreinoDetalhe(treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios);
+    }
+
+    private async Task<AlvoExercicio?> MapearAlvoAsync(EtapaPrescrita? etapa, CancellationToken ct)
+    {
+        if (etapa is null)
+        {
+            return null;
+        }
+
+        var intensidade = await _repositorio.ObterMetricaAsync(etapa.IntensidadeMetricaId, ct);
+        var volume = await _repositorio.ObterMetricaAsync(etapa.VolumeMetricaId, ct);
+        if (intensidade is null || volume is null)
+        {
+            return null;
+        }
+
+        return new AlvoExercicio(
+            etapa.IntensidadeMetricaId,
+            intensidade.Value.Codigo,
+            intensidade.Value.Nome,
+            etapa.IntensidadeAlvo,
+            etapa.VolumeMetricaId,
+            volume.Value.Codigo,
+            volume.Value.Nome,
+            etapa.VolumeAlvo);
     }
 
     /// <summary>
@@ -259,6 +299,65 @@ public sealed class ServicoPlanejamento
             }
         }
         await _repositorio.SalvarAsync(ct);
+    }
+
+    // ---- Alvos do exercício (PBI-14) ----
+
+    /// <summary>
+    /// Define séries, alvos (intensidade/volume), descanso e instrução de um
+    /// exercício da ficha. Grava em <c>treino_exercicio</c> (rodadas, descanso,
+    /// observação) e numa única etapa de ESFORÇO (<c>etapa_prescrita</c>).
+    /// </summary>
+    public async Task DefinirAlvosAsync(
+        Guid usuarioLogadoId,
+        Guid treinoExercicioId,
+        DefinirAlvosRequest request,
+        CancellationToken ct)
+    {
+        var te = await _repositorio.ObterTreinoExercicioComEtapasAsync(treinoExercicioId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
+
+        await ValidarEixoAsync(request.IntensidadeMetricaId, EixoMetrica.Intensidade, ct);
+        await ValidarEixoAsync(request.VolumeMetricaId, EixoMetrica.Volume, ct);
+
+        te.Rodadas = request.Series;
+        te.DescansoAlvoSeg = request.DescansoSeg;
+        te.Observacao = string.IsNullOrWhiteSpace(request.Instrucao)
+            ? null
+            : request.Instrucao.Trim();
+
+        // Substitui as etapas pela única etapa de esforço com os alvos.
+        foreach (var antiga in te.Etapas.ToList())
+        {
+            _repositorio.RemoverEtapa(antiga);
+        }
+        _repositorio.AdicionarEtapa(new EtapaPrescrita
+        {
+            Id = Guid.NewGuid(),
+            TreinoExercicioId = te.Id,
+            Ordem = 1,
+            Tipo = TipoEtapa.Esforco,
+            IntensidadeMetricaId = request.IntensidadeMetricaId,
+            IntensidadeAlvo = request.IntensidadeAlvo,
+            VolumeMetricaId = request.VolumeMetricaId,
+            VolumeAlvo = request.VolumeAlvo,
+        });
+
+        await _repositorio.SalvarAsync(ct);
+    }
+
+    private async Task ValidarEixoAsync(short metricaId, string eixoEsperado, CancellationToken ct)
+    {
+        var eixo = await _metricas.ObterEixoAsync(metricaId, ct);
+        if (eixo is null)
+        {
+            throw new ArgumentException($"Métrica {metricaId} não existe.");
+        }
+        if (eixo != eixoEsperado)
+        {
+            throw new ArgumentException($"A métrica {metricaId} não é do eixo {eixoEsperado}.");
+        }
     }
 
     private async Task GarantirAcessoAoTreinoAsync(

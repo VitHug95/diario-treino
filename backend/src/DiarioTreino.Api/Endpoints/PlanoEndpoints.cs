@@ -177,6 +177,36 @@ public static class PlanoEndpoints
         .WithName("RemoverExercicioFicha").WithTags("Fichas")
         .WithSummary("Remove um exercício da ficha");
 
+        // Define os alvos do exercício na ficha (séries, carga/reps, descanso). PBI-14.
+        grupo.MapPut("/treinos/{id:guid}/exercicios/{treinoExercicioId:guid}/alvos", async (
+            Guid id,
+            Guid treinoExercicioId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<DefinirAlvosRequest> validator,
+            DefinirAlvosRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            try
+            {
+                await planejamento.DefinirAlvosAsync(perfil.Id, treinoExercicioId, request, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        })
+        .WithName("DefinirAlvosExercicio").WithTags("Fichas")
+        .WithSummary("Define séries e alvos do exercício na ficha");
+
         return app;
     }
 

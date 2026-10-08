@@ -21,7 +21,13 @@ public sealed class FichaExerciciosEndpointTests
     private sealed record PlanoResp(Guid Id, string Nome, List<TreinoResp> Treinos);
     private sealed record TreinoResp(Guid Id, string Nome, string? Descricao, short Ordem);
     private sealed record FichaResp(Guid Id, string Nome, string? Descricao, short Ordem, List<TeResp> Exercicios);
-    private sealed record TeResp(Guid Id, Guid ExercicioId, string Nome, string? GrupoMuscular, string Modalidade, short Ordem, short Rodadas);
+    private sealed record TeResp(
+        Guid Id, Guid ExercicioId, string Nome, string? GrupoMuscular, string Modalidade,
+        short Ordem, short Rodadas, short? DescansoSeg, string? Instrucao, AlvoResp? Alvo);
+    private sealed record AlvoResp(
+        short IntensidadeMetricaId, string IntensidadeMetricaCodigo, string IntensidadeMetricaNome,
+        decimal? IntensidadeAlvo, short VolumeMetricaId, string VolumeMetricaCodigo,
+        string VolumeMetricaNome, decimal? VolumeAlvo);
     private sealed record CriadoResp(Guid Id);
 
     // Exercício global do seed usado nos testes.
@@ -196,5 +202,93 @@ public sealed class FichaExerciciosEndpointTests
         var resposta = await client.GetAsync($"/api/v1/treinos/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    // ---- PBI-14: alvos do exercício ----
+
+    [Fact]
+    public async Task Definir_alvos_reflete_no_detalhe_da_ficha()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,  // CARGA_KG
+                intensidadeAlvo = 30,
+                volumeMetricaId = 10,      // REPETICOES
+                volumeAlvo = 10,
+                descansoSeg = 90,
+                instrucao = "descer devagar",
+            });
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        var ex = ficha!.Exercicios.Single();
+        Assert.Equal((short)3, ex.Rodadas);
+        Assert.Equal((short)90, ex.DescansoSeg);
+        Assert.Equal("descer devagar", ex.Instrucao);
+        Assert.NotNull(ex.Alvo);
+        Assert.Equal("CARGA_KG", ex.Alvo!.IntensidadeMetricaCodigo);
+        Assert.Equal(30m, ex.Alvo.IntensidadeAlvo);
+        Assert.Equal("REPETICOES", ex.Alvo.VolumeMetricaCodigo);
+        Assert.Equal(10m, ex.Alvo.VolumeAlvo);
+    }
+
+    [Fact]
+    public async Task Definir_alvos_series_fora_do_intervalo_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new { series = 13, intensidadeMetricaId = 1, volumeMetricaId = 10 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
+    }
+
+    [Fact]
+    public async Task Definir_alvos_com_eixo_errado_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        // Intensidade recebendo métrica de volume (10).
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new { series = 3, intensidadeMetricaId = 10, volumeMetricaId = 10 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
+    }
+
+    [Fact]
+    public async Task Definir_alvos_em_exercicio_de_outro_usuario_responde_404()
+    {
+        var (apiA, clientA, _) = Autenticar(_postgres);
+        await using var _apiA = apiA;
+        var treinoId = await CriarFicha(clientA);
+        var teId = (await (await AddExercicio(clientA, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var (apiB, clientB, _) = Autenticar(_postgres);
+        await using var _apiB = apiB;
+        var put = await clientB.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new { series = 3, intensidadeMetricaId = 1, volumeMetricaId = 10 });
+
+        Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);
     }
 }
