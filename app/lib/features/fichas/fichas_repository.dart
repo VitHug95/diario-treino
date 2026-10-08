@@ -57,6 +57,39 @@ class FichasRepository {
   Future<void> arquivarFicha(String treinoId) =>
       _executar(() => _dio.delete<void>('/treinos/$treinoId'));
 
+  // ---- Exercícios da ficha (PBI-13) ----
+
+  Future<TreinoDetalhe> obterFicha(String treinoId) async {
+    final resposta = await _dio.get<Map<String, dynamic>>('/treinos/$treinoId');
+    return TreinoDetalhe.doJson(resposta.data!);
+  }
+
+  Future<void> adicionarExercicio({
+    required String treinoId,
+    required String exercicioId,
+  }) =>
+      _executar(() => _dio.post<Map<String, dynamic>>(
+            '/treinos/$treinoId/exercicios',
+            data: {'exercicioId': exercicioId},
+          ));
+
+  Future<void> removerExercicio({
+    required String treinoId,
+    required String treinoExercicioId,
+  }) =>
+      _executar(() => _dio.delete<void>(
+            '/treinos/$treinoId/exercicios/$treinoExercicioId',
+          ));
+
+  Future<void> reordenarExercicios({
+    required String treinoId,
+    required List<String> treinoExercicioIds,
+  }) =>
+      _executar(() => _dio.put<void>(
+            '/treinos/$treinoId/exercicios/ordem',
+            data: {'treinoExercicioIds': treinoExercicioIds},
+          ));
+
   Future<void> _executar(Future<void> Function() acao) async {
     try {
       await acao();
@@ -83,4 +116,10 @@ final fichasRepositoryProvider = Provider<FichasRepository>(
 /// Plano ativo atual (recarrega ao invalidar após criar/editar/arquivar).
 final planoAtivoProvider = FutureProvider.autoDispose<PlanoAtivo?>(
   (ref) => ref.watch(fichasRepositoryProvider).obterPlanoAtivo(),
+);
+
+/// Detalhe de uma ficha (com os exercícios), por id.
+final fichaDetalheProvider =
+    FutureProvider.autoDispose.family<TreinoDetalhe, String>(
+  (ref, treinoId) => ref.watch(fichasRepositoryProvider).obterFicha(treinoId),
 );
