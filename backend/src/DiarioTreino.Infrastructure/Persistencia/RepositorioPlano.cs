@@ -58,5 +58,48 @@ public sealed class RepositorioPlano : IRepositorioPlano
         return ordens.Count == 0 ? (short)0 : ordens.Max()!.Value;
     }
 
+    // ---- Exercícios da ficha (PBI-13) ----
+
+    public async Task<Treino?> ObterTreinoComExerciciosAsync(Guid treinoId, CancellationToken ct)
+    {
+        var treino = await _db.Treinos.FirstOrDefaultAsync(t => t.Id == treinoId, ct);
+        if (treino is null)
+        {
+            return null;
+        }
+
+        treino.Exercicios = await _db.TreinoExercicios
+            .Include(te => te.Exercicio)
+            .Where(te => te.TreinoId == treinoId)
+            .OrderBy(te => te.Ordem)
+            .ToListAsync(ct);
+
+        return treino;
+    }
+
+    public void AdicionarTreinoExercicio(TreinoExercicio treinoExercicio) =>
+        _db.TreinoExercicios.Add(treinoExercicio);
+
+    public void RemoverTreinoExercicio(TreinoExercicio treinoExercicio) =>
+        _db.TreinoExercicios.Remove(treinoExercicio);
+
+    public Task<TreinoExercicio?> ObterTreinoExercicioAsync(Guid id, CancellationToken ct) =>
+        _db.TreinoExercicios.FirstOrDefaultAsync(te => te.Id == id, ct);
+
+    public Task<List<TreinoExercicio>> ObterExerciciosDaFichaAsync(Guid treinoId, CancellationToken ct) =>
+        _db.TreinoExercicios
+            .Where(te => te.TreinoId == treinoId)
+            .OrderBy(te => te.Ordem)
+            .ToListAsync(ct);
+
+    public async Task<short> ObterMaiorOrdemExercicioAsync(Guid treinoId, CancellationToken ct)
+    {
+        var ordens = await _db.TreinoExercicios
+            .Where(te => te.TreinoId == treinoId)
+            .Select(te => (short?)te.Ordem)
+            .ToListAsync(ct);
+        return ordens.Count == 0 ? (short)0 : ordens.Max()!.Value;
+    }
+
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 }

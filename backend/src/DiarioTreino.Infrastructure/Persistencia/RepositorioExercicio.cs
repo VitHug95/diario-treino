@@ -75,4 +75,11 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
         _db.Exercicios.Add(exercicio);
         await _db.SaveChangesAsync(ct);
     }
+
+    public Task<bool> ExisteDisponivelAsync(Guid exercicioId, Guid usuarioId, CancellationToken ct) =>
+        _db.Exercicios.AnyAsync(
+            e => e.Id == exercicioId
+                && e.Ativo
+                && (e.CriadoPorId == null || e.CriadoPorId == usuarioId),
+            ct);
 }
