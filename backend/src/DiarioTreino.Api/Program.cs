@@ -65,6 +65,7 @@ try
     app.MapMeEndpoints();
     app.MapExercicioEndpoints();
     app.MapPlanoEndpoints();
+    app.MapSessaoEndpoints();
 
     app.Run();
 }
