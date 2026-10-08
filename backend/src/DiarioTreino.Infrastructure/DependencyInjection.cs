@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Application.Execucao;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
 using DiarioTreino.Infrastructure.Persistencia;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
         services.AddScoped<IRepositorioMetrica, RepositorioMetrica>();
         services.AddScoped<IRepositorioPlano, RepositorioPlano>();
+        services.AddScoped<IRepositorioSessao, RepositorioSessao>();
 
         return services;
     }
