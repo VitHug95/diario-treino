@@ -36,6 +36,16 @@ public interface IRepositorioPlano
     /// <summary>Exercício prescrito por id, ou nulo.</summary>
     public Task<TreinoExercicio?> ObterTreinoExercicioAsync(Guid id, CancellationToken ct);
 
+    /// <summary>Exercício prescrito por id, com as etapas carregadas, ou nulo.</summary>
+    public Task<TreinoExercicio?> ObterTreinoExercicioComEtapasAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Métrica (código, nome) por id — para montar os alvos no DTO.</summary>
+    public Task<(string Codigo, string Nome)?> ObterMetricaAsync(short metricaId, CancellationToken ct);
+
+    public void AdicionarEtapa(EtapaPrescrita etapa);
+
+    public void RemoverEtapa(EtapaPrescrita etapa);
+
     /// <summary>Exercícios prescritos de uma ficha, na ordem.</summary>
     public Task<List<TreinoExercicio>> ObterExerciciosDaFichaAsync(Guid treinoId, CancellationToken ct);
 

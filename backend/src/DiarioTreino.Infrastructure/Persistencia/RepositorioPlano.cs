@@ -70,6 +70,7 @@ public sealed class RepositorioPlano : IRepositorioPlano
 
         treino.Exercicios = await _db.TreinoExercicios
             .Include(te => te.Exercicio)
+            .Include(te => te.Etapas)
             .Where(te => te.TreinoId == treinoId)
             .OrderBy(te => te.Ordem)
             .ToListAsync(ct);
@@ -86,6 +87,21 @@ public sealed class RepositorioPlano : IRepositorioPlano
     public Task<TreinoExercicio?> ObterTreinoExercicioAsync(Guid id, CancellationToken ct) =>
         _db.TreinoExercicios.FirstOrDefaultAsync(te => te.Id == id, ct);
 
+    public Task<TreinoExercicio?> ObterTreinoExercicioComEtapasAsync(Guid id, CancellationToken ct) =>
+        _db.TreinoExercicios
+            .Include(te => te.Etapas)
+            .FirstOrDefaultAsync(te => te.Id == id, ct);
+
+    public async Task<(string Codigo, string Nome)?> ObterMetricaAsync(
+        short metricaId, CancellationToken ct)
+    {
+        var m = await _db.Metricas
+            .Where(x => x.Id == metricaId)
+            .Select(x => new { x.Codigo, x.Nome })
+            .FirstOrDefaultAsync(ct);
+        return m is null ? null : (m.Codigo, m.Nome);
+    }
+
     public Task<List<TreinoExercicio>> ObterExerciciosDaFichaAsync(Guid treinoId, CancellationToken ct) =>
         _db.TreinoExercicios
             .Where(te => te.TreinoId == treinoId)
@@ -100,6 +116,10 @@ public sealed class RepositorioPlano : IRepositorioPlano
             .ToListAsync(ct);
         return ordens.Count == 0 ? (short)0 : ordens.Max()!.Value;
     }
+
+    public void AdicionarEtapa(EtapaPrescrita etapa) => _db.EtapasPrescritas.Add(etapa);
+
+    public void RemoverEtapa(EtapaPrescrita etapa) => _db.EtapasPrescritas.Remove(etapa);
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 }
