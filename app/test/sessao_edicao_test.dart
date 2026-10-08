@@ -132,4 +132,78 @@ void main() {
       expect(ed.series.first.intensidadeTexto, '12,5');
     });
   });
+
+  group('Editar séries (PBI-16)', () {
+    test('adicionar série copia os valores da última e numera a próxima rodada', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.series.first.intensidade.text = '35';
+      ed.series.first.volume.text = '8';
+
+      ed.adicionarSerie();
+
+      expect(ed.series, hasLength(2));
+      expect(ed.series[1].rodada, 2);
+      expect(ed.series[1].intensidade.text, '35');
+      expect(ed.series[1].volume.text, '8');
+    });
+
+    test('remover série renumera as rodadas na sequência', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.adicionarSerie();
+      ed.adicionarSerie();
+      expect(ed.series.map((s) => s.rodada), [1, 2, 3]);
+
+      ed.removerSerie(0);
+
+      expect(ed.series, hasLength(2));
+      expect(ed.series.map((s) => s.rodada), [1, 2]);
+    });
+
+    test('resumo lista as séries preenchidas', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.adicionarSerie();
+      ed.series[0].intensidade.text = '30';
+      ed.series[0].volume.text = '10';
+      ed.series[1].intensidade.text = '35';
+      ed.series[1].volume.text = '8';
+
+      expect(ed.resumo, '2 séries · 30 × 10, 35 × 8');
+    });
+
+    test('resumo de exercício não realizado', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.realizado = false;
+      expect(ed.resumo, 'Não realizado');
+    });
+
+    test('resumo de peso corporal mostra só o volume', () {
+      final prancha = RascunhoExercicio(
+        treinoExercicioId: 'te4',
+        exercicioId: 'e4',
+        nome: 'Prancha',
+        grupoMuscular: 'core',
+        modalidade: 'ISOMETRIA',
+        ordem: 1,
+        origemPreenchimento: null,
+        series: const [
+          SerieRascunho(
+            rodada: 1,
+            ordem: 1,
+            tipo: 'ESFORCO',
+            intensidadeMetricaId: 2,
+            intensidadeMetricaCodigo: 'PESO_CORPORAL',
+            intensidadeMetricaNome: 'Peso corporal',
+            intensidade: null,
+            volumeMetricaId: 11,
+            volumeMetricaCodigo: 'TEMPO_SEG',
+            volumeMetricaNome: 'Tempo',
+            volume: 45,
+            descansoSeg: null,
+          ),
+        ],
+      );
+      final ed = ExercicioEdicao.doRascunho(prancha);
+      expect(ed.resumo, '1 série · 45');
+    });
+  });
 }

@@ -13,7 +13,8 @@ import 'sessao_models.dart';
 import 'sessao_repository.dart';
 
 /// Tela 3 do protótipo: registrar o treino de uma ficha, com as séries já
-/// preenchidas pelo histórico ou pelos alvos (PBI-15).
+/// preenchidas pelo histórico ou pelos alvos (PBI-15) e edição das séries
+/// durante o registro — adicionar, remover, recolher o resumo (PBI-16).
 class RegistrarSessaoScreen extends ConsumerWidget {
   const RegistrarSessaoScreen({
     super.key,
@@ -70,6 +71,11 @@ class _FormularioState extends ConsumerState<_Formulario> {
   void dispose() {
     _duracao.dispose();
     _observacao.dispose();
+    for (final ex in _exercicios) {
+      for (final s in ex.series) {
+        s.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -162,8 +168,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
               else
                 for (final ex in _exercicios)
                   _CardExercicio(
+                    key: ValueKey(ex.treinoExercicioId),
                     exercicio: ex,
-                    aoAlternarRealizado: (v) => setState(() => ex.realizado = v),
+                    aoMudar: () => setState(() {}),
                   ),
               const SizedBox(height: AppSpacing.x16),
               TextField(
@@ -235,14 +242,17 @@ class _CampoDuracao extends StatelessWidget {
   }
 }
 
+/// Card de um exercício no registro: recolhe para mostrar o resumo, ou expande
+/// para editar as séries (adicionar, remover, ajustar valores). PBI-16.
 class _CardExercicio extends StatelessWidget {
   const _CardExercicio({
+    super.key,
     required this.exercicio,
-    required this.aoAlternarRealizado,
+    required this.aoMudar,
   });
 
   final ExercicioEdicao exercicio;
-  final ValueChanged<bool> aoAlternarRealizado;
+  final VoidCallback aoMudar;
 
   @override
   Widget build(BuildContext context) {
@@ -264,47 +274,122 @@ class _CardExercicio extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(exercicio.nome, style: AppText.title),
-                    if (subtitulo.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.x4),
-                      Text(subtitulo,
-                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+          // Cabeçalho tocável: recolhe/expande.
+          InkWell(
+            onTap: () {
+              exercicio.recolhido = !exercicio.recolhido;
+              aoMudar();
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(exercicio.nome, style: AppText.title),
+                      if (subtitulo.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.x4),
+                        Text(subtitulo,
+                            style: AppText.caption.copyWith(color: cores.textSecondary)),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Semantics(
-                label: exercicio.realizado
-                    ? 'Marcar ${exercicio.nome} como não realizado'
-                    : 'Marcar ${exercicio.nome} como realizado',
-                child: Switch(
-                  value: exercicio.realizado,
-                  onChanged: aoAlternarRealizado,
+                Icon(
+                  exercicio.recolhido ? LucideIcons.chevronDown : LucideIcons.chevronUp,
+                  size: AppSizes.iconeSm,
+                  color: cores.iconMuted,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          if (exercicio.origemPreenchimento != null) ...[
+          if (exercicio.recolhido) ...[
             const SizedBox(height: AppSpacing.x8),
-            _AvisoOrigem(texto: exercicio.origemPreenchimento!, cores: cores),
+            Text(exercicio.resumo,
+                style: AppText.bodyS.copyWith(color: cores.textSecondary)),
+          ] else ...[
+            if (exercicio.origemPreenchimento != null) ...[
+              const SizedBox(height: AppSpacing.x8),
+              _AvisoOrigem(texto: exercicio.origemPreenchimento!, cores: cores),
+            ],
+            const SizedBox(height: AppSpacing.x12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    exercicio.realizado ? 'Realizado' : 'Não realizado',
+                    style: AppText.label.copyWith(
+                      color: exercicio.realizado ? cores.textStrong : cores.textSecondary,
+                    ),
+                  ),
+                ),
+                Semantics(
+                  label: exercicio.realizado
+                      ? 'Marcar ${exercicio.nome} como não realizado'
+                      : 'Marcar ${exercicio.nome} como realizado',
+                  child: Switch(
+                    value: exercicio.realizado,
+                    onChanged: (v) {
+                      exercicio.realizado = v;
+                      aoMudar();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (exercicio.realizado) _CorpoSeries(exercicio: exercicio, aoMudar: aoMudar),
           ],
-          const SizedBox(height: AppSpacing.x12),
-          if (!exercicio.realizado)
-            Text('Não realizado neste treino.',
-                style: AppText.bodyS.copyWith(color: cores.textSecondary))
-          else if (exercicio.series.isEmpty)
-            Text('Sem séries sugeridas. Marque como não realizado se não fez.',
-                style: AppText.bodyS.copyWith(color: cores.textSecondary))
-          else
-            for (final s in exercicio.series) _LinhaSerie(serie: s),
         ],
       ),
+    );
+  }
+}
+
+/// Lista editável de séries + botão "adicionar série".
+class _CorpoSeries extends StatelessWidget {
+  const _CorpoSeries({required this.exercicio, required this.aoMudar});
+
+  final ExercicioEdicao exercicio;
+  final VoidCallback aoMudar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    if (exercicio.series.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.x8),
+        child: Text('Sem séries sugeridas. Marque como não realizado se não fez.',
+            style: AppText.bodyS.copyWith(color: cores.textSecondary)),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.x8),
+        for (var i = 0; i < exercicio.series.length; i++)
+          _LinhaSerie(
+            key: ValueKey(exercicio.series[i].id),
+            serie: exercicio.series[i],
+            podeRemover: exercicio.series.length > 1,
+            aoRemover: () {
+              exercicio.removerSerie(i);
+              aoMudar();
+            },
+          ),
+        const SizedBox(height: AppSpacing.x4),
+        SizedBox(
+          height: AppSizes.touchMin,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              exercicio.adicionarSerie();
+              aoMudar();
+            },
+            icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+            label: const Text('Adicionar série'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -340,11 +425,19 @@ class _AvisoOrigem extends StatelessWidget {
   }
 }
 
-/// Uma linha de série editável: rótulo da rodada + campos de intensidade,
-/// volume e descanso conforme as métricas do exercício.
+/// Uma linha de série editável. Peso corporal mostra o selo "Intensidade: peso
+/// corporal" no lugar do campo de carga (MER 3.11, critério do PBI-16).
 class _LinhaSerie extends StatelessWidget {
-  const _LinhaSerie({required this.serie});
+  const _LinhaSerie({
+    super.key,
+    required this.serie,
+    required this.podeRemover,
+    required this.aoRemover,
+  });
+
   final SerieEdicao serie;
+  final bool podeRemover;
+  final VoidCallback aoRemover;
 
   @override
   Widget build(BuildContext context) {
@@ -355,40 +448,40 @@ class _LinhaSerie extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           SizedBox(
-            width: 28,
+            width: 24,
             child: Text('${serie.rodada}',
                 style: AppText.numeralS.copyWith(color: cores.textSecondary)),
           ),
-          const SizedBox(width: AppSpacing.x8),
+          const SizedBox(width: AppSpacing.x6),
           if (serie.intensidadePorPesoCorporal)
-            Expanded(
-              child: _SeloPesoCorporal(cores: cores),
-            )
+            Expanded(child: _SeloPesoCorporal(cores: cores))
           else
             Expanded(
               child: _CampoNumero(
                 rotulo: serie.intensidadeMetricaNome,
-                valorInicial: serie.intensidadeTexto,
-                aoMudar: (v) => serie.intensidadeTexto = v,
+                controlador: serie.intensidade,
               ),
             ),
-          const SizedBox(width: AppSpacing.x8),
+          const SizedBox(width: AppSpacing.x6),
           Expanded(
             child: _CampoNumero(
               rotulo: serie.volumeMetricaNome,
-              valorInicial: serie.volumeTexto,
-              aoMudar: (v) => serie.volumeTexto = v,
+              controlador: serie.volume,
             ),
           ),
-          const SizedBox(width: AppSpacing.x8),
+          const SizedBox(width: AppSpacing.x6),
           SizedBox(
-            width: 72,
+            width: 64,
             child: _CampoNumero(
               rotulo: 'Desc.',
-              valorInicial: serie.descansoTexto,
+              controlador: serie.descanso,
               somenteInteiro: true,
-              aoMudar: (v) => serie.descansoTexto = v,
             ),
+          ),
+          IconButton(
+            onPressed: podeRemover ? aoRemover : null,
+            icon: Icon(LucideIcons.x, size: AppSizes.iconeSm, color: cores.danger),
+            tooltip: 'Remover série',
           ),
         ],
       ),
@@ -402,67 +495,48 @@ class _SeloPesoCorporal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: AppSizes.campoSerie,
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
-      decoration: BoxDecoration(
-        color: cores.bgInput,
-        borderRadius: BorderRadius.circular(AppRadius.campoSerie),
-        border: Border.all(color: cores.lineDefault),
+    return Semantics(
+      label: 'Intensidade: peso corporal',
+      child: Container(
+        height: AppSizes.campoSerie,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+        decoration: BoxDecoration(
+          color: cores.bgInput,
+          borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+          border: Border.all(color: cores.lineDefault),
+        ),
+        child: Text('Peso corporal',
+            style: AppText.caption.copyWith(color: cores.textSecondary)),
       ),
-      child: Text('Peso corporal',
-          style: AppText.caption.copyWith(color: cores.textSecondary)),
     );
   }
 }
 
-class _CampoNumero extends StatefulWidget {
+class _CampoNumero extends StatelessWidget {
   const _CampoNumero({
     required this.rotulo,
-    required this.valorInicial,
-    required this.aoMudar,
+    required this.controlador,
     this.somenteInteiro = false,
   });
 
   final String rotulo;
-  final String valorInicial;
-  final ValueChanged<String> aoMudar;
+  final TextEditingController controlador;
   final bool somenteInteiro;
-
-  @override
-  State<_CampoNumero> createState() => _CampoNumeroState();
-}
-
-class _CampoNumeroState extends State<_CampoNumero> {
-  late final TextEditingController _controlador;
-
-  @override
-  void initState() {
-    super.initState();
-    _controlador = TextEditingController(text: widget.valorInicial);
-  }
-
-  @override
-  void dispose() {
-    _controlador.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: _controlador,
-      keyboardType: TextInputType.numberWithOptions(decimal: !widget.somenteInteiro),
+      controller: controlador,
+      keyboardType: TextInputType.numberWithOptions(decimal: !somenteInteiro),
       inputFormatters: [
         FilteringTextInputFormatter.allow(
-          widget.somenteInteiro ? RegExp(r'[0-9]') : RegExp(r'[0-9.,]'),
+          somenteInteiro ? RegExp(r'[0-9]') : RegExp(r'[0-9.,]'),
         ),
       ],
       style: AppText.inputValue,
-      onChanged: widget.aoMudar,
       decoration: InputDecoration(
-        labelText: widget.rotulo,
+        labelText: rotulo,
         isDense: true,
       ),
     );
