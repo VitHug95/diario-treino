@@ -42,5 +42,39 @@ public sealed class RepositorioSessao : IRepositorioSessao
         return (sessao.Data, series);
     }
 
+    // ---- Ver / editar / excluir (PBI-18) ----
+
+    public async Task<Guid?> ObterAtletaDaSessaoAsync(Guid sessaoId, CancellationToken ct)
+    {
+        var atleta = await _db.Sessoes
+            .Where(s => s.Id == sessaoId)
+            .Select(s => (Guid?)s.AtletaId)
+            .FirstOrDefaultAsync(ct);
+        return atleta;
+    }
+
+    public async Task<Sessao?> ObterSessaoComSeriesAsync(Guid sessaoId, CancellationToken ct)
+    {
+        var sessao = await _db.Sessoes.FirstOrDefaultAsync(s => s.Id == sessaoId, ct);
+        if (sessao is null)
+        {
+            return null;
+        }
+
+        sessao.Series = await _db.SeriesExecutadas
+            .Where(se => se.SessaoId == sessaoId)
+            .OrderBy(se => se.Rodada)
+            .ThenBy(se => se.Ordem)
+            .ToListAsync(ct);
+
+        return sessao;
+    }
+
+    public void RemoverSessao(Sessao sessao) => _db.Sessoes.Remove(sessao);
+
+    public void RemoverSerie(SerieExecutada serie) => _db.SeriesExecutadas.Remove(serie);
+
+    public void AdicionarSerie(SerieExecutada serie) => _db.SeriesExecutadas.Add(serie);
+
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 }
