@@ -1,3 +1,5 @@
+import 'package:diario_treino/features/catalogo/exercicio_resumo.dart';
+import 'package:diario_treino/features/catalogo/metrica.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,6 +206,47 @@ void main() {
       );
       final ed = ExercicioEdicao.doRascunho(prancha);
       expect(ed.resumo, '1 série · 45');
+    });
+  });
+
+  group('Exercício fora da ficha (PBI-17)', () {
+    final metricas = {
+      'CARGA_KG': const Metrica(
+          id: 1, codigo: 'CARGA_KG', nome: 'Carga', unidade: 'kg', eixo: 'INTENSIDADE'),
+      'REPETICOES': const Metrica(
+          id: 10, codigo: 'REPETICOES', nome: 'Repetições', unidade: 'rep', eixo: 'VOLUME'),
+    };
+
+    ExercicioResumo item() => const ExercicioResumo(
+          id: 'ex-novo',
+          nome: 'Rosca direta',
+          grupoMuscular: 'bíceps',
+          modalidade: 'FORCA',
+          intensidadeMetricaCodigo: 'CARGA_KG',
+          intensidadeMetricaNome: 'Carga',
+          volumeMetricaCodigo: 'REPETICOES',
+          volumeMetricaNome: 'Repetições',
+          proprio: false,
+        );
+
+    test('monta sem vínculo com o prescrito e resolve as métricas por código', () {
+      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(item(), metricas);
+
+      expect(ed.treinoExercicioId, isNull);
+      expect(ed.foraDaFicha, isTrue);
+      expect(ed.realizado, isTrue);
+      expect(ed.exercicioId, 'ex-novo');
+      final s = ed.series.single;
+      expect(s.intensidadeMetricaId, 1);
+      expect(s.volumeMetricaId, 10);
+      expect(s.intensidadeTexto, '');
+      expect(s.volumeTexto, '');
+    });
+
+    test('começa com uma série vazia', () {
+      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(item(), metricas);
+      expect(ed.series, hasLength(1));
+      expect(ed.series.first.rodada, 1);
     });
   });
 }
