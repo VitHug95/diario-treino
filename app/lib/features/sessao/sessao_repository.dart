@@ -30,14 +30,75 @@ class SessaoRepository {
     return RascunhoSessao.doJson(resposta.data!);
   }
 
-  /// Grava a sessão. Exercícios não realizados ou sem séries ficam de fora.
-  Future<void> criarSessao({
+  /// Grava a sessão e devolve o id criado. Exercícios não realizados ou sem
+  /// séries ficam de fora.
+  Future<String> criarSessao({
     required String? treinoId,
     required DateTime data,
     int? duracaoMin,
     String? observacao,
     required List<ExercicioEdicao> exercicios,
   }) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>('/sessoes', data: _corpoSessao(
+        treinoId: treinoId,
+        data: data,
+        duracaoMin: duracaoMin,
+        observacao: observacao,
+        exercicios: exercicios,
+      ));
+      return resposta.data!['id'] as String;
+    } on DioException catch (e) {
+      throw SessaoException(_traduzir(e));
+    }
+  }
+
+  /// Detalhe de uma sessão registrada (PBI-18).
+  Future<SessaoDetalhe> obterSessao(String sessaoId) async {
+    final resposta = await _dio.get<Map<String, dynamic>>('/sessoes/$sessaoId');
+    return SessaoDetalhe.doJson(resposta.data!);
+  }
+
+  /// Edita uma sessão existente (PBI-18): troca data/duração/observação e as
+  /// séries pelas atuais.
+  Future<void> editarSessao({
+    required String sessaoId,
+    required String? treinoId,
+    required DateTime data,
+    int? duracaoMin,
+    String? observacao,
+    required List<ExercicioEdicao> exercicios,
+  }) async {
+    try {
+      await _dio.put<void>('/sessoes/$sessaoId', data: _corpoSessao(
+        treinoId: treinoId,
+        data: data,
+        duracaoMin: duracaoMin,
+        observacao: observacao,
+        exercicios: exercicios,
+      ));
+    } on DioException catch (e) {
+      throw SessaoException(_traduzir(e));
+    }
+  }
+
+  /// Exclui uma sessão (PBI-18).
+  Future<void> excluirSessao(String sessaoId) async {
+    try {
+      await _dio.delete<void>('/sessoes/$sessaoId');
+    } on DioException catch (e) {
+      throw SessaoException(_traduzir(e));
+    }
+  }
+
+  /// Monta o corpo compartilhado por criar/editar sessão.
+  Map<String, dynamic> _corpoSessao({
+    required String? treinoId,
+    required DateTime data,
+    int? duracaoMin,
+    String? observacao,
+    required List<ExercicioEdicao> exercicios,
+  }) {
     final corpoExercicios = <Map<String, dynamic>>[];
     for (final e in exercicios) {
       final series = e.realizado ? _serializarSeries(e.series) : const [];
@@ -47,18 +108,13 @@ class SessaoRepository {
         'series': series,
       });
     }
-
-    try {
-      await _dio.post<Map<String, dynamic>>('/sessoes', data: {
-        'treinoId': treinoId,
-        'data': _soData(data),
-        'duracaoMin': duracaoMin,
-        'observacao': observacao,
-        'exercicios': corpoExercicios,
-      });
-    } on DioException catch (e) {
-      throw SessaoException(_traduzir(e));
-    }
+    return {
+      'treinoId': treinoId,
+      'data': _soData(data),
+      'duracaoMin': duracaoMin,
+      'observacao': observacao,
+      'exercicios': corpoExercicios,
+    };
   }
 
   static List<Map<String, dynamic>> _serializarSeries(List<SerieEdicao> series) {
@@ -121,3 +177,9 @@ final metricasPorCodigoProvider =
   final metricas = await ref.watch(catalogoRepositoryProvider).listarMetricas();
   return {for (final m in metricas) m.codigo: m};
 });
+
+/// Detalhe de uma sessão registrada, por id (PBI-18).
+final sessaoDetalheProvider =
+    FutureProvider.autoDispose.family<SessaoDetalhe, String>(
+  (ref, sessaoId) => ref.watch(sessaoRepositoryProvider).obterSessao(sessaoId),
+);

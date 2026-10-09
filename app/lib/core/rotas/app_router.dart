@@ -10,6 +10,7 @@ import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
+import '../../features/sessao/detalhe_sessao_screen.dart';
 import '../../features/sessao/registrar_sessao_screen.dart';
 import 'shell_navegacao.dart';
 
@@ -25,6 +26,7 @@ abstract final class Rotas {
   static const exercicios = '/exercicios';
   static const criarExercicio = '/exercicios/novo';
   static const registrarSessao = '/fichas/registrar';
+  static const detalheSessao = '/sessoes';
 }
 
 /// Dados passados ao abrir o registro de sessão (via `extra`).
@@ -32,6 +34,13 @@ class RegistrarSessaoArgs {
   const RegistrarSessaoArgs({required this.treinoId, required this.treinoNome});
   final String treinoId;
   final String treinoNome;
+}
+
+/// Dados passados ao abrir o detalhe de uma sessão (via `extra`).
+class DetalheSessaoArgs {
+  const DetalheSessaoArgs({required this.sessaoId, this.treinoNome});
+  final String sessaoId;
+  final String? treinoNome;
 }
 
 /// go_router com casca de navegação inferior (Início/Fichas/Progresso) e
@@ -93,6 +102,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                             const CriarExercicioScreen(),
                       ),
                     ],
+                  ),
+                  // Detalhe de uma sessão registrada (PBI-18).
+                  GoRoute(
+                    path: 'sessoes',
+                    name: 'detalheSessao',
+                    builder: (context, state) {
+                      final args = state.extra as DetalheSessaoArgs?;
+                      return DetalheSessaoScreen(
+                        sessaoId: args?.sessaoId ?? '',
+                        treinoNome: args?.treinoNome,
+                      );
+                    },
                   ),
                 ],
               ),
