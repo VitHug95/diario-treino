@@ -217,7 +217,7 @@ void main() {
           id: 10, codigo: 'REPETICOES', nome: 'Repetições', unidade: 'rep', eixo: 'VOLUME'),
     };
 
-    ExercicioResumo _item() => const ExercicioResumo(
+    ExercicioResumo item() => const ExercicioResumo(
           id: 'ex-novo',
           nome: 'Rosca direta',
           grupoMuscular: 'bíceps',
@@ -230,7 +230,7 @@ void main() {
         );
 
     test('monta sem vínculo com o prescrito e resolve as métricas por código', () {
-      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(_item(), metricas);
+      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(item(), metricas);
 
       expect(ed.treinoExercicioId, isNull);
       expect(ed.foraDaFicha, isTrue);
@@ -244,7 +244,7 @@ void main() {
     });
 
     test('começa com uma série vazia', () {
-      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(_item(), metricas);
+      final ed = ExercicioEdicao.foraDaFichaDoCatalogo(item(), metricas);
       expect(ed.series, hasLength(1));
       expect(ed.series.first.rodada, 1);
     });
