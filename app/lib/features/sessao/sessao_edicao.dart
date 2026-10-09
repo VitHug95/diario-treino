@@ -71,6 +71,21 @@ class SerieEdicao {
         descansoTexto: s.descansoSeg?.toString() ?? '',
       );
 
+  factory SerieEdicao.doDetalhe(SerieDetalhe s) => SerieEdicao(
+        rodada: s.rodada,
+        ordem: s.ordem,
+        tipo: s.tipo,
+        intensidadeMetricaId: s.intensidadeMetricaId,
+        intensidadeMetricaCodigo: s.intensidadeMetricaCodigo,
+        intensidadeMetricaNome: s.intensidadeMetricaNome,
+        intensidadeTexto: fmt(s.intensidade),
+        volumeMetricaId: s.volumeMetricaId,
+        volumeMetricaCodigo: s.volumeMetricaCodigo,
+        volumeMetricaNome: s.volumeMetricaNome,
+        volumeTexto: fmt(s.volume),
+        descansoTexto: s.descansoSeg?.toString() ?? '',
+      );
+
   /// Cria uma cópia desta série (mesmos valores e métricas) para a próxima
   /// rodada. Usado pelo "adicionar série copia a anterior".
   SerieEdicao copiarComoRodada(int novaRodada) => SerieEdicao(
@@ -139,6 +154,20 @@ class ExercicioEdicao {
         series: e.series.map(SerieEdicao.doRascunho).toList(),
         // Começa marcado como realizado quando já há séries sugeridas.
         realizado: e.series.isNotEmpty,
+      );
+
+  /// Monta um exercício para edição a partir do detalhe da sessão (PBI-18).
+  /// Exercício não realizado começa desmarcado; os feitos trazem suas séries.
+  factory ExercicioEdicao.doDetalhe(ExercicioSessaoDetalhe e) => ExercicioEdicao(
+        treinoExercicioId: e.treinoExercicioId,
+        exercicioId: e.exercicioId,
+        nome: e.nome,
+        grupoMuscular: e.grupoMuscular,
+        modalidade: e.modalidade,
+        origemPreenchimento: e.plano != null ? 'Plano: ${e.plano}' : null,
+        series: e.series.map(SerieEdicao.doDetalhe).toList(),
+        realizado: !e.naoRealizado,
+        foraDaFicha: e.foraDaFicha,
       );
 
   /// Monta um exercício fora da ficha (PBI-17) a partir do item do catálogo.

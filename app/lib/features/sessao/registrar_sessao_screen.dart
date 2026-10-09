@@ -11,44 +11,93 @@ import '../../theme/theme_tokens.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import 'sessao_edicao.dart';
-import 'sessao_models.dart';
 import 'sessao_repository.dart';
 
 /// Tela 3 do protótipo: registrar o treino de uma ficha, com as séries já
 /// preenchidas pelo histórico ou pelos alvos (PBI-15) e edição das séries
 /// durante o registro — adicionar, remover, recolher o resumo (PBI-16).
+///
+/// Em modo edição (PBI-18), [sessaoId] é informado: a tela abre com os dados da
+/// sessão existente e salva via PUT em vez de criar.
 class RegistrarSessaoScreen extends ConsumerWidget {
   const RegistrarSessaoScreen({
     super.key,
     required this.treinoId,
     required this.treinoNome,
+    this.sessaoId,
   });
 
   final String treinoId;
   final String treinoNome;
 
+  /// Nulo = registrar novo; preenchido = editar a sessão existente.
+  final String? sessaoId;
+
+  bool get _editando => sessaoId != null;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rascunho = ref.watch(rascunhoSessaoProvider(treinoId));
+    final titulo = _editando ? 'Editar treino' : 'Registrar $treinoNome';
 
+    // Edição: carrega a sessão existente. Novo: carrega o rascunho da ficha.
+    if (_editando) {
+      final detalhe = ref.watch(sessaoDetalheProvider(sessaoId!));
+      return Scaffold(
+        appBar: AppBar(title: Text(titulo)),
+        body: detalhe.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => _ErroCarregar(
+            aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId!)),
+          ),
+          data: (dados) => _Formulario(
+            treinoId: dados.treinoId,
+            sessaoId: sessaoId,
+            data: dados.data,
+            duracaoMin: dados.duracaoMin,
+            observacao: dados.observacao,
+            exercicios: dados.exercicios.map(ExercicioEdicao.doDetalhe).toList(),
+          ),
+        ),
+      );
+    }
+
+    final rascunho = ref.watch(rascunhoSessaoProvider(treinoId));
     return Scaffold(
-      appBar: AppBar(title: Text('Registrar $treinoNome')),
+      appBar: AppBar(title: Text(titulo)),
       body: rascunho.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _ErroCarregar(
           aoTentar: () => ref.invalidate(rascunhoSessaoProvider(treinoId)),
         ),
-        data: (dados) => _Formulario(treinoId: treinoId, rascunho: dados),
+        data: (dados) => _Formulario(
+          treinoId: treinoId,
+          sessaoId: null,
+          data: dados.data,
+          duracaoMin: null,
+          observacao: null,
+          exercicios: dados.exercicios.map(ExercicioEdicao.doRascunho).toList(),
+        ),
       ),
     );
   }
 }
 
 class _Formulario extends ConsumerStatefulWidget {
-  const _Formulario({required this.treinoId, required this.rascunho});
+  const _Formulario({
+    required this.treinoId,
+    required this.sessaoId,
+    required this.data,
+    required this.duracaoMin,
+    required this.observacao,
+    required this.exercicios,
+  });
 
-  final String treinoId;
-  final RascunhoSessao rascunho;
+  final String? treinoId;
+  final String? sessaoId;
+  final DateTime data;
+  final int? duracaoMin;
+  final String? observacao;
+  final List<ExercicioEdicao> exercicios;
 
   @override
   ConsumerState<_Formulario> createState() => _FormularioState();
@@ -61,12 +110,15 @@ class _FormularioState extends ConsumerState<_Formulario> {
   final _observacao = TextEditingController();
   bool _salvando = false;
 
+  bool get _editando => widget.sessaoId != null;
+
   @override
   void initState() {
     super.initState();
-    _data = widget.rascunho.data;
-    _exercicios =
-        widget.rascunho.exercicios.map(ExercicioEdicao.doRascunho).toList();
+    _data = widget.data;
+    _exercicios = widget.exercicios;
+    if (widget.duracaoMin != null) _duracao.text = widget.duracaoMin.toString();
+    if (widget.observacao != null) _observacao.text = widget.observacao!;
   }
 
   @override
@@ -116,15 +168,33 @@ class _FormularioState extends ConsumerState<_Formulario> {
   Future<void> _salvar() async {
     setState(() => _salvando = true);
     try {
-      await ref.read(sessaoRepositoryProvider).criarSessao(
-            treinoId: widget.treinoId,
-            data: _data,
-            duracaoMin: int.tryParse(_duracao.text.trim()),
-            observacao:
-                _observacao.text.trim().isEmpty ? null : _observacao.text.trim(),
-            exercicios: _exercicios,
-          );
-      if (mounted) await _confirmar();
+      final repo = ref.read(sessaoRepositoryProvider);
+      final duracao = int.tryParse(_duracao.text.trim());
+      final obs = _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
+
+      if (_editando) {
+        await repo.editarSessao(
+          sessaoId: widget.sessaoId!,
+          treinoId: widget.treinoId,
+          data: _data,
+          duracaoMin: duracao,
+          observacao: obs,
+          exercicios: _exercicios,
+        );
+        if (!mounted) return;
+        // Atualiza o detalhe e volta para a tela de visualização.
+        ref.invalidate(sessaoDetalheProvider(widget.sessaoId!));
+        Navigator.of(context).pop(true);
+      } else {
+        final sessaoId = await repo.criarSessao(
+          treinoId: widget.treinoId,
+          data: _data,
+          duracaoMin: duracao,
+          observacao: obs,
+          exercicios: _exercicios,
+        );
+        if (mounted) await _confirmarRegistro(sessaoId);
+      }
     } on SessaoException catch (e) {
       _erro(e.mensagem);
     } finally {
@@ -132,7 +202,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
     }
   }
 
-  Future<void> _confirmar() async {
+  Future<void> _confirmarRegistro(String sessaoId) async {
     final acao = await showDialog<_AcaoPosRegistro>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -143,6 +213,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
             onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.inicio),
             child: const Text('Ir para o Início'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.verTreino),
+            child: const Text('Ver o treino'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.progresso),
             child: const Text('Ver progresso'),
@@ -152,6 +226,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
     );
     if (!mounted) return;
     switch (acao) {
+      case _AcaoPosRegistro.verTreino:
+        context.go(Rotas.inicio);
+        context.push(Rotas.detalheSessao, extra: DetalheSessaoArgs(sessaoId: sessaoId));
       case _AcaoPosRegistro.progresso:
         context.go(Rotas.progresso);
       case _AcaoPosRegistro.inicio:
@@ -218,13 +295,17 @@ class _FormularioState extends ConsumerState<_Formulario> {
             ],
           ),
         ),
-        _BarraSalvar(salvando: _salvando, aoSalvar: _salvar),
+        _BarraSalvar(
+          salvando: _salvando,
+          aoSalvar: _salvar,
+          rotulo: _editando ? 'SALVAR ALTERAÇÕES' : 'SALVAR TREINO',
+        ),
       ],
     );
   }
 }
 
-enum _AcaoPosRegistro { inicio, progresso }
+enum _AcaoPosRegistro { inicio, progresso, verTreino }
 
 class _CampoData extends StatelessWidget {
   const _CampoData({required this.data, required this.aoTocar});
@@ -604,8 +685,13 @@ class _CampoNumero extends StatelessWidget {
 }
 
 class _BarraSalvar extends StatelessWidget {
-  const _BarraSalvar({required this.salvando, required this.aoSalvar});
+  const _BarraSalvar({
+    required this.salvando,
+    required this.aoSalvar,
+    required this.rotulo,
+  });
 
+  final String rotulo;
   final bool salvando;
   final VoidCallback aoSalvar;
 
@@ -630,7 +716,7 @@ class _BarraSalvar extends StatelessWidget {
                     width: AppSizes.iconeSm,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('SALVAR TREINO'),
+                : Text(rotulo),
           ),
         ),
       ),

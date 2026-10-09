@@ -249,4 +249,78 @@ void main() {
       expect(ed.series.first.rodada, 1);
     });
   });
+
+  group('Editar sessão a partir do detalhe (PBI-18)', () {
+    SessaoDetalhe detalhe() => SessaoDetalhe.doJson({
+          'id': 's1',
+          'treinoId': 't1',
+          'treinoNome': 'A',
+          'data': '2026-09-29',
+          'duracaoMin': 50,
+          'observacao': 'Dormi mal',
+          'exercicios': [
+            {
+              'exercicioId': 'e1',
+              'treinoExercicioId': 'te1',
+              'nome': 'Supino reto',
+              'grupoMuscular': 'peito',
+              'modalidade': 'FORCA',
+              'ordem': 1,
+              'naoRealizado': false,
+              'foraDaFicha': false,
+              'plano': '3 × 10 com 30 Carga',
+              'series': [
+                {
+                  'rodada': 1, 'ordem': 1, 'tipo': 'ESFORCO',
+                  'intensidadeMetricaId': 1, 'intensidadeMetricaCodigo': 'CARGA_KG',
+                  'intensidadeMetricaNome': 'Carga', 'intensidade': 30,
+                  'volumeMetricaId': 10, 'volumeMetricaCodigo': 'REPETICOES',
+                  'volumeMetricaNome': 'Repetições', 'volume': 10, 'descansoSeg': 90,
+                },
+              ],
+            },
+            {
+              'exercicioId': 'e2',
+              'treinoExercicioId': 'te2',
+              'nome': 'Agachamento',
+              'grupoMuscular': 'pernas',
+              'modalidade': 'FORCA',
+              'ordem': 2,
+              'naoRealizado': true,
+              'foraDaFicha': false,
+              'plano': '4 × 8 com 50 Carga',
+              'series': <dynamic>[],
+            },
+          ],
+        });
+
+    test('parse do detalhe traz plano e flags', () {
+      final d = detalhe();
+      expect(d.treinoNome, 'A');
+      expect(d.data, DateTime(2026, 9, 29));
+      expect(d.observacao, 'Dormi mal');
+      final supino = d.exercicios[0];
+      expect(supino.plano, '3 × 10 com 30 Carga');
+      expect(supino.naoRealizado, isFalse);
+      expect(supino.series.single.volume, 10);
+      final agachamento = d.exercicios[1];
+      expect(agachamento.naoRealizado, isTrue);
+      expect(agachamento.series, isEmpty);
+    });
+
+    test('exercício feito vira edição realizada com séries', () {
+      final ed = ExercicioEdicao.doDetalhe(detalhe().exercicios[0]);
+      expect(ed.realizado, isTrue);
+      expect(ed.treinoExercicioId, 'te1');
+      expect(ed.series.single.intensidadeTexto, '30');
+      expect(ed.series.single.volumeTexto, '10');
+      expect(ed.origemPreenchimento, 'Plano: 3 × 10 com 30 Carga');
+    });
+
+    test('exercício não realizado começa desmarcado', () {
+      final ed = ExercicioEdicao.doDetalhe(detalhe().exercicios[1]);
+      expect(ed.realizado, isFalse);
+      expect(ed.series, isEmpty);
+    });
+  });
 }
