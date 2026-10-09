@@ -34,6 +34,11 @@ public sealed class ServicoCatalogoTests
 
         public Task<bool> ExisteDisponivelAsync(Guid exercicioId, Guid usuarioId, CancellationToken ct)
             => Task.FromResult(true);
+
+        public Task<IReadOnlyDictionary<Guid, ExercicioBasico>> ObterBasicosPorIdsAsync(
+            IReadOnlyCollection<Guid> ids, CancellationToken ct)
+            => Task.FromResult<IReadOnlyDictionary<Guid, ExercicioBasico>>(
+                new Dictionary<Guid, ExercicioBasico>());
     }
 
     private sealed class RepositorioMetricaFake : IRepositorioMetrica

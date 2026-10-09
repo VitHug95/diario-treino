@@ -30,4 +30,18 @@ public interface IRepositorioExercicio
     /// criado por ele próprio)?
     /// </summary>
     public Task<bool> ExisteDisponivelAsync(Guid exercicioId, Guid usuarioId, CancellationToken ct);
+
+    /// <summary>
+    /// Dados básicos (nome, grupo, modalidade) dos exercícios indicados, por id.
+    /// Usado no detalhe da sessão (PBI-18), onde a série guarda só o id.
+    /// </summary>
+    public Task<IReadOnlyDictionary<Guid, ExercicioBasico>> ObterBasicosPorIdsAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken ct);
 }
+
+/// <summary>Dados mínimos de um exercício para exibição.</summary>
+public sealed record ExercicioBasico(
+    Guid Id,
+    string Nome,
+    string? GrupoMuscular,
+    string Modalidade);

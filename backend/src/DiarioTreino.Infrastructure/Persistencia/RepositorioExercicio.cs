@@ -82,4 +82,21 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
                 && e.Ativo
                 && (e.CriadoPorId == null || e.CriadoPorId == usuarioId),
             ct);
+
+    public async Task<IReadOnlyDictionary<Guid, ExercicioBasico>> ObterBasicosPorIdsAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, ExercicioBasico>();
+        }
+
+        var itens = await _db.Exercicios
+            .AsNoTracking()
+            .Where(e => ids.Contains(e.Id))
+            .Select(e => new ExercicioBasico(e.Id, e.Nome, e.GrupoMuscular, e.Modalidade))
+            .ToListAsync(ct);
+
+        return itens.ToDictionary(e => e.Id);
+    }
 }
