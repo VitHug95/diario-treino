@@ -47,8 +47,9 @@ class CatalogoRepository {
         .toList();
   }
 
-  /// Cria um exercício próprio. Traduz os erros da API em [CatalogoException].
-  Future<void> criarExercicio({
+  /// Cria um exercício próprio e devolve o id gerado. Traduz os erros da API
+  /// em [CatalogoException].
+  Future<String> criarExercicio({
     required String nome,
     String? grupoMuscular,
     required String modalidade,
@@ -56,16 +57,24 @@ class CatalogoRepository {
     required int volumeMetricaId,
   }) async {
     try {
-      await _dio.post<Map<String, dynamic>>('/exercicios', data: {
+      final resposta = await _dio.post<Map<String, dynamic>>('/exercicios', data: {
         'nome': nome,
         'grupoMuscular': grupoMuscular,
         'modalidade': modalidade,
         'intensidadeMetricaId': intensidadeMetricaId,
         'volumeMetricaId': volumeMetricaId,
       });
+      return (resposta.data?['id'] as String?) ?? '';
     } on DioException catch (e) {
       throw CatalogoException(_traduzir(e));
     }
+  }
+
+  /// Busca um exercício específico pelo id, dentro do catálogo do usuário.
+  /// Usado após criar um exercício no seletor, para devolvê-lo já selecionado.
+  Future<ExercicioResumo?> buscarPorId(String id) async {
+    final itens = await buscar();
+    return itens.where((e) => e.id == id).firstOrNull;
   }
 
   static String _traduzir(DioException e) {

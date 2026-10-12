@@ -22,6 +22,34 @@ class DiarioTreinoApp extends ConsumerWidget {
       darkTheme: AppTheme.escuro,
       themeMode: modo,
       routerConfig: router,
+      // O app é desenhado para celular (MAS, seção 10). Em telas largas (web no
+      // computador), limita o conteúdo a 600px e centraliza, para não esticar.
+      builder: (context, child) => _LarguraMaxima(child: child),
+    );
+  }
+}
+
+/// Centraliza e limita a largura do conteúdo em telas largas. Em telas estreitas
+/// (celular), não tem efeito, pois a largura disponível já é menor que o teto.
+class _LarguraMaxima extends StatelessWidget {
+  const _LarguraMaxima({required this.child});
+
+  static const double _maxLargura = 600;
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final conteudo = child ?? const SizedBox.shrink();
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxLargura),
+          // Material garante o fundo correto do app dentro da faixa de 600px.
+          child: Material(color: Theme.of(context).scaffoldBackgroundColor, child: conteudo),
+        ),
+      ),
     );
   }
 }
