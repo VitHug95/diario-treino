@@ -61,6 +61,24 @@ public static class SessaoEndpoints
         .WithName("CriarSessao").WithTags("Sessões")
         .WithSummary("Registra uma sessão de treino");
 
+        // Lista as sessões do usuário no período (PBI-22). de/ate opcionais.
+        grupo.MapGet("/sessoes", async (
+            DateOnly? de,
+            DateOnly? ate,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoSessao sessoes,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var itens = await sessoes.ListarSessoesAsync(perfil.Id, de, ate, ct);
+            return Results.Ok(itens);
+        })
+        .WithName("ListarSessoes").WithTags("Sessões")
+        .WithSummary("Lista as sessões do atleta no período");
+
         // ---- Ver / editar / excluir (PBI-18) ----
 
         // Detalhe de uma sessão (séries por exercício, plano, não realizados).

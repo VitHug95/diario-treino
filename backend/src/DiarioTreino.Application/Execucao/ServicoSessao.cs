@@ -35,6 +35,15 @@ public sealed class ServicoSessao
     }
 
     /// <summary>
+    /// Lista as sessões do usuário logado no período (PBI-22), mais recentes
+    /// primeiro. No MVP, o atleta é o próprio usuário logado, então a listagem
+    /// filtra por ele — sessões de outros usuários nunca entram no resultado.
+    /// </summary>
+    public Task<IReadOnlyList<SessaoResumo>> ListarSessoesAsync(
+        Guid usuarioLogadoId, DateOnly? de, DateOnly? ate, CancellationToken ct) =>
+        _sessoes.ListarPorPeriodoAsync(usuarioLogadoId, de, ate, ct);
+
+    /// <summary>
     /// Monta o rascunho de sessão de uma ficha: cada exercício abre com as
     /// séries da última sessão do atleta que o contenha; sem histórico, usa os
     /// alvos prescritos (MER 5.1).

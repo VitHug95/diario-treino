@@ -103,6 +103,22 @@ public sealed record ExercicioSessaoDetalhe(
     string? Plano,
     IReadOnlyList<SerieDetalhe> Series);
 
+/// <summary>
+/// Item da listagem de sessões por período (PBI-22, GET /sessoes). Enxuto: só
+/// o que a lista mostra. "Treino livre" fica a cargo da UI (TreinoNome nulo).
+/// </summary>
+public sealed record SessaoResumo(
+    Guid Id,
+    DateOnly Data,
+    Guid? TreinoId,
+    /// <summary>Nome da ficha; nulo = treino sem ficha ("Treino livre").</summary>
+    string? TreinoNome,
+    /// <summary>Quantidade de exercícios distintos realizados na sessão.</summary>
+    int QuantidadeExercicios,
+    short? DuracaoMin,
+    /// <summary>True quando a sessão tem observação (selo "Obs.").</summary>
+    bool TemObservacao);
+
 /// <summary>Uma série feita, como aparece no detalhe da sessão.</summary>
 public sealed record SerieDetalhe(
     short Rodada,
