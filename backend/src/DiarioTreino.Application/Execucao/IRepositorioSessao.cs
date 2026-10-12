@@ -15,6 +15,14 @@ public interface IRepositorioSessao
     public Task<(DateOnly Data, IReadOnlyList<SerieExecutada> Series)?> ObterUltimaExecucaoAsync(
         Guid atletaId, Guid exercicioId, CancellationToken ct);
 
+    /// <summary>
+    /// Sessões do atleta no período (PBI-22), em ordem de data decrescente.
+    /// `de`/`ate` são limites opcionais e inclusivos. Cada item já traz o nome
+    /// da ficha, a contagem de exercícios distintos e se tem observação.
+    /// </summary>
+    public Task<IReadOnlyList<SessaoResumo>> ListarPorPeriodoAsync(
+        Guid atletaId, DateOnly? de, DateOnly? ate, CancellationToken ct);
+
     // ---- Ver / editar / excluir (PBI-18) ----
 
     /// <summary>Atleta dono da sessão, ou nulo se a sessão não existe.</summary>

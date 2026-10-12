@@ -42,6 +42,30 @@ public sealed class RepositorioSessao : IRepositorioSessao
         return (sessao.Data, series);
     }
 
+    public async Task<IReadOnlyList<SessaoResumo>> ListarPorPeriodoAsync(
+        Guid atletaId, DateOnly? de, DateOnly? ate, CancellationToken ct)
+    {
+        var consulta = _db.Sessoes.Where(s => s.AtletaId == atletaId);
+        if (de is { } d) consulta = consulta.Where(s => s.Data >= d);
+        if (ate is { } a) consulta = consulta.Where(s => s.Data <= a);
+
+        // Mais recente primeiro (usa o índice ix_sessao_atleta_data). Nome da
+        // ficha por subconsulta (nulo = treino livre); contagem de exercícios
+        // distintos nas séries resolvida no banco, sem carregar as séries.
+        return await consulta
+            .OrderByDescending(s => s.Data)
+            .ThenByDescending(s => s.CriadoEm)
+            .Select(s => new SessaoResumo(
+                s.Id,
+                s.Data,
+                s.TreinoId,
+                _db.Treinos.Where(t => t.Id == s.TreinoId).Select(t => t.Nome).FirstOrDefault(),
+                s.Series.Select(se => se.ExercicioId).Distinct().Count(),
+                s.DuracaoMin,
+                s.Observacao != null))
+            .ToListAsync(ct);
+    }
+
     // ---- Ver / editar / excluir (PBI-18) ----
 
     public async Task<Guid?> ObterAtletaDaSessaoAsync(Guid sessaoId, CancellationToken ct)
