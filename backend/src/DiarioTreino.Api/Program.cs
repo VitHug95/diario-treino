@@ -1,5 +1,6 @@
 using DiarioTreino.Api.Autenticacao;
 using DiarioTreino.Api.Endpoints;
+using DiarioTreino.Api.Infraestrutura;
 using DiarioTreino.Api.Middleware;
 using DiarioTreino.Application;
 using DiarioTreino.Infrastructure;
@@ -101,6 +102,9 @@ try
     app.MapExercicioEndpoints();
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
+
+    // Em produção, aplica as migrations pendentes antes de atender requisições.
+    await app.AplicarMigracoesSeConfiguradoAsync();
 
     app.Run();
 }

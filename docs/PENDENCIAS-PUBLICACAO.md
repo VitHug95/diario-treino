@@ -41,62 +41,84 @@ bloqueado aqui (WSL quebrado + rede). Sem banco, a API responde mas falha ao
 consultar. Por isso o caminho de teste do cliente é a **publicação** (Neon faz o
 papel do banco), não o ambiente local.
 
-## 4. Decisões que você precisa cravar
+## 4. Hospedagem escolhida
 
-1. **Hospedagem** (muda os arquivos de deploy):
-   - **Host gerenciado** (recomendado para teste rápido): API em
-     Render/Fly/Railway + front web em Netlify/Vercel/Cloudflare Pages.
-     Subdomínio grátis do próprio host, sem precisar comprar domínio agora.
-   - **VPS + Caddy** (o que o backlog previa): mais controle, mais setup
-     (docker-compose de produção + Caddyfile + HTTPS automático).
-2. **Nome/domínio**: ainda provisório. Para o teste, dá para usar o subdomínio
-   grátis do host. Domínio próprio fica para depois.
+**Fly.io (API) + Netlify (front web) + Neon (banco Postgres).**
 
-## 5. O que você vai configurar na máquina liberada (precisa de rede/credenciais)
+- Os **dados ficam no Neon** (banco gerenciado). Fly e Netlify são
+  descartáveis/reconstruíveis sem perder dados.
+- Plano free do Fly pode "adormecer" a API por inatividade: a 1ª chamada após
+  ociosidade demora alguns segundos a dezenas de segundos para a API acordar.
+  Isso é lentidão pontual, **não** perda de dados. Para eliminar: subir
+  `min_machines_running = 1` no fly.toml (pode ter custo), ou plano pago baixo.
+- Nome/domínio ainda provisório: usar os subdomínios grátis
+  (`*.fly.dev`, `*.netlify.app`). Domínio próprio depois.
 
-Nenhum destes dá para fazer na máquina bloqueada:
+Arquivos de deploy já versionados nesta branch:
+- `backend/Dockerfile` — imagem da API (.NET 10, multi-stage).
+- `backend/fly.toml` — config do Fly (porta 8080, health check em `/health`).
+- `app/netlify.toml` — build e publish do front (SPA redirect incluso).
 
-- [ ] **Neon**: criar o projeto Postgres, copiar a connection string.
-      Formato esperado pela API (Npgsql):
-      `Host=...;Port=5432;Database=...;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true`
-      (o Neon dá uma URL `postgres://...`; converter para o formato
-      chave=valor acima, ou usar o formato que o Npgsql aceitar).
-- [ ] **Host da API**: criar o serviço, subir a imagem Docker, e definir as
-      variáveis de ambiente:
-      - `ConnectionStrings__DiarioTreino` = (connection string do Neon)
-      - `Cors__OrigensPermitidas__0` = (URL do front publicado, ex.:
-        `https://diario-treino.netlify.app`)
-      - `Firebase__ProjectId` = `diario-treino-c21b6` (já é o default, confirmar)
-      - `ASPNETCORE_ENVIRONMENT` = `Production`
-- [ ] **Host do front web**: publicar o build web, apontando a API:
-      `flutter build web --release --dart-define=API_BASE_URL=https://SUA-API/api/v1`
-- [ ] **Firebase Auth**: adicionar o domínio de produção do front em
-      *Authentication → Settings → Authorized domains*. Sem isso o login quebra
-      fora do localhost.
-- [ ] **Migrations no Neon**: aplicar o schema do zero. Se a API aplicar
-      migrations no startup (ver item 6), basta subir a API apontando pro Neon.
-      Senão, rodar manualmente:
-      `dotnet ef database update --project backend/src/DiarioTreino.Infrastructure --startup-project backend/src/DiarioTreino.Api`
-      com a connection string do Neon na variável de ambiente.
+## 5. Passo a passo na máquina liberada (precisa de rede/credenciais)
 
-## 6. O que o Kiro ainda vai preparar (código, sem rede) — PENDENTE
+### 5.1 Neon (banco)
+- [ ] Criar conta/projeto no Neon e um banco (ex.: `diariotreino`).
+- [ ] Copiar a connection string. O Neon dá uma URL `postgres://user:senha@host/db?sslmode=require`.
+      Converter para o formato que o Npgsql espera:
+      `Host=HOST;Database=DB;Username=USER;Password=SENHA;SSL Mode=Require;Trust Server Certificate=true`
 
-Estes itens são código e serão feitos na branch `feat/pbi-04-publicacao`.
-**Ainda NÃO estão prontos** no momento deste handoff (dependem da escolha de
-hospedagem no item 4):
+### 5.2 Fly (API)
+- [ ] Instalar o `flyctl` e `fly auth login`.
+- [ ] Na pasta `backend/`, ajustar `app` no `fly.toml` para um nome único.
+- [ ] `fly launch --no-deploy` (ou `fly apps create <nome>`), confirmando a região `gru`.
+- [ ] Definir os segredos (NÃO vão no git):
+      ```
+      fly secrets set ConnectionStrings__DiarioTreino="Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true"
+      fly secrets set Cors__OrigensPermitidas__0="https://SEU-FRONT.netlify.app"
+      fly secrets set Firebase__ProjectId="diario-treino-c21b6"
+      ```
+- [ ] `fly deploy` (usa o Dockerfile). No 1º start, a API aplica as migrations
+      no Neon automaticamente (produção). Conferir nos logs: `fly logs`.
+- [ ] Testar: `https://SEU-APP.fly.dev/health` deve responder 200.
 
-- [ ] **Dockerfile** da API (.NET 10, multi-stage build).
-- [ ] **Migrations no startup**: a API aplica as migrations pendentes ao subir
-      (para o Neon nascer pronto sem passo manual). Alternativa: passo de deploy.
-- [ ] Arquivo de deploy conforme a hospedagem:
-      - gerenciado: `render.yaml` (ou equivalente do host escolhido);
-      - VPS: `docker-compose.prod.yml` + `Caddyfile`.
-- [ ] Pipeline de deploy no CI (deploy automático a cada merge na `main`,
-      conforme o critério do PBI-04) — opcional para o primeiro teste manual.
+### 5.3 Netlify (front)
+- [ ] No `app/netlify.toml`, trocar a URL do `--dart-define=API_BASE_URL` pela
+      URL real da API no Fly (`https://SEU-APP.fly.dev/api/v1`).
+- [ ] O build do Netlify precisa do Flutter (a imagem padrão não traz). Opções:
+      instalar o Flutter no `command` (git clone do SDK) ou usar um plugin/imagem
+      com Flutter. Documentar a escolha ao configurar.
+- [ ] Conectar o repo no Netlify com base `app/` e publicar. Anotar a URL
+      `https://SEU-FRONT.netlify.app`.
+- [ ] Confirmar que a URL do front bate com o `Cors__OrigensPermitidas__0` do Fly
+      (senão o navegador bloqueia por CORS).
 
-> ATENÇÃO: o Dockerfile e a aplicação de migrations **não foram testados** nesta
-> máquina (sem Docker). O primeiro teste real será no deploy. Prever ao menos
-> uma rodada de ajuste.
+### 5.4 Firebase
+- [ ] Firebase Console → Authentication → Settings → Authorized domains →
+      adicionar `SEU-FRONT.netlify.app`. Sem isso o login quebra fora do localhost.
+
+### 5.5 Teste local completo (opcional, agora dá — Docker liberado)
+- [ ] `docker compose up -d` em `backend/` (sobe o Postgres local).
+- [ ] `dotnet run --project backend/src/DiarioTreino.Api/DiarioTreino.Api.csproj`
+- [ ] `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:5289/api/v1`
+      — com o CORS já corrigido, as fichas devem carregar.
+
+## 6. O que o Kiro JÁ preparou nesta branch (código, sem rede)
+
+- [x] **CORS** na API (`Program.cs` + `appsettings.json`). Build 0/0.
+- [x] **Migrations no startup** em produção
+      (`src/DiarioTreino.Api/Infraestrutura/MigracoesStartup.cs`, chamado no
+      `Program.cs`). Controlado por `Banco:AplicarMigracoesNoStartup`
+      (padrão: liga em Production). Build 0/0.
+- [x] **Dockerfile** da API (`backend/Dockerfile`, multi-stage net10.0).
+- [x] **fly.toml** (`backend/fly.toml`).
+- [x] **netlify.toml** (`app/netlify.toml`).
+
+Ainda em aberto (opcional para o 1º teste manual):
+- [ ] Deploy automático no CI a cada merge na `main` (critério do PBI-04).
+
+> ATENÇÃO: o **Dockerfile**, o **fly.toml** e a **aplicação de migrations** NÃO
+> foram testados nesta máquina (Docker bloqueado). O primeiro teste real será no
+> `fly deploy`. Prever ao menos uma rodada de ajuste (caminhos, porta, SDK).
 
 ## 7. Ordem sugerida na máquina liberada
 
