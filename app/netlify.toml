@@ -1,0 +1,19 @@
+# Configuração do Netlify para o app web (Flutter) do Diário de Treino.
+# "base" é a pasta app/. O build do Flutter web precisa do SDK Flutter no
+# ambiente do Netlify — ver docs/PENDENCIAS-PUBLICACAO.md para a forma de
+# instalar o Flutter no build (a imagem do Netlify não traz Flutter por padrão).
+#
+# A URL da API entra como --dart-define no comando de build. Troque o valor
+# abaixo pela URL real da API no Fly antes de publicar (ou defina via UI do
+# Netlify / variável de ambiente e referencie aqui).
+
+[build]
+  base = "app"
+  publish = "build/web"
+  command = "flutter build web --release --dart-define=API_BASE_URL=https://diario-treino-api.fly.dev/api/v1"
+
+# SPA: qualquer rota cai no index.html (go_router cuida do resto).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

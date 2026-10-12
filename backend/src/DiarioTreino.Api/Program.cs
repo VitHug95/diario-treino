@@ -1,5 +1,6 @@
 using DiarioTreino.Api.Autenticacao;
 using DiarioTreino.Api.Endpoints;
+using DiarioTreino.Api.Infraestrutura;
 using DiarioTreino.Api.Middleware;
 using DiarioTreino.Application;
 using DiarioTreino.Infrastructure;
@@ -43,6 +44,38 @@ try
     // Autenticação via token do Firebase (MAS 11.2).
     builder.Services.AddAutenticacaoFirebase(builder.Configuration);
 
+    // CORS: o app web chama a API de outra origem (dev: localhost do Flutter;
+    // produção: domínio do front). As origens vêm da configuração
+    // "Cors:OrigensPermitidas" (lista). Em Development, se nada for informado,
+    // libera qualquer localhost para não travar o desenvolvimento.
+    const string politicaCors = "AppWeb";
+    var origensPermitidas = builder.Configuration
+        .GetSection("Cors:OrigensPermitidas").Get<string[]>() ?? [];
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(politicaCors, policy =>
+        {
+            if (origensPermitidas.Length > 0)
+            {
+                policy.WithOrigins(origensPermitidas);
+            }
+            else if (builder.Environment.IsDevelopment())
+            {
+                // Flutter web usa porta aleatória em localhost; libera todas.
+                policy.SetIsOriginAllowed(origem =>
+                {
+                    if (!Uri.TryCreate(origem, UriKind.Absolute, out var uri))
+                    {
+                        return false;
+                    }
+                    return uri.Host is "localhost" or "127.0.0.1";
+                });
+            }
+
+            policy.AllowAnyHeader().AllowAnyMethod();
+        });
+    });
+
     var app = builder.Build();
 
     // Converte exceções não tratadas em Problem Details.
@@ -52,6 +85,9 @@ try
     // Correlação por requisição, antes do log de requisições do Serilog.
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging();
+
+    // CORS antes da autenticação, para o preflight (OPTIONS) passar.
+    app.UseCors(politicaCors);
 
     app.UseAuthentication();
     app.UseAuthorization();
@@ -66,6 +102,9 @@ try
     app.MapExercicioEndpoints();
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
+
+    // Em produção, aplica as migrations pendentes antes de atender requisições.
+    await app.AplicarMigracoesSeConfiguradoAsync();
 
     app.Run();
 }
