@@ -475,6 +475,25 @@ Itens que surgiram com o app em uso real.
 
 **Depende de:** PBI-10, PBI-11.
 
+#### PBI-33 · Bug: treino "salvo" não aparece no histórico
+**História:** Como atleta, quero que o treino que registro seja de fato gravado e apareça depois, para não perder o que fiz.
+
+**Sintoma relatado:** ao tocar em "Salvar treino", aparece a confirmação "Treino registrado" (com atalhos para Início / Ver treino / Ver progresso), mas o treino não aparece de fato salvo depois. Nos prints, todos os exercícios da ficha abrem como "Não realizado".
+
+**Causa raiz (confirmada no código):** o registro abre cada exercício como "realizado" apenas quando o rascunho traz séries sugeridas (`ExercicioEdicao.doRascunho`: `realizado: e.series.isNotEmpty`). O rascunho (`ServicoSessao.MontarRascunhoAsync`) só sugere séries a partir de (1) última execução do exercício ou (2) alvos prescritos na ficha (PBI-14). Para exercícios **sem alvos definidos e sem histórico** (ex.: ficha recém-criada, primeiro registro), o rascunho vem **sem séries** → todos abrem como "Não realizado" → ao salvar, a regra do back-end (`CriarSessaoAsync`: exercício sem séries não grava nada) cria a sessão **vazia**. A confirmação de sucesso aparece mesmo assim, dando a impressão de "não salvou".
+
+**Critérios de aceite**
+- Exercício sem alvos e sem histórico abre de forma que dê para registrar as séries facilmente (ex.: já com uma série em branco para preencher, ou um caminho claro para adicionar a primeira série), em vez de só "Não realizado".
+- Ao salvar com pelo menos um exercício com séries preenchidas, a sessão é gravada com as séries e aparece no detalhe (PBI-18) e na listagem (PBI-22).
+- Exercício deixado deliberadamente como "Não realizado" continua sendo gravado como não realizado, sem impedir o salvamento dos demais (regra atual preservada).
+- Se o usuário tenta salvar uma sessão **sem nenhuma série em nenhum exercício**, o app avisa (ex.: "nenhuma série registrada") em vez de mostrar "Treino registrado" para uma sessão vazia.
+- Se o `POST /sessoes` falhar, o app mostra erro em vez da confirmação de sucesso.
+- Teste cobrindo: registro de sessão com séries e leitura posterior; e tentativa de salvar sessão vazia.
+
+**Notas técnicas:** front em `registrar_sessao_screen.dart` e `sessao_edicao.dart` (`ExercicioEdicao.doRascunho`). Avaliar: adicionar uma série em branco quando não há sugestão (como já é feito em `foraDaFichaDoCatalogo`), e barrar o salvamento de sessão totalmente vazia. Relaciona-se com a PBI-14 (definir alvos deixaria o rascunho pré-preenchido). Decidir também a mensagem de confirmação só após 201.
+**Depende de:** PBI-15, PBI-18.
+**Prioridade:** alta (bug em funcionalidade central já publicada).
+
 ---
 
 ## 9. Épicos futuros (ainda não refinados)
