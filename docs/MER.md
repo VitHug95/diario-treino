@@ -32,6 +32,9 @@ erDiagram
 
     metrica ||--o{ exercicio : "intensidade padrão"
     metrica ||--o{ exercicio : "volume padrão"
+    membro ||--o{ musculo : "agrupa"
+    membro ||--o{ exercicio : "classifica"
+    musculo |o--o{ exercicio : "detalha (opcional)"
     metrica ||--o{ etapa_prescrita : "mede"
     metrica ||--o{ serie_executada : "mede"
 
@@ -72,10 +75,23 @@ erDiagram
         varchar unidade
         varchar eixo "INTENSIDADE | VOLUME"
     }
+    membro {
+        smallint id PK
+        varchar codigo UK
+        varchar nome
+        smallint ordem
+    }
+    musculo {
+        smallint id PK
+        smallint membro_id FK
+        varchar codigo UK
+        varchar nome
+    }
     exercicio {
         uuid id PK
         varchar nome
-        varchar grupo_muscular
+        smallint membro_id FK
+        smallint musculo_id FK "opcional"
         varchar modalidade "FORCA | ISOMETRIA | CARDIO"
         smallint intensidade_metrica_padrao_id FK
         smallint volume_metrica_padrao_id FK
@@ -207,6 +223,56 @@ Carga inicial (seed via migration):
 
 Os ids de intensidade e volume ficam em faixas separadas para facilitar leitura; novas métricas (escala de dor, amplitude) entram como novas linhas.
 
+### 3.4.1 `membro`
+Tabela de referência com os membros usados para filtrar e organizar exercícios. Substitui o antigo texto livre `grupo_muscular` (ADR-10 do MAS).
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | smallint | não | PK |
+| codigo | varchar(30) | não | Único, usado no código |
+| nome | varchar(40) | não | Exibido no chip de filtro |
+| ordem | smallint | não | Ordem dos chips na tela |
+
+Carga inicial (seed via migration):
+
+| id | codigo | nome | ordem |
+|---|---|---|---|
+| 1 | PEITO | Peito | 1 |
+| 2 | COSTAS | Costas | 2 |
+| 3 | OMBROS | Ombros | 3 |
+| 4 | BRACOS | Braços | 4 |
+| 5 | PERNAS | Pernas | 5 |
+| 6 | CORE | Core | 6 |
+| 7 | CARDIO | Cardio | 7 |
+| 8 | MOBILIDADE | Mobilidade | 8 |
+
+`MOBILIDADE` cobre equilíbrio, alongamento e exercícios de reabilitação que não miram um músculo. Lista sujeita à validação do Vinicius; ajustes entram por migration de seed.
+
+### 3.4.2 `musculo`
+Detalhe opcional dentro de cada membro. Hoje serve para o cadastro mais preciso; no futuro, para contar séries por músculo.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | smallint | não | PK |
+| membro_id | smallint | não | FK `membro` |
+| codigo | varchar(30) | não | Único |
+| nome | varchar(40) | não | |
+
+Restrição única em `(id, membro_id)` para servir de alvo da FK composta de `exercicio`.
+
+Carga inicial:
+
+| Membro | Músculos |
+|---|---|
+| Peito | Peitoral |
+| Costas | Dorsal, Trapézio |
+| Ombros | Deltoide |
+| Braços | Bíceps, Tríceps, Antebraço |
+| Pernas | Quadríceps, Posteriores de coxa, Glúteos, Panturrilha, Adutores |
+| Core | Abdômen, Oblíquos, Lombar |
+| Cardio | (nenhum) |
+| Mobilidade | (nenhum) |
+
 ### 3.5 `exercicio`
 Catálogo de exercícios. Global (`criado_por_id` nulo) ou próprio do usuário.
 
@@ -214,7 +280,8 @@ Catálogo de exercícios. Global (`criado_por_id` nulo) ou próprio do usuário.
 |---|---|---|---|
 | id | uuid | não | PK |
 | nome | varchar(80) | não | |
-| grupo_muscular | varchar(40) | sim | Ex.: peito, costas, pernas |
+| membro_id | smallint | sim* | FK `membro`. Obrigatório na criação pela API; nulo só em exercício antigo que a migração não conseguiu classificar |
+| musculo_id | smallint | sim | FK composta `(musculo_id, membro_id)` → `musculo (id, membro_id)`, o que garante que o músculo pertence ao membro escolhido |
 | modalidade | varchar(20) | não | `CHECK (modalidade IN ('FORCA','ISOMETRIA','CARDIO'))`. Define qual gráfico de progresso usar |
 | intensidade_metrica_padrao_id | smallint | não | FK `metrica`, eixo `INTENSIDADE` |
 | volume_metrica_padrao_id | smallint | não | FK `metrica`, eixo `VOLUME` |
@@ -224,6 +291,10 @@ Catálogo de exercícios. Global (`criado_por_id` nulo) ou próprio do usuário.
 Índice único em `(lower(nome), coalesce(criado_por_id, '00000000-0000-0000-0000-000000000000'))` para evitar duplicata no mesmo catálogo.
 
 Exemplos de padrão: supino reto = carga x repetições; prancha = peso corporal x tempo; corrida = zona x tempo.
+
+**Modalidade e membro são coisas diferentes.** A modalidade define como o exercício é medido e qual gráfico usar; é estrutural. O membro é classificação para filtrar e organizar. Um não substitui o outro.
+
+**Migração do texto livre:** a migration que cria `membro_id` converte o antigo `grupo_muscular` comparando sem acento e sem maiúscula (ex.: "perna", "pernas", "quadríceps" → PERNAS; "bíceps" → BRAÇOS com músculo Bíceps; "abdomen", "core" → CORE). Exercício de modalidade `CARDIO` sem grupo vai para `CARDIO`; "equilíbrio" vai para `MOBILIDADE`. O que não bater fica com `membro_id` nulo e aparece no app como "sem membro", para o dono classificar. Depois da conversão, a coluna `grupo_muscular` é removida.
 
 ### 3.6 `plano_treino`
 Conjunto de fichas de um atleta. No MVP, autor e atleta são a mesma pessoa.
@@ -323,6 +394,7 @@ O que de fato aconteceu, série por série.
 | `sessao (atleta_id, data DESC)` | Sessões do período, tela inicial, progresso |
 | `serie_executada (sessao_id)` | Detalhe da sessão |
 | `serie_executada (exercicio_id, sessao_id)` | Última execução do exercício (pré-preenchimento) e evolução por exercício |
+| `exercicio (membro_id)` | Filtro por membro no seletor e no catálogo |
 | `treino (plano_id, ordem)` | Fichas do plano |
 | `treino_exercicio (treino_id, ordem)` | Exercícios da ficha |
 | `vinculo (aluno_id) WHERE status = 'ATIVO'` | Regra de acesso do educador |
@@ -349,6 +421,8 @@ Uma sessão do Treino A com supino em 2 séries e uma prancha:
 | serie_executada | prancha, rodada 1, ESFORCO, PESO_CORPORAL nulo, TEMPO_SEG 45 |
 
 ## 7. Previsto para incrementos futuros
+
+- **Músculos secundários e volume por músculo:** tabela `exercicio_musculo_secundario (exercicio_id, musculo_id)` e contagem de séries por semana (1 para o músculo principal, 0,5 para os secundários).
 
 - **Tags da observação:** tabela `tag` e `sessao_tag` para cruzar padrões (sono ruim, dor). Não entra no MVP.
 - **Faixas de zona por atleta:** tabela `zona_atleta (atleta_id, zona, fc_min, fc_max)` se a zona for definida por frequência cardíaca. Depende da resposta do Vinicius.

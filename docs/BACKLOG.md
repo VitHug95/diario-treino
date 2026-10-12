@@ -2,7 +2,7 @@
 
 **Projeto:** Diário de Treino (nome provisório)
 **Versão:** 0.1, antes da primeira Sprint
-**Documentos relacionados:** [MAS.md](docs/MAS.md), [MER.md](docs/MER.md), [README.md](README.md), protótipo no canvas "Telas App de Treino"
+**Documentos relacionados:** [MAS.md](MAS.md), [MER.md](MER.md), [README.md](../README.md), protótipo no canvas "Telas App de Treino"
 
 ---
 
@@ -27,7 +27,7 @@ Uma PBI só entra na Sprint Planning quando:
 - tem história no formato "Como... quero... para..." e valor claro para o PO;
 - tem critérios de aceite verificáveis;
 - as dependências estão prontas ou entram na mesma Sprint;
-- não tem pergunta em aberto que bloqueie (seção 9);
+- não tem pergunta em aberto que bloqueie (seção 10);
 - os Developers estimaram e acham que cabe numa Sprint.
 
 ## 4. Definition of Done
@@ -179,7 +179,7 @@ Vale para toda PBI, além dos critérios de aceite dela:
 **Critérios de aceite**
 - Lista o catálogo global mais os exercícios criados pelo próprio usuário.
 - Busca por nome sem diferenciar maiúsculas e acentos.
-- Filtro por modalidade: Todos, Força, Isometria, Cardio.
+- Filtro por modalidade: Todos, Força, Isometria, Cardio. *(Substituído pelo filtro por membro na PBI-31.)*
 - Cada item mostra grupo e forma de medir (ex.: "Carga × repetições").
 - Exercícios próprios aparecem com a marca "Meu".
 - Estado vazio sugere criar o exercício.
@@ -317,7 +317,7 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 **API:** `GET /progresso/exercicios/{id}`. **Tela:** 4.
 **Depende de:** PBI-15.
-**Em aberto:** métrica de força (maior carga ou volume total). Ver seção 9.
+**Em aberto:** métrica de força (maior carga ou volume total). Ver seção 10.
 
 #### PBI-21 · Observação no ponto do gráfico
 **História:** Como atleta, quero tocar num ponto do gráfico e ler o que anotei naquele dia, para entender por que o desempenho caiu ou subiu.
@@ -349,6 +349,9 @@ Vale para toda PBI, além dos critérios de aceite dela:
 **Critérios de aceite**
 - Cartão "Próximo da sequência" com a ficha seguinte à última registrada, respeitando a ordem das fichas.
 - Lista de fichas com a data da última vez de cada uma.
+- Tocar no cartão "Próximo da sequência" ou em qualquer ficha da lista abre direto o registro daquela ficha. Nada é gravado até o atleta tocar em "Salvar treino", então um toque por engano não suja o histórico.
+- Editar ficha continua na aba Fichas; a Início é só para treinar.
+- O botão "Ver exercícios" sai da Início. O catálogo passa a ter entrada própria na aba Fichas (ação "Meus exercícios" no topo), além do seletor dentro do registro e da montagem de ficha.
 - Atalhos para treino livre e, a partir do incremento 2, para cardio.
 - Navegação inferior: Início, Fichas, Progresso.
 
@@ -395,7 +398,7 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 ## 7. Incremento 2: Cardio
 
-> Só entra em refinamento depois da resposta do Vinicius sobre como a zona é definida (seção 9).
+> Só entra em refinamento depois da resposta do Vinicius sobre como a zona é definida (seção 10).
 
 #### PBI-27 · Cardio contínuo
 **História:** Como atleta, quero registrar uma corrida ou pedalada contínua com zona e tempo ou distância, para acompanhar meu condicionamento junto com a musculação.
@@ -442,21 +445,53 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 ---
 
-## 8. Épicos futuros (ainda não refinados)
+## 8. Ajustes depois da primeira publicação
+
+Itens que surgiram com o app em uso real.
+
+#### PBI-31 · Filtrar exercícios por membro
+**História:** Como atleta, quero filtrar os exercícios por membro (peito, pernas, costas...), para achar rápido o que eu treinei na hora de registrar ou montar a ficha.
+
+**Critérios de aceite**
+- Os chips do seletor e do catálogo passam a ser: Todos, Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade, nessa ordem, com rolagem horizontal no celular.
+- O filtro por modalidade sai dos chips. A modalidade continua aparecendo na legenda de cada item ("Carga × Repetições").
+- A legenda de cada item mostra o membro (e o músculo, quando houver) com a grafia da lista, nunca o texto antigo.
+- Busca por nome e filtro por membro funcionam juntos.
+- No cadastro de exercício, o campo de grupo vira seleção: membro obrigatório e músculo opcional, com os músculos filtrados pelo membro escolhido.
+- Migration converte o texto antigo conforme o MER (3.5); o que não for reconhecido aparece como "sem membro", com atalho para o dono classificar.
+- Exercícios de cardio do catálogo global ficam no membro Cardio.
+
+**API:** `GET /membros`, `GET /exercicios?busca=&membro=`, `POST /exercicios` (passa a exigir `membroId`). **Tabelas:** `membro`, `musculo`, `exercicio`. **Telas:** 8 e 9.
+**Notas técnicas:** ADR-10 do MAS. Seed dos membros e músculos conforme MER 3.4.1 e 3.4.2. Fazer em etapas, sem quebrar o que está no ar: (1) migration cria `membro` e `musculo`, adiciona `membro_id` e `musculo_id` em `exercicio` e converte o texto, **mantendo** `grupo_muscular`; (2) API passa a ler e gravar o membro; (3) front troca os chips e o cadastro; (4) só então uma segunda migration remove `grupo_muscular`. Cada etapa vai para produção sozinha e o app continua funcionando entre elas.
+**Depende de:** PBI-10, PBI-11.
+
+#### PBI-32 · Ajustes de UX do seletor e da largura no web
+**História:** Como atleta, quero criar um exercício sem sair do registro quando ele não está no catálogo, e usar o app no computador sem a tela esticada.
+
+**Critérios de aceite**
+- O seletor de exercício tem o botão "Criar exercício novo", inclusive no estado vazio da busca (tela 8 do protótipo).
+- Depois de criado, o exercício volta já selecionado para a tela de origem (ficha ou registro).
+- No navegador de computador, o conteúdo fica limitado a 600px de largura e centralizado (MAS, seção 10).
+
+**Depende de:** PBI-10, PBI-11.
+
+---
+
+## 9. Épicos futuros (ainda não refinados)
 
 Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready ainda.
 
 | Épico | Itens previstos |
 |---|---|
 | **E7 · Modo educador** | Papel de educador; convite e aceite de vínculo; lista de alunos; ver treino e progresso do aluno; montar ficha para o aluno; exportar progresso em PDF; termo de consentimento LGPD; alerta de aluno sem registrar ou com observações de dor seguidas |
-| **E8 · Inteligência no feedback** | Tags rápidas na observação; recorde pessoal e 1RM estimado; sugestão de aumento de carga |
+| **E8 · Inteligência no feedback** | Músculos secundários e cartão "séries por músculo na semana" (base no ADR-10); Tags rápidas na observação; recorde pessoal e 1RM estimado; sugestão de aumento de carga |
 | **E9 · Corrida avançada** | Faixas de zona por atleta; importação de arquivo do relógio ou Strava |
 | **E10 · Lojas** | Publicação na Google Play; avaliação de custo e processo da App Store |
 | **E11 · Conforto no registro** | Cronômetro de descanso dentro do registro |
 
 ---
 
-## 9. Perguntas em aberto que bloqueiam PBIs
+## 10. Perguntas em aberto que bloqueiam PBIs
 
 | Pergunta | Bloqueia | Com quem |
 |---|---|---|
@@ -464,11 +499,12 @@ Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready aind
 | A zona é definida por frequência cardíaca, pace ou percepção de esforço? | PBI-27 a PBI-29 | Vinicius |
 | Rodada a mais ou incompleta no intervalado: como aparece no feedback? | PBI-29 | Vinicius |
 | O aluno pode esconder uma observação do educador? | E7 | Vinicius |
+| Lista de membros e músculos está boa para o uso de vocês e para reabilitação? (não bloqueia: a lista proposta entra e é ajustada por migration) | PBI-31 | Vinicius |
 | Nome definitivo do app | PBI-04 (domínio) | Vitor e Vinicius |
 
 ---
 
-## 10. Proposta de Sprints
+## 11. Proposta de Sprints
 
 Sprints de uma semana, com review no fim de semana usando o app no celular do PO. O Sprint Goal e a seleção final saem da Sprint Planning; abaixo é só um ponto de partida para a conversa.
 
@@ -477,7 +513,7 @@ Sprints de uma semana, com review no fim de semana usando o app no celular do PO
 | 1 | O app está publicado e o atleta entra com a própria conta | 01, 02, 03, 04, 06, 07, 08 |
 | 2 | O atleta monta suas fichas com alvos | 10, 11, 12, 13, 14 |
 | 3 | O atleta registra o primeiro treino de verdade | 15, 16, 17, 18 |
-| 4 | O atleta vê a evolução e entende cada queda | 20, 21, 22, 23 |
+| 4 | O atleta vê a evolução e entende cada queda | 20, 21, 22, 23, 31, 32 |
 | 5 | MVP pronto para uso diário | 05, 09, 19, 24, 25, 26 |
 
 A Sprint 1 é a mais pesada em infraestrutura e a de maior risco. Se não couber, o corte natural é deixar o login com Google (parte da PBI-08) para a Sprint 2 e manter o resto, porque publicar logo é o que libera o feedback do PO.

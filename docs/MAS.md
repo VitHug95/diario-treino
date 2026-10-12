@@ -100,6 +100,17 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Decisão:** dois temas com a mesma estrutura de telas. Padrão "seguir o sistema" do celular, com troca manual por um botão na tela inicial e uma opção em Perfil (Sistema, Claro, Escuro). A escolha fica salva no aparelho.
 - **Consequência:** nenhuma cor é escrita direto nas telas; tudo vem de tokens de tema (`ThemeData` claro e escuro + `ThemeExtension` para cores próprias, como a de observação). Cada componente precisa ser conferido nos dois temas, inclusive o contraste mínimo de texto.
 
+### ADR-09: Hospedagem provisória para a fase de testes
+- **Contexto:** para validar o app em uso real sem montar a infraestrutura definitiva, a publicação da PBI-04 foi feita em serviços gerenciados.
+- **Decisão:** durante a fase de testes, a API roda no Fly.io (`diario-treino-api.fly.dev`) e o front no Netlify (`diario-treino.netlify.app`), com o banco no Neon e login no Firebase. É uma situação **provisória**. A implantação final segue a seção 14: máquina própria com Docker e Caddy, e domínio próprio.
+- **Consequência:** nada no código pode depender de recurso exclusivo do Fly ou do Netlify. Configuração só por variável de ambiente, API empacotada em Docker e front como arquivos estáticos, para a migração ser só troca de destino do deploy. Na migração: registrar o domínio, atualizar `Cors__OrigensPermitidas`, autorizar o domínio novo no Firebase e apontar o deploy do CI para a máquina.
+
+### ADR-10: Exercícios classificados por membro, em lista fechada
+- **Status:** aceito, a implementar na PBI-31. Até lá, o banco em produção ainda usa o texto livre `grupo_muscular`.
+- **Contexto:** o grupo muscular era texto livre e opcional. Em uso real já apareceram variações ("pernas", "Pernas", "peito" em minúsculo) e exercícios sem grupo. Além disso, o seletor filtrava por modalidade, que não é como a pessoa procura um exercício na hora de registrar: ela pensa "treinei perna", não "fiz força".
+- **Decisão:** o exercício passa a ter um **membro** obrigatório, escolhido de uma lista fixa (Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade), e um **músculo** opcional ligado ao membro. Os chips do seletor e do catálogo filtram por membro. A **modalidade continua igual**: segue definindo como o exercício é medido (ADR-06) e aparece na legenda de cada item, só deixa de ser filtro.
+- **Consequência:** filtro confiável e base pronta para contar séries por músculo no futuro. Exige migration que converte o texto existente e uma tela de cadastro com seleção em vez de campo livre. A lista final será validada pelo Vinicius; mudanças nela são migrations de seed, sem mudança de código.
+
 ## 7. Visão de contexto (C4 nível 1)
 
 ```mermaid
@@ -176,7 +187,7 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 |---|---|---|
 | Identidade | Usuario, UsuarioPapel | Provisionar usuário no primeiro acesso, consultar perfil |
 | Vínculos (futuro) | Vinculo | Convidar aluno, aceitar, encerrar |
-| Catálogo | Exercicio, Metrica | Listar catálogo global + exercícios próprios, criar exercício |
+| Catálogo | Exercicio, Metrica, Membro, Musculo | Listar catálogo global + exercícios próprios com filtro por membro, criar exercício |
 | Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita | Montar e editar fichas |
 | Execução | Sessao, SerieExecutada | Abrir sessão pré-preenchida, salvar sessão, editar sessão |
 | Progresso | (consultas) | Evolução por exercício, resumo do período, sessões do período |
@@ -216,6 +227,8 @@ lib/
 | Tema | `ThemeMode` (sistema, claro, escuro) persistido com shared_preferences |
 
 Organização por funcionalidade (feature-first): cada pasta de `features` tem suas telas, estado e chamadas, o que casa uma PBI com uma pasta.
+
+No navegador de computador, o conteúdo fica limitado a 600px de largura e centralizado. O app é desenhado para celular e não deve esticar em telas largas.
 
 ## 11. Autenticação e autorização
 
@@ -271,7 +284,8 @@ Prefixo `/api/v1`, JSON, datas em ISO 8601, ids em UUID. Erros no formato Proble
 |---|---|---|---|
 | GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | 1 |
 | GET | `/metricas` | Métricas disponíveis | 1 |
-| GET | `/exercicios?busca=` | Catálogo global + exercícios do usuário | 1 |
+| GET | `/membros` | Membros e seus músculos, na ordem dos chips | 1 |
+| GET | `/exercicios?busca=&membro=` | Catálogo global + exercícios do usuário, filtrável por membro | 1 |
 | POST | `/exercicios` | Cria exercício próprio | 1 |
 | GET | `/planos/ativo` | Plano ativo com fichas e exercícios | 1 |
 | POST | `/planos` | Cria plano | 1 |
@@ -300,6 +314,8 @@ Rotas de dados de atleta aceitam `atletaId` opcional na query para o educador; s
 - Backup: `pg_dump` semanal automatizado (job agendado na VPS), guardado fora da VPS e do Neon, com teste de restauração a cada trimestre.
 
 ## 14. Implantação
+
+> **Fase de testes:** enquanto o app está em validação, a publicação é provisória no Fly.io (API) e no Netlify (front), conforme o ADR-09. O desenho abaixo é o da implantação final, em máquina própria com domínio próprio.
 
 ```mermaid
 flowchart LR

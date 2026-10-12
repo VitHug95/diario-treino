@@ -82,6 +82,8 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 
 - [docs/MAS.md](docs/MAS.md): arquitetura, decisões (ADRs), autenticação, contrato da API, implantação e testes
 - [docs/MER.md](docs/MER.md): modelo de dados completo, dicionário, índices e regras
+- [docs/DESIGN.md](docs/DESIGN.md) e [docs/design-tokens.json](docs/design-tokens.json): fontes, cores dos temas claro e escuro, espaçamentos, raios e tamanhos
+- [docs/BACKLOG.md](docs/BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e proposta de Sprints
 
 O modelo de dados oficial é o do MER. Este README guarda a visão de produto e as decisões em alto nível.
 
@@ -97,6 +99,7 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 - **Métrica é escolhida de uma lista, não digitada livre**, para o gráfico conseguir agrupar e comparar valores ao longo do tempo.
 - **Feedback depende do tipo de exercício.** Carga: evolução de carga com reps. Isometria: tempo sustentado na mesma intensidade. Intervalado: rodadas cumpridas e tempo mantido na zona-alvo. Zona sozinha não mostra evolução, porque é relativa à pessoa.
 - **Tema claro e escuro (layouts A e B aprovados).** Segue o sistema por padrão, com botão de troca na tela inicial e opção em Perfil.
+- **Exercícios filtrados por membro (ADR-10).** Membro obrigatório de lista fixa (Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade) e músculo opcional. A modalidade continua definindo como o exercício é medido, mas deixa de ser filtro.
 - **Identidade no Firebase, autorização no nosso banco.** O token diz quem é a pessoa; o Postgres diz o que ela pode fazer.
 - **Autorização centralizada em uma regra só:** pode ver dados do atleta quem for o próprio atleta ou educador com vínculo ativo. Todo endpoint passa por ela, inclusive a exportação em PDF.
 - **PDF é uma visão dos mesmos dados da tela de progresso**, gerado a partir da mesma consulta, para o relatório nunca divergir do que aparece no app.
@@ -107,7 +110,8 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 - Back: API em .NET 10, monólito em camadas, EF Core + Npgsql
 - Banco: PostgreSQL no Neon (plano gratuito), com `pg_dump` semanal guardado fora
 - Login: Firebase Authentication (e-mail/senha e Google); papéis e vínculos ficam no Postgres
-- Hospedagem da API: Docker na mesma VPS do bot de WhatsApp, atrás do Caddy (HTTPS automático)
+- Hospedagem final: máquina própria com Docker e Caddy (HTTPS automático) e domínio próprio
+- Hospedagem na fase de testes (provisória): API no Fly.io e front no Netlify, sem dependência desses serviços no código (ADR-09)
 - Desenvolvimento assistido pelo Kiro
 
 ## Custos levantados na conversa
