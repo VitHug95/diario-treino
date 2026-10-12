@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
+import 'criar_exercicio_screen.dart';
 import 'exercicio_resumo.dart';
 
 /// Tela 8 do protótipo (ESCOLHER EXERCÍCIO): seletor que reaproveita a busca do
@@ -45,9 +46,37 @@ class _SelecionarExercicioScreenState
     });
   }
 
+  /// Abre a tela de criar exercício. Ao voltar com o id criado, resolve o
+  /// [ExercicioResumo] e fecha o seletor devolvendo-o já selecionado — no
+  /// mesmo formato que a seleção normal (id ou objeto completo).
+  Future<void> _criarExercicio() async {
+    final id = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const CriarExercicioScreen()),
+    );
+    if (id == null || id.isEmpty || !mounted) return;
+
+    if (!widget.retornarCompleto) {
+      // Fichas (PBI-13) só precisam do id.
+      Navigator.of(context).pop(id);
+      return;
+    }
+
+    // Registro (PBI-17) precisa do objeto completo: busca o recém-criado.
+    final exercicio = await ref.read(catalogoRepositoryProvider).buscarPorId(id);
+    if (!mounted) return;
+    if (exercicio != null) {
+      Navigator.of(context).pop(exercicio);
+    } else {
+      // Não achou (caso raro): mantém o seletor aberto com a lista atualizada.
+      ref.invalidate(catalogoProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Exercício criado. Toque para selecionar.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
     final filtro = ref.watch(catalogoFiltroProvider);
     final resultado = ref.watch(catalogoProvider);
 
@@ -106,9 +135,9 @@ class _SelecionarExercicioScreenState
                 ),
               ),
               data: (itens) => itens.isEmpty
-                  ? Center(
-                      child: Text('Nenhum exercício encontrado.',
-                          style: AppText.body.copyWith(color: cores.textSecondary)),
+                  ? _EstadoVazio(
+                      busca: filtro.busca,
+                      aoCriar: _criarExercicio,
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -122,7 +151,62 @@ class _SelecionarExercicioScreenState
                     ),
             ),
           ),
+          // Atalho sempre visível para criar um exercício fora do catálogo.
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x16, AppSpacing.x8, AppSpacing.x16, AppSpacing.x16),
+              child: OutlinedButton.icon(
+                onPressed: _criarExercicio,
+                icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+                label: const Text('Criar exercício novo'),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Estado vazio da busca: sugere criar o exercício que não foi encontrado,
+/// aproveitando o texto digitado para dar contexto ("Criar '{busca}'").
+class _EstadoVazio extends StatelessWidget {
+  const _EstadoVazio({required this.busca, required this.aoCriar});
+
+  final String busca;
+  final VoidCallback aoCriar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final buscaLimpa = busca.trim();
+    final rotulo =
+        buscaLimpa.isEmpty ? 'Criar exercício novo' : 'Criar "$buscaLimpa"';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.dumbbell, size: 48, color: cores.iconMuted),
+            const SizedBox(height: AppSpacing.x12),
+            Text('Nenhum exercício encontrado',
+                style: AppText.title, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.x8),
+            Text('Não achou o que procura? Crie um exercício novo.',
+                style: AppText.body.copyWith(color: cores.textSecondary),
+                textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.x16),
+            FilledButton.icon(
+              onPressed: aoCriar,
+              icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+              label: Text(rotulo),
+            ),
+          ],
+        ),
       ),
     );
   }

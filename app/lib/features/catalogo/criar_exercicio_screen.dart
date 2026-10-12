@@ -55,20 +55,21 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
 
     setState(() => _salvando = true);
     try {
-      await ref.read(catalogoRepositoryProvider).criarExercicio(
+      final id = await ref.read(catalogoRepositoryProvider).criarExercicio(
             nome: _nome.text,
             grupoMuscular: _grupo.text,
             modalidade: _tipo.valorApi,
             intensidadeMetricaId: _intensidadeId!,
             volumeMetricaId: _volumeId!,
           );
-      // Atualiza a lista do catálogo e volta.
+      // Atualiza a lista do catálogo e volta devolvendo o id criado (o seletor
+      // usa o id para reabrir o exercício já selecionado; o catálogo ignora).
       ref.invalidate(catalogoProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Exercício criado.')),
         );
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(id);
       }
     } on CatalogoException catch (e) {
       _mostrar(e.mensagem);
