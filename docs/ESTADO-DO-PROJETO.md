@@ -241,3 +241,40 @@ registrar/editar/excluir sessão), com API no Fly, front no Netlify e banco no N
 Faltam, do incremento 1: tela inicial com fichas (PBI-23), progresso (PBI-20/21/22),
 treino livre (PBI-19), primeiro acesso (PBI-09), perfil/conta (PBI-25), tema
 completo (PBI-24), E2E (PBI-26) e backup (PBI-05).
+
+---
+
+## 10. Ponto de retomada (continuar amanhã)
+
+Atualizado ao fim da sessão de 12/10/2026.
+
+### O que foi feito nesta leva
+- **PBI-32** (criar exercício no seletor + largura 600px no web): mergeada na `main`.
+- **PBI-23 parte B** (tela inicial lista fichas e inicia o registro): mergeada na `main`.
+- **PBI-22 (back)** `GET /sessoes?de=&ate=` (listar sessões do período): **mergeada na `main`**, CI verde (testes de integração passaram no runner).
+- **PBI-33** (bug) registrada no BACKLOG.
+
+### Pendências de git
+- Branch `docs/pbi-33-bug-salvar-treino` (só o registro do bug no BACKLOG) **ainda não mergeada**. PR:
+  `https://github.com/VitHug95/diario-treino/pull/new/docs/pbi-33-bug-salvar-treino`
+
+### Próximo passo (prioridade): corrigir a PBI-33
+Bug: ao salvar o treino aparece "Treino registrado", mas a sessão é gravada **vazia**.
+**Causa raiz confirmada no código:** exercício sem alvos (PBI-14) e sem histórico gera
+rascunho sem séries (`ServicoSessao.MontarRascunhoAsync`), abre como "Não realizado"
+(`ExercicioEdicao.doRascunho`: `realizado: e.series.isNotEmpty`), e a regra do back-end
+não grava série de exercício sem séries → sessão vazia, mas com confirmação de sucesso.
+
+Correção planejada (só front: `registrar_sessao_screen.dart` e `sessao_edicao.dart`):
+1. Exercício sem séries sugeridas abre com **uma série em branco** para preencher (como já é feito em `ExercicioEdicao.foraDaFichaDoCatalogo`), em vez de só "Não realizado".
+2. **Barrar o salvamento de sessão totalmente vazia** (nenhuma série em nenhum exercício), com aviso.
+3. Confirmação "Treino registrado" só após o `201` de sucesso.
+4. Testes: sessão com séries + leitura posterior; e tentativa de salvar sessão vazia.
+
+### Sequência depois da PBI-33
+1. **PBI-22 (front)** — lista de sessões do período na aba Progresso, consumindo o `GET /sessoes` já pronto.
+2. **PBI-23 parte A** — "próximo da sequência" real + "data da última vez" de cada ficha (agora dá, com o histórico de sessões).
+3. **PBI-31** — classificar exercícios por membro (F+A+B, em 4 etapas conforme o ADR-10/MER).
+
+### Observação de infra (quando for conveniente)
+O Netlify reaproveita cache de build agressivamente (`if [ ! -d "$HOME/flutter" ]` no `netlify.toml`), o que já fez o site servir versão antiga após merge. Workaround atual: "Clear cache and deploy site" no painel. Vale ajustar o build para ser confiável sem limpeza manual.
