@@ -10,6 +10,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
+import '../fichas/fichas_repository.dart';
 import 'sessao_edicao.dart';
 import 'sessao_repository.dart';
 
@@ -194,8 +195,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
           exercicios: _exercicios,
         );
         if (!mounted) return;
-        // Atualiza o detalhe e volta para a tela de visualização.
+        // Atualiza o detalhe e a tela inicial (sugestão/checks/última vez).
         ref.invalidate(sessaoDetalheProvider(widget.sessaoId!));
+        _invalidarInicio();
         Navigator.of(context).pop(true);
       } else {
         final sessaoId = await repo.criarSessao(
@@ -205,6 +207,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
           observacao: obs,
           exercicios: _exercicios,
         );
+        // A sessão nova muda a recomendação, os checks da semana e a "última
+        // vez" na tela inicial; invalida para refletir ao voltar (bug PBI-23A).
+        _invalidarInicio();
         if (mounted) await _confirmarRegistro(sessaoId);
       }
     } on SessaoException catch (e) {
@@ -247,6 +252,13 @@ class _FormularioState extends ConsumerState<_Formulario> {
       case null:
         context.go(Rotas.inicio);
     }
+  }
+
+  /// Invalida os dados que a tela inicial deriva do histórico de sessões, para
+  /// a recomendação/semana/última-vez refletirem a sessão recém-salva.
+  void _invalidarInicio() {
+    ref.invalidate(sessoesRecentesProvider);
+    ref.invalidate(planoAtivoProvider);
   }
 
   void _erro(String msg) {

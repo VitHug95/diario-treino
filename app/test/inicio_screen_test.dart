@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/auth_service.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
@@ -107,4 +109,37 @@ void main() {
 
     expect(find.text('B · Costas'), findsOneWidget);
   });
+
+  // Regressão do bug PBI-23A: enquanto o histórico ainda não carregou, a tela
+  // NÃO pode fabricar uma sugestão (era isso que fazia "sempre Treino A").
+  testWidgets('Enquanto o histórico carrega, não mostra sugestão', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final plano = PlanoAtivo(
+      id: 'p1',
+      nome: 'Plano',
+      treinos: [_ficha('A', 1, descricao: 'Peito'), _ficha('B', 2)],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
+          planoAtivoProvider.overrideWith((ref) async => plano),
+          // Sessões "penduradas" em loading: nunca completam neste teste.
+          sessoesRecentesProvider.overrideWith((ref) => Completer<List<SessaoResumo>>().future),
+        ],
+        child: MaterialApp(theme: AppTheme.claro, home: const InicioScreen()),
+      ),
+    );
+    // pump (não pumpAndSettle: o future fica pendente de propósito).
+    await tester.pump();
+
+    // Fichas aparecem (dá para registrar), mas sem o cartão de sugestão.
+    expect(find.text('SUAS FICHAS'), findsOneWidget);
+    expect(find.text('SUGESTÃO DE HOJE'), findsNothing);
+    expect(find.text('REGISTRAR TREINO'), findsNothing);
+  });
+
 }

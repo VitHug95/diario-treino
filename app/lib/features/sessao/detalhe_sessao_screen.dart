@@ -7,6 +7,7 @@ import '../../core/rotas/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../fichas/fichas_repository.dart';
 import 'registrar_sessao_screen.dart';
 import 'sessao_models.dart';
 import 'sessao_repository.dart';
@@ -57,6 +58,9 @@ class DetalheSessaoScreen extends ConsumerWidget {
 
     try {
       await ref.read(sessaoRepositoryProvider).excluirSessao(sessaoId);
+      // Excluir muda recomendação/checks/última vez na tela inicial.
+      ref.invalidate(sessoesRecentesProvider);
+      ref.invalidate(planoAtivoProvider);
       if (context.mounted) context.go(Rotas.inicio);
     } on SessaoException catch (e) {
       if (context.mounted) {
