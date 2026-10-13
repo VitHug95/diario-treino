@@ -46,7 +46,7 @@ Data do levantamento: 12/10/2026.
 `Cors__OrigensPermitidas__0`.
 
 **Pendências conhecidas da PBI-04 (não bloqueiam o uso):**
-- Deploy automático **da API** no CI a cada merge na `main` (hoje é `flyctl deploy` manual; o front já tem deploy automático via Netlify).
+- ~~Deploy automático da API no CI~~ — FEITO: job `deploy-api` no `ci.yml` publica a API no Fly a cada merge na `main` (após o CI passar). Falta só criar o secret `FLY_API_TOKEN` no GitHub uma vez (ver `docs/DEPLOY-AUTOMATICO.md`).
 - Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` / `*.netlify.app`).
 - Backup do banco (PBI-05) ainda não feito.
 - Ruído de log cosmético na API (`libgssapi_krb5.so.2`) — não afeta a conexão.
@@ -217,8 +217,9 @@ outro usuário responde **404** (regra do `IControleAcesso`).
 - Em todo push/PR na `main`: build .NET (sem warnings — `TreatWarningsAsErrors`),
   testes unitários e de integração; e no front: `flutter analyze`, `flutter test`,
   `flutter build web`.
-- O CI **não publica** — publicação da API é manual (`flyctl deploy`); o front tem
-  deploy automático pelo Netlify ao mergear na `main`.
+- O CI publica a API no Fly automaticamente a cada merge na `main` (job
+  `deploy-api`, requer o secret `FLY_API_TOKEN` — ver `docs/DEPLOY-AUTOMATICO.md`);
+  o front tem deploy automático pelo Netlify ao mergear na `main`.
 
 ---
 
