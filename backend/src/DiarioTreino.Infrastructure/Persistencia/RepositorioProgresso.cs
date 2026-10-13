@@ -81,4 +81,23 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
             .Select(x => new PontoBruto(x.Data, x.MaiorTempo!.Value, null, x.Observacao != null))
             .ToList();
     }
+
+    public async Task<IReadOnlyList<ExercicioComHistorico>> ListarExerciciosComHistoricoAsync(
+        Guid atletaId, CancellationToken ct)
+    {
+        // Ids de exercício que aparecem em séries de esforço de sessões do
+        // atleta (distintos).
+        var ids = _db.SeriesExecutadas
+            .Where(se => se.Tipo == TipoEtapa.Esforco
+                && se.Sessao!.AtletaId == atletaId)
+            .Select(se => se.ExercicioId)
+            .Distinct();
+
+        // Junta ao catálogo para nome/modalidade, em ordem alfabética.
+        return await _db.Exercicios
+            .Where(e => ids.Contains(e.Id))
+            .OrderBy(e => e.Nome)
+            .Select(e => new ExercicioComHistorico(e.Id, e.Nome, e.Modalidade))
+            .ToListAsync(ct);
+    }
 }

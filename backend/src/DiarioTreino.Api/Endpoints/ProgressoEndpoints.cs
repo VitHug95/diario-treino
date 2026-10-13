@@ -15,6 +15,22 @@ public static class ProgressoEndpoints
     {
         var grupo = app.MapGroup("/api/v1").RequireAuthorization();
 
+        // Exercícios que o atleta já treinou (seletor do gráfico).
+        grupo.MapGet("/progresso/exercicios", async (
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoProgresso progresso,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var itens = await progresso.ListarExerciciosComHistoricoAsync(perfil.Id, ct);
+            return Results.Ok(itens);
+        })
+        .WithName("ExerciciosComHistorico").WithTags("Progresso")
+        .WithSummary("Exercícios que o atleta já treinou");
+
         // Série de evolução de um exercício no período. de/ate opcionais.
         grupo.MapGet("/progresso/exercicios/{exercicioId:guid}", async (
             Guid exercicioId,

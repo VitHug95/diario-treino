@@ -20,6 +20,14 @@ public interface IRepositorioProgresso
         DateOnly? de,
         DateOnly? ate,
         CancellationToken ct);
+
+    /// <summary>
+    /// Exercícios que o atleta já treinou (têm séries de esforço em alguma
+    /// sessão dele), com nome e modalidade, em ordem alfabética. Base do seletor
+    /// do gráfico de progresso.
+    /// </summary>
+    public Task<IReadOnlyList<ExercicioComHistorico>> ListarExerciciosComHistoricoAsync(
+        Guid atletaId, CancellationToken ct);
 }
 
 /// <summary>Ponto bruto vindo do banco, antes de virar DTO.</summary>
