@@ -394,6 +394,23 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 **Depende de:** PBI-21.
 
+**Status:** PARCIAL. Em vez de começar pelo Robot+Browser (que exige um modo de
+teste de autenticação na API — caminho de risco a decidir com o PO), entregou-se
+primeiro um **teste de fluxo de UI** em `app/test/fluxo_registro_test.dart`:
+roda com `flutter test` (headless, no CI atual, sem browser/rede), exercita as
+telas e a navegação reais com as bordas fakeadas (auth e repositórios em
+memória) e cobre o caminho que o bug PBI-23A quebrou (registrar o Treino A →
+voltar à Início → a sugestão passa a recomendar o B). O **E2E completo** (Robot
++ Browser contra a stack real, incluindo progresso com observação) continua
+como meta deste PBI; depende também do progresso (PBI-20/21) e de um modo de
+teste de login (ver nota).
+
+**Nota técnica (E2E completo):** rodar Robot/Browser no CI exige autenticar sem
+Firebase real — ou um modo de teste na API validando um JWT de teste (como o
+`TokenFalsoFirebase` dos testes de integração, hoje só dentro da
+WebApplicationFactory), ou o Firebase Auth Emulator. Ambos adicionam um caminho
+de autenticação alternativo; decidir a abordagem com o PO antes.
+
 ---
 
 ## 7. Incremento 2: Cardio
