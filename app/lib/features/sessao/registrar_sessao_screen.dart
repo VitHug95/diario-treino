@@ -25,6 +25,7 @@ class RegistrarSessaoScreen extends ConsumerWidget {
     required this.treinoId,
     required this.treinoNome,
     this.sessaoId,
+    this.dataInicial,
   });
 
   final String treinoId;
@@ -32,6 +33,9 @@ class RegistrarSessaoScreen extends ConsumerWidget {
 
   /// Nulo = registrar novo; preenchido = editar a sessão existente.
   final String? sessaoId;
+
+  /// Dia pré-selecionado ao registrar novo (faixa semanal). Nulo = hoje.
+  final DateTime? dataInicial;
 
   bool get _editando => sessaoId != null;
 
@@ -72,7 +76,8 @@ class RegistrarSessaoScreen extends ConsumerWidget {
         data: (dados) => _Formulario(
           treinoId: treinoId,
           sessaoId: null,
-          data: dados.data,
+          // Dia escolhido na faixa semanal, se houver; senão o padrão (hoje).
+          data: dataInicial ?? dados.data,
           duracaoMin: null,
           observacao: null,
           exercicios: dados.exercicios.map(ExercicioEdicao.doRascunho).toList(),

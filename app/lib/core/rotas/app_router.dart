@@ -31,9 +31,16 @@ abstract final class Rotas {
 
 /// Dados passados ao abrir o registro de sessão (via `extra`).
 class RegistrarSessaoArgs {
-  const RegistrarSessaoArgs({required this.treinoId, required this.treinoNome});
+  const RegistrarSessaoArgs({
+    required this.treinoId,
+    required this.treinoNome,
+    this.data,
+  });
   final String treinoId;
   final String treinoNome;
+
+  /// Dia pré-selecionado (faixa semanal da tela inicial). Nulo = hoje.
+  final DateTime? data;
 }
 
 /// Dados passados ao abrir o detalhe de uma sessão (via `extra`).
@@ -135,6 +142,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                       return RegistrarSessaoScreen(
                         treinoId: args?.treinoId ?? '',
                         treinoNome: args?.treinoNome ?? 'treino',
+                        dataInicial: args?.data,
                       );
                     },
                   ),
