@@ -317,7 +317,16 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 **API:** `GET /progresso/exercicios/{id}`. **Tela:** 4.
 **Depende de:** PBI-15.
-**Em aberto:** métrica de força (maior carga ou volume total). Ver seção 10.
+**Decidido (PO, 14/10):** o gráfico de força usa a **maior carga da sessão**
+(não o volume total). Além da carga (eixo do gráfico), cada ponto mostra as
+**repetições feitas com aquela carga** — a reps da própria série de maior carga,
+não a maior reps da sessão —, porque o atleta progride também variando as reps
+na mesma carga. Isometria segue com o maior tempo sustentado. Pergunta da
+seção 10 resolvida.
+**Status back-end:** FEITO — `GET /progresso/exercicios/{id}` implementado
+(ServicoProgresso + RepositorioProgresso), com força (carga + reps daquela
+carga), isometria (tempo), resumo (sessões, variação, sessões com obs) e filtro
+de/ate. Falta o front (gráfico com fl_chart).
 
 #### PBI-21 · Observação no ponto do gráfico
 **História:** Como atleta, quero tocar num ponto do gráfico e ler o que anotei naquele dia, para entender por que o desempenho caiu ou subiu.

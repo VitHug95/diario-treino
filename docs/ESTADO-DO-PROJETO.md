@@ -279,3 +279,24 @@ Correção planejada (só front: `registrar_sessao_screen.dart` e `sessao_edicao
 
 ### Observação de infra (quando for conveniente)
 O Netlify reaproveita cache de build agressivamente (`if [ ! -d "$HOME/flutter" ]` no `netlify.toml`), o que já fez o site servir versão antiga após merge. Workaround atual: "Clear cache and deploy site" no painel. Vale ajustar o build para ser confiável sem limpeza manual.
+
+---
+
+## 11. Follow-ups anotados (não bloqueiam, pegar quando der)
+
+> A seção 10 acima é um snapshot de 12/10 e já ficou para trás (PBI-33, PBI-22
+> front, PBI-23A, deploy automático e PBI-20 back já foram feitos depois dela).
+> Esta seção 11 acumula os pequenos follow-ups combinados desde então.
+
+- **Teste da virada de semana (faixa semanal da tela inicial):** a faixa de dias
+  (`InicioLogica.diasDaSemana`) sempre mostra a semana corrente e "zera" os
+  checks ao virar a semana — comportamento correto e desejado (confirmado com o
+  PO). Hoje recalcula no rebuild da tela (não ao vivo à meia-noite de domingo, o
+  que é aceitável). Falta um teste unitário específico passando uma data de
+  referência de outra semana para `diasDaSemana` e confirmando que os checks da
+  semana anterior não aparecem. A lógica já tem teste com data fixa; só não há o
+  caso "troca de semana". Rápido de adicionar.
+- **Cache do Netlify** (ver observação de infra acima).
+- **E2E completo (PBI-26)**: hoje há um teste de fluxo via `flutter test`
+  (`app/test/fluxo_registro_test.dart`); o Robot + Browser contra a stack real
+  continua como meta, depende de decidir o modo de teste de autenticação.

@@ -102,6 +102,7 @@ try
     app.MapExercicioEndpoints();
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
+    app.MapProgressoEndpoints();
 
     // Em produção, aplica as migrations pendentes antes de atender requisições.
     await app.AplicarMigracoesSeConfiguradoAsync();
