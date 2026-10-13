@@ -209,3 +209,37 @@ final sessoesRecentesProvider =
       .subtract(const Duration(days: 60));
   return ref.watch(sessaoRepositoryProvider).listarSessoes(de: de);
 });
+
+/// Período escolhido na lista de sessões (aba Progresso, PBI-22).
+enum PeriodoSessoes {
+  dias15('15 dias', 15),
+  dias30('30 dias', 30),
+  dias90('90 dias', 90);
+
+  const PeriodoSessoes(this.rotulo, this.dias);
+  final String rotulo;
+  final int dias;
+}
+
+/// Período selecionado na aba Progresso. Padrão: 30 dias.
+final periodoSessoesProvider =
+    NotifierProvider<PeriodoSessoesController, PeriodoSessoes>(
+  PeriodoSessoesController.new,
+);
+
+class PeriodoSessoesController extends Notifier<PeriodoSessoes> {
+  @override
+  PeriodoSessoes build() => PeriodoSessoes.dias30;
+
+  void definir(PeriodoSessoes periodo) => state = periodo;
+}
+
+/// Sessões do período selecionado (PBI-22), mais recentes primeiro.
+final sessoesDoPeriodoProvider =
+    FutureProvider.autoDispose<List<SessaoResumo>>((ref) {
+  final periodo = ref.watch(periodoSessoesProvider);
+  final hoje = DateTime.now();
+  final de = DateTime(hoje.year, hoje.month, hoje.day)
+      .subtract(Duration(days: periodo.dias));
+  return ref.watch(sessaoRepositoryProvider).listarSessoes(de: de);
+});
