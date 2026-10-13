@@ -230,6 +230,12 @@ class ExercicioEdicao {
     }
   }
 
+  /// Tem ao menos uma série com volume preenchido (= série de fato feita).
+  /// Usado para barrar o salvamento de sessão vazia (PBI-33) e espelha a regra
+  /// do repositório (série sem volume é ignorada ao enviar).
+  bool get temSerieFeita =>
+      realizado && series.any((s) => s.volume.text.trim().isNotEmpty);
+
   /// Resumo do exercício recolhido, ex.: "3 séries · 30 kg × 10, 35 kg × 8".
   /// Sem séries preenchidas, convida a tocar para registrar.
   String get resumo {

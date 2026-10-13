@@ -101,9 +101,46 @@ public sealed class ServicoSessao
                 "Preenchido com os alvos da ficha", series);
         }
 
-        // 3) Sem histórico e sem alvos: começa vazio.
+        // 3) Sem histórico e sem alvos: abre com UMA série em branco, usando as
+        // métricas padrão do exercício, para o atleta preencher (PBI-33). Antes
+        // vinha vazio e abria como "não realizado", gerando sessão vazia.
+        var serieBranco = await MontarSerieEmBrancoAsync(te, ct);
+        var seriesIniciais = serieBranco is null ? new List<SerieRascunho>() : [serieBranco];
         return new RascunhoExercicio(
-            te.Id, te.ExercicioId, nome, grupo, modalidade, te.Ordem, null, []);
+            te.Id, te.ExercicioId, nome, grupo, modalidade, te.Ordem, null, seriesIniciais);
+    }
+
+    /// <summary>
+    /// Uma série em branco (sem valores) com as métricas padrão do exercício,
+    /// para exercícios sem alvos e sem histórico (PBI-33). Nula se o exercício
+    /// não pôde ser carregado.
+    /// </summary>
+    private async Task<SerieRascunho?> MontarSerieEmBrancoAsync(
+        TreinoExercicio te, CancellationToken ct)
+    {
+        if (te.Exercicio is null)
+        {
+            return null;
+        }
+
+        var intensidadeId = te.Exercicio.IntensidadeMetricaPadraoId;
+        var volumeId = te.Exercicio.VolumeMetricaPadraoId;
+        var i = await ObterMetricaAsync(intensidadeId, ct);
+        var v = await ObterMetricaAsync(volumeId, ct);
+
+        return new SerieRascunho(
+            Rodada: 1,
+            Ordem: 1,
+            Tipo: TipoEtapa.Esforco,
+            IntensidadeMetricaId: intensidadeId,
+            IntensidadeMetricaCodigo: i.Codigo,
+            IntensidadeMetricaNome: i.Nome,
+            Intensidade: null,
+            VolumeMetricaId: volumeId,
+            VolumeMetricaCodigo: v.Codigo,
+            VolumeMetricaNome: v.Nome,
+            Volume: null,
+            DescansoSeg: te.DescansoAlvoSeg);
     }
 
     private async Task<List<SerieRascunho>> MontarSeriesDosAlvosAsync(
