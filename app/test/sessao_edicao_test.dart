@@ -323,4 +323,59 @@ void main() {
       expect(ed.series, isEmpty);
     });
   });
+
+  group('Sessão vazia / série em branco (PBI-33)', () {
+    // Exercício que o back agora manda com uma série em branco (sem valores).
+    RascunhoExercicio comSerieEmBranco() => const RascunhoExercicio(
+          treinoExercicioId: 'te1',
+          exercicioId: 'e1',
+          nome: 'Supino reto',
+          grupoMuscular: 'peito',
+          modalidade: 'FORCA',
+          ordem: 1,
+          origemPreenchimento: null,
+          series: [
+            SerieRascunho(
+              rodada: 1,
+              ordem: 1,
+              tipo: 'ESFORCO',
+              intensidadeMetricaId: 1,
+              intensidadeMetricaCodigo: 'CARGA_KG',
+              intensidadeMetricaNome: 'Carga',
+              intensidade: null,
+              volumeMetricaId: 10,
+              volumeMetricaCodigo: 'REPETICOES',
+              volumeMetricaNome: 'Repetições',
+              volume: null,
+              descansoSeg: null,
+            ),
+          ],
+        );
+
+    test('exercício com série em branco abre realizado e editável', () {
+      final ed = ExercicioEdicao.doRascunho(comSerieEmBranco());
+      expect(ed.realizado, isTrue);
+      expect(ed.series, hasLength(1));
+      expect(ed.series.first.volumeTexto, '');
+    });
+
+    test('série em branco não conta como feita até preencher o volume', () {
+      final ed = ExercicioEdicao.doRascunho(comSerieEmBranco());
+      expect(ed.temSerieFeita, isFalse);
+
+      ed.series.first.volume.text = '10';
+      expect(ed.temSerieFeita, isTrue);
+    });
+
+    test('exercício preenchido com alvos já conta como feito', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      expect(ed.temSerieFeita, isTrue);
+    });
+
+    test('exercício não realizado nunca conta como feito', () {
+      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.realizado = false;
+      expect(ed.temSerieFeita, isFalse);
+    });
+  });
 }

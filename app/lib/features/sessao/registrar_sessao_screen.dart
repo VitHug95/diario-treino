@@ -166,6 +166,13 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 
   Future<void> _salvar() async {
+    // Barra sessão totalmente vazia: sem isso o back grava uma sessão sem
+    // séries e o app ainda mostraria "Treino registrado" (bug PBI-33).
+    if (!_exercicios.any((e) => e.temSerieFeita)) {
+      _erro('Preencha ao menos uma série para registrar o treino.');
+      return;
+    }
+
     setState(() => _salvando = true);
     try {
       final repo = ref.read(sessaoRepositoryProvider);

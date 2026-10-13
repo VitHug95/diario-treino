@@ -102,6 +102,32 @@ public sealed class SessaoEndpointTests
     }
 
     [Fact]
+    public async Task Rascunho_sem_alvos_e_sem_historico_abre_com_uma_serie_em_branco()
+    {
+        // PBI-33: antes vinha sem séries e abria tudo como "não realizado",
+        // gerando sessão vazia. Agora abre com 1 série em branco das métricas
+        // padrão do exercício (Supino reto = CARGA_KG + REPETICOES no seed).
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        await AddExercicio(client, treinoId, SupinoReto); // sem DefinirAlvos
+
+        var rascunho = await client.GetFromJsonAsync<RascunhoResp>(
+            $"/api/v1/treinos/{treinoId}/rascunho-sessao");
+
+        var ex = Assert.Single(rascunho!.Exercicios);
+        Assert.Null(ex.OrigemPreenchimento);
+        var serie = Assert.Single(ex.Series);
+        Assert.Equal("ESFORCO", serie.Tipo);
+        Assert.Equal((short)1, serie.Rodada);
+        Assert.Equal(CargaKg, serie.IntensidadeMetricaId);
+        Assert.Equal(Repeticoes, serie.VolumeMetricaId);
+        // Em branco: sem valores preenchidos.
+        Assert.Null(serie.Intensidade);
+        Assert.Null(serie.Volume);
+    }
+
+    [Fact]
     public async Task Rascunho_com_historico_vem_da_ultima_sessao()
     {
         var (api, client, _) = Autenticar(_postgres);
