@@ -76,9 +76,8 @@ class InicioScreen extends ConsumerWidget {
                 ),
                 data: (plano) => _Conteudo(
                   plano: plano,
-                  // As sessões são complementares: se falharem, a tela ainda
-                  // funciona sem os checks/recomendação (lista vazia).
-                  sessoes: sessoesAsync.value ?? const <SessaoResumo>[],
+                  sessoes: sessoesAsync,
+                  aoTentarSessoes: () => ref.invalidate(sessoesRecentesProvider),
                 ),
               ),
             ],
@@ -91,11 +90,21 @@ class InicioScreen extends ConsumerWidget {
 
 /// Decide o que mostrar conforme o estado do plano: sem plano/sem fichas
 /// (chamada para montar) ou com fichas (faixa semanal + destaque + lista).
+///
+/// As sessões (histórico) são tratadas por estado explícito: a recomendação, a
+/// faixa semanal e a "última vez" só aparecem quando o histórico carregou. Em
+/// carregamento, mostra a lista de fichas sem fingir uma sugestão (evita o bug
+/// de sugerir sempre a primeira ficha). Em erro, oferece recarregar.
 class _Conteudo extends StatelessWidget {
-  const _Conteudo({required this.plano, required this.sessoes});
+  const _Conteudo({
+    required this.plano,
+    required this.sessoes,
+    required this.aoTentarSessoes,
+  });
 
   final PlanoAtivo? plano;
-  final List<SessaoResumo> sessoes;
+  final AsyncValue<List<SessaoResumo>> sessoes;
+  final VoidCallback aoTentarSessoes;
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +114,29 @@ class _Conteudo extends StatelessWidget {
     }
 
     final ordenadas = [...fichas]..sort((a, b) => a.ordem.compareTo(b.ordem));
-    final recomendada = InicioLogica.proximaFicha(ordenadas, sessoes) ?? ordenadas.first;
+
+    return sessoes.when(
+      // Histórico carregado: recomendação, semana e "última vez" reais.
+      data: (lista) => _ComHistorico(fichas: ordenadas, sessoes: lista),
+      // Carregando: mostra as fichas para registrar, sem sugestão prematura.
+      loading: () => _SemHistorico(fichas: ordenadas, carregando: true, aoTentar: aoTentarSessoes),
+      // Erro: não engole; mostra as fichas e um aviso para recarregar.
+      error: (_, __) => _SemHistorico(fichas: ordenadas, carregando: false, aoTentar: aoTentarSessoes),
+    );
+  }
+}
+
+/// Estado completo: histórico disponível. Recomenda a próxima ficha, mostra a
+/// faixa semanal e a "última vez" de cada ficha.
+class _ComHistorico extends StatelessWidget {
+  const _ComHistorico({required this.fichas, required this.sessoes});
+
+  final List<TreinoResumo> fichas;
+  final List<SessaoResumo> sessoes;
+
+  @override
+  Widget build(BuildContext context) {
+    final recomendada = InicioLogica.proximaFicha(fichas, sessoes) ?? fichas.first;
     final ultimaVez = InicioLogica.ultimaVezPorFicha(sessoes);
     final dias = InicioLogica.diasDaSemana(DateTime.now(), sessoes);
 
@@ -118,8 +149,54 @@ class _Conteudo extends StatelessWidget {
         const SizedBox(height: AppSpacing.x24),
         Text('SUAS FICHAS', style: AppText.overline),
         const SizedBox(height: AppSpacing.x12),
-        for (final ficha in ordenadas) ...[
+        for (final ficha in fichas) ...[
           _CartaoFicha(ficha: ficha, ultimaVez: ultimaVez[ficha.id]),
+          const SizedBox(height: AppSpacing.entreItens),
+        ],
+      ],
+    );
+  }
+}
+
+/// Estado sem histórico pronto (carregando ou erro): lista as fichas para
+/// registrar, sem recomendação nem checks (não finge uma sugestão). Em erro,
+/// mostra um aviso discreto com recarregar.
+class _SemHistorico extends StatelessWidget {
+  const _SemHistorico({
+    required this.fichas,
+    required this.carregando,
+    required this.aoTentar,
+  });
+
+  final List<TreinoResumo> fichas;
+  final bool carregando;
+  final VoidCallback aoTentar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!carregando)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+            child: Row(
+              children: [
+                Icon(LucideIcons.cloudOff, size: AppSizes.iconeSm, color: cores.textSecondary),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: Text('Não foi possível carregar seu histórico.',
+                      style: AppText.caption.copyWith(color: cores.textSecondary)),
+                ),
+                TextButton(onPressed: aoTentar, child: const Text('Recarregar')),
+              ],
+            ),
+          ),
+        Text('SUAS FICHAS', style: AppText.overline),
+        const SizedBox(height: AppSpacing.x12),
+        for (final ficha in fichas) ...[
+          _CartaoFicha(ficha: ficha, ultimaVez: null),
           const SizedBox(height: AppSpacing.entreItens),
         ],
       ],
