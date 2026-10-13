@@ -211,4 +211,66 @@ public sealed class ProgressoEndpointTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
+
+    // ---- Lista de exercícios com histórico (seletor do gráfico) ----
+
+    private sealed record ExercicioHistResp(Guid Id, string Nome, string Modalidade);
+
+    [Fact]
+    public async Task Lista_so_os_exercicios_que_o_atleta_treinou()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var teSupino = await CriarFichaComExercicio(client, SupinoReto);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        await CriarSessao(client, SupinoReto, teSupino, hoje, [SerieForca(1, 30, 10)]);
+
+        var lista = await client.GetFromJsonAsync<List<ExercicioHistResp>>(
+            "/api/v1/progresso/exercicios");
+
+        // Só o supino (o único treinado), não o catálogo inteiro.
+        var ex = Assert.Single(lista!);
+        Assert.Equal(SupinoReto, ex.Id);
+        Assert.Equal("FORCA", ex.Modalidade);
+    }
+
+    [Fact]
+    public async Task Lista_vazia_quando_o_atleta_nao_treinou_nada()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var lista = await client.GetFromJsonAsync<List<ExercicioHistResp>>(
+            "/api/v1/progresso/exercicios");
+
+        Assert.Empty(lista!);
+    }
+
+    [Fact]
+    public async Task Lista_nao_inclui_exercicios_de_outro_usuario()
+    {
+        var (apiA, clientA, _) = Autenticar(_postgres);
+        await using var _apiA = apiA;
+        var teSupino = await CriarFichaComExercicio(clientA, SupinoReto);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        await CriarSessao(clientA, SupinoReto, teSupino, hoje, [SerieForca(1, 30, 10)]);
+
+        var (apiB, clientB, _) = Autenticar(_postgres);
+        await using var _apiB = apiB;
+        var listaB = await clientB.GetFromJsonAsync<List<ExercicioHistResp>>(
+            "/api/v1/progresso/exercicios");
+
+        Assert.Empty(listaB!);
+    }
+
+    [Fact]
+    public async Task Lista_sem_token_responde_401()
+    {
+        await using var api = new ApiFactory(_postgres.ConnectionString);
+        var client = api.CreateClient();
+
+        var resposta = await client.GetAsync("/api/v1/progresso/exercicios");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
 }

@@ -22,6 +22,11 @@ public sealed class ServicoProgresso
         _exercicios = exercicios;
     }
 
+    /// <summary>Exercícios que o atleta logado já treinou (seletor do gráfico).</summary>
+    public Task<IReadOnlyList<ExercicioComHistorico>> ListarExerciciosComHistoricoAsync(
+        Guid usuarioLogadoId, CancellationToken ct) =>
+        _progresso.ListarExerciciosComHistoricoAsync(usuarioLogadoId, ct);
+
     public async Task<ProgressoExercicio> ObterProgressoAsync(
         Guid usuarioLogadoId,
         Guid exercicioId,

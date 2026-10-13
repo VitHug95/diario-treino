@@ -29,6 +29,14 @@ public sealed record PontoProgresso(
     decimal Valor,
     decimal? Repeticoes);
 
+/// <summary>
+/// Exercício que o atleta já treinou, para o seletor do gráfico (PBI-20).
+/// </summary>
+public sealed record ExercicioComHistorico(
+    Guid Id,
+    string Nome,
+    string Modalidade);
+
 /// <summary>Resumo do período mostrado no gráfico.</summary>
 public sealed record ResumoProgresso(
     int Sessoes,
