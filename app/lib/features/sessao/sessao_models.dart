@@ -246,3 +246,37 @@ class SerieDetalhe {
         descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
       );
 }
+
+/// Item da listagem de sessões por período (GET /api/v1/sessoes, PBI-22).
+/// Enxuto: só o que a lista/tela inicial precisa.
+class SessaoResumo {
+  const SessaoResumo({
+    required this.id,
+    required this.data,
+    required this.treinoId,
+    required this.treinoNome,
+    required this.quantidadeExercicios,
+    required this.duracaoMin,
+    required this.temObservacao,
+  });
+
+  final String id;
+  final DateTime data;
+  final String? treinoId;
+
+  /// Nulo = treino sem ficha ("Treino livre").
+  final String? treinoNome;
+  final int quantidadeExercicios;
+  final int? duracaoMin;
+  final bool temObservacao;
+
+  factory SessaoResumo.doJson(Map<String, dynamic> json) => SessaoResumo(
+        id: json['id'] as String,
+        data: DateTime.parse(json['data'] as String),
+        treinoId: json['treinoId'] as String?,
+        treinoNome: json['treinoNome'] as String?,
+        quantidadeExercicios: (json['quantidadeExercicios'] as num).toInt(),
+        duracaoMin: (json['duracaoMin'] as num?)?.toInt(),
+        temObservacao: json['temObservacao'] as bool,
+      );
+}

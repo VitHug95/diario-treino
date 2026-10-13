@@ -493,6 +493,41 @@ Itens que surgiram com o app em uso real.
 **Notas técnicas:** front em `registrar_sessao_screen.dart` e `sessao_edicao.dart` (`ExercicioEdicao.doRascunho`). Avaliar: adicionar uma série em branco quando não há sugestão (como já é feito em `foraDaFichaDoCatalogo`), e barrar o salvamento de sessão totalmente vazia. Relaciona-se com a PBI-14 (definir alvos deixaria o rascunho pré-preenchido). Decidir também a mensagem de confirmação só após 201.
 **Depende de:** PBI-15, PBI-18.
 **Prioridade:** alta (bug em funcionalidade central já publicada).
+**Status:** ✅ corrigida (série em branco no rascunho + trava de sessão vazia; na `main` e publicada).
+
+#### PBI-34 · Trocar a métrica de intensidade no registro (ex.: isométrico com carga)
+
+**História:** Como atleta, quero poder registrar um exercício com uma intensidade diferente da padrão (ex.: agachamento isométrico com halter/kettlebell/caneleira, em vez de só peso corporal), para o registro refletir o que realmente fiz.
+
+**Contexto:** hoje a série do registro usa a métrica de intensidade **padrão do exercício** (do catálogo) e não dá para trocar. Um isométrico fica preso em "peso corporal"; um exercício de carga fica preso em "carga". Observado em teste pelo PO no agachamento isométrico.
+
+**Decisão de produto em aberto (bloqueia o refinamento):** onde a troca acontece?
+- (a) **no momento do registro** — a série deixa escolher a métrica de intensidade (dentre as do eixo INTENSIDADE); flexível por dia, mas o gráfico de progresso precisa lidar com um exercício que ora é peso corporal, ora carga;
+- (b) **no exercício/alvo da ficha (PBI-14)** — define-se a intensidade ali e o registro herda; mais previsível para o gráfico, menos flexível no dia a dia.
+
+**Critérios de aceite (preliminares, dependem da decisão)**
+- Dá para registrar o mesmo exercício com carga num dia e peso corporal em outro (se for a opção a), ou a ficha define a intensidade usada (se for a opção b).
+- A métrica escolhida respeita o eixo (INTENSIDADE) — validação já existe no back (`ValidarEixoAsync`).
+- O gráfico de progresso (PBI-20) continua coerente quando a métrica de intensidade varia entre sessões do mesmo exercício (definir como agrupar).
+
+**Notas técnicas:** o `POST/PUT /sessoes` já aceita `intensidadeMetricaId` por série e valida o eixo — ou seja, o back praticamente já suporta a opção (a); falta a UI de troca no registro (`registrar_sessao_screen.dart` / `sessao_edicao.dart`) e resolver o impacto no progresso. A opção (b) mexe em `treino_exercicio`/alvos.
+**Depende de:** PBI-15. Relaciona-se com PBI-14 e PBI-20.
+**Prioridade:** média (limitação real, mas contornável deixando o exercício com a métrica certa no catálogo).
+
+#### PBI-35 · Cronograma semanal planejado (ficha por dia da semana)
+
+**História:** Como atleta, quero poder planejar qual ficha é de cada dia da semana (ex.: A na segunda, B na quarta), para o app cobrar/sugerir o treino certo do dia e mostrar aderência ao plano.
+
+**Contexto:** a tela inicial (PBI-23A) já tem uma faixa semanal que marca os dias **em que treinei** (sem planejar o quê). Esta PBI é o passo além: associar fichas a dias e mostrar "era pra fazer A na segunda — fez? ✓ / não fez". O modelo atual **não** suporta isso (não há "dia planejado da ficha" no MER).
+
+**Critérios de aceite (preliminares)**
+- Associar uma ou mais fichas a dias da semana (um dia pode ter ficha planejada ou ser livre).
+- A tela inicial mostra o planejado × o realizado por dia.
+- Semana fixa ou rotação (a definir com o PO).
+
+**Notas técnicas:** exige mudança de banco (ex.: tabela `treino_dia_semana` ou agendamento), migration, endpoints novos. É um épico pequeno, não um ajuste. Fica como evolução da PBI-23/E6.
+**Depende de:** PBI-23 (parte A), PBI-15.
+**Prioridade:** baixa (evolução; a faixa semanal do PBI-23A já entrega valor sem isto).
 
 ---
 

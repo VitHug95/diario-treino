@@ -11,13 +11,16 @@ import '../../theme/theme_tokens.dart';
 import '../auth/auth_service.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
+import '../sessao/sessao_models.dart';
+import '../sessao/sessao_repository.dart';
+import 'inicio_logica.dart';
 
-/// Tela inicial (tela 2 do protótipo), PBI-23 (parte B).
+/// Tela inicial (tela 2 do protótipo), PBI-23 (partes B e A).
 ///
-/// Lista as fichas do plano ativo e permite iniciar o registro com um toque.
-/// O "próximo da sequência" inteligente (ficha seguinte à última registrada) e
-/// a "data da última vez" dependem do histórico de sessões (PBI-22) e entram
-/// quando esse endpoint existir.
+/// Lista as fichas do plano ativo, recomenda a próxima ficha da sequência
+/// (rotação a partir da última registrada — recomendação, não obrigação),
+/// mostra a data da última vez de cada ficha e uma faixa semanal (seg→dom)
+/// marcando os dias com treino registrado.
 class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
@@ -28,11 +31,15 @@ class InicioScreen extends ConsumerWidget {
     final usuario = ref.watch(authStateProvider).value;
     final primeiroNome = (usuario?.displayName ?? 'Atleta').split(' ').first;
     final planoAsync = ref.watch(planoAtivoProvider);
+    final sessoesAsync = ref.watch(sessoesRecentesProvider);
 
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(planoAtivoProvider),
+          onRefresh: () async {
+            ref.invalidate(planoAtivoProvider);
+            ref.invalidate(sessoesRecentesProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
@@ -67,7 +74,12 @@ class InicioScreen extends ConsumerWidget {
                 error: (_, __) => _Erro(
                   aoTentar: () => ref.invalidate(planoAtivoProvider),
                 ),
-                data: (plano) => _Conteudo(plano: plano),
+                data: (plano) => _Conteudo(
+                  plano: plano,
+                  // As sessões são complementares: se falharem, a tela ainda
+                  // funciona sem os checks/recomendação (lista vazia).
+                  sessoes: sessoesAsync.value ?? const <SessaoResumo>[],
+                ),
               ),
             ],
           ),
@@ -78,11 +90,12 @@ class InicioScreen extends ConsumerWidget {
 }
 
 /// Decide o que mostrar conforme o estado do plano: sem plano/sem fichas
-/// (chamada para montar) ou com fichas (destaque + lista para registrar).
+/// (chamada para montar) ou com fichas (faixa semanal + destaque + lista).
 class _Conteudo extends StatelessWidget {
-  const _Conteudo({required this.plano});
+  const _Conteudo({required this.plano, required this.sessoes});
 
   final PlanoAtivo? plano;
+  final List<SessaoResumo> sessoes;
 
   @override
   Widget build(BuildContext context) {
@@ -91,19 +104,22 @@ class _Conteudo extends StatelessWidget {
       return const _SemFichas();
     }
 
-    // Respeita a ordem das fichas; a primeira é o destaque "comece por aqui".
     final ordenadas = [...fichas]..sort((a, b) => a.ordem.compareTo(b.ordem));
-    final destaque = ordenadas.first;
+    final recomendada = InicioLogica.proximaFicha(ordenadas, sessoes) ?? ordenadas.first;
+    final ultimaVez = InicioLogica.ultimaVezPorFicha(sessoes);
+    final dias = InicioLogica.diasDaSemana(DateTime.now(), sessoes);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CartaoDestaque(ficha: destaque),
+        _FaixaSemana(dias: dias, aoTocarDia: (d) => _registrar(context, recomendada, data: d)),
+        const SizedBox(height: AppSpacing.x20),
+        _CartaoDestaque(ficha: recomendada),
         const SizedBox(height: AppSpacing.x24),
         Text('SUAS FICHAS', style: AppText.overline),
         const SizedBox(height: AppSpacing.x12),
         for (final ficha in ordenadas) ...[
-          _CartaoFicha(ficha: ficha),
+          _CartaoFicha(ficha: ficha, ultimaVez: ultimaVez[ficha.id]),
           const SizedBox(height: AppSpacing.entreItens),
         ],
       ],
@@ -111,11 +127,26 @@ class _Conteudo extends StatelessWidget {
   }
 }
 
-void _registrar(BuildContext context, TreinoResumo ficha) {
+/// Abre o registro de uma ficha. [data] opcional pré-seleciona o dia (faixa
+/// semanal); hoje é o padrão da própria tela de registro quando não informado.
+void _registrar(BuildContext context, TreinoResumo ficha, {DateTime? data}) {
   context.push(
     Rotas.registrarSessao,
-    extra: RegistrarSessaoArgs(treinoId: ficha.id, treinoNome: ficha.nome),
+    extra: RegistrarSessaoArgs(
+      treinoId: ficha.id,
+      treinoNome: ficha.nome,
+      data: data,
+    ),
   );
+}
+
+/// Formata uma data como "seg, 13/10".
+String _dataCurta(DateTime d) {
+  const dias = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+  final dia = dias[d.weekday - 1];
+  final dd = d.day.toString().padLeft(2, '0');
+  final mm = d.month.toString().padLeft(2, '0');
+  return '$dia, $dd/$mm';
 }
 
 class _BotaoTema extends StatelessWidget {
@@ -141,9 +172,94 @@ class _BotaoTema extends StatelessWidget {
   }
 }
 
-/// Cartão "próximo da sequência" — fundo escuro (bg-header). Hoje destaca a
-/// primeira ficha da ordem (PBI-23 parte B); o cálculo pela última registrada
-/// entra com o histórico de sessões (PBI-22).
+/// Faixa dos 7 dias da semana (seg→dom) com check nos dias com treino. Tocar
+/// num dia (que não seja futuro) abre o registro naquela data (PBI-23A).
+class _FaixaSemana extends StatelessWidget {
+  const _FaixaSemana({required this.dias, required this.aoTocarDia});
+
+  final List<DiaSemana> dias;
+  final ValueChanged<DateTime> aoTocarDia;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        for (final dia in dias)
+          Expanded(
+            child: Semantics(
+              button: !dia.futuro,
+              label: _rotuloAcessivel(dia),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                onTap: dia.futuro ? null : () => aoTocarDia(dia.data),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
+                  child: Column(
+                    children: [
+                      Text(dia.inicial,
+                          style: AppText.caption.copyWith(
+                            color: dia.ehHoje ? cores.primaryText : cores.textSecondary,
+                          )),
+                      const SizedBox(height: AppSpacing.x6),
+                      _MarcaDia(dia: dia, cores: cores),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static String _rotuloAcessivel(DiaSemana dia) {
+    final dd = '${dia.data.day.toString().padLeft(2, '0')}/${dia.data.month.toString().padLeft(2, '0')}';
+    if (dia.treinou) return 'Dia $dd, treino registrado';
+    if (dia.futuro) return 'Dia $dd, ainda não chegou';
+    return 'Dia $dd, sem treino. Toque para registrar';
+  }
+}
+
+/// Bolinha do dia: check quando treinou; círculo apagado quando não.
+class _MarcaDia extends StatelessWidget {
+  const _MarcaDia({required this.dia, required this.cores});
+
+  final DiaSemana dia;
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    const tamanho = 28.0;
+    if (dia.treinou) {
+      return Container(
+        width: tamanho,
+        height: tamanho,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(LucideIcons.check,
+            size: AppSizes.iconeSm, color: Theme.of(context).colorScheme.onPrimary),
+      );
+    }
+    return Container(
+      width: tamanho,
+      height: tamanho,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: dia.ehHoje ? cores.primaryText : cores.lineDefault,
+        ),
+      ),
+    );
+  }
+}
+
+/// Cartão de recomendação — fundo escuro (bg-header). Sugere a próxima ficha da
+/// sequência (rotação a partir da última registrada). É recomendação, não trava:
+/// qualquer ficha pode ser registrada pela lista abaixo (PBI-23A).
 class _CartaoDestaque extends StatelessWidget {
   const _CartaoDestaque({required this.ficha});
 
@@ -166,13 +282,13 @@ class _CartaoDestaque extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('COMECE POR AQUI',
+          Text('SUGESTÃO DE HOJE',
               style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x8),
           Text(titulo,
               style: AppText.displayM.copyWith(color: cores.textOnHeader)),
           const SizedBox(height: AppSpacing.x4),
-          Text('Toque para registrar o treino de hoje.',
+          Text('Próxima da sua sequência. Você pode registrar qualquer ficha.',
               style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x16),
           FilledButton.icon(
@@ -186,11 +302,12 @@ class _CartaoDestaque extends StatelessWidget {
   }
 }
 
-/// Ficha da lista: toque abre o registro direto.
+/// Ficha da lista: toque abre o registro direto. Mostra a data da última vez.
 class _CartaoFicha extends StatelessWidget {
-  const _CartaoFicha({required this.ficha});
+  const _CartaoFicha({required this.ficha, required this.ultimaVez});
 
   final TreinoResumo ficha;
+  final DateTime? ultimaVez;
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +339,13 @@ class _CartaoFicha extends StatelessWidget {
                           style: AppText.caption
                               .copyWith(color: cores.textSecondary)),
                     ],
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(
+                      ultimaVez == null
+                          ? 'Ainda não registrada'
+                          : 'Última vez: ${_dataCurta(ultimaVez!)}',
+                      style: AppText.caption.copyWith(color: cores.textSecondary),
+                    ),
                   ],
                 ),
               ),

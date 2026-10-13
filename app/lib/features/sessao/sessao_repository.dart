@@ -91,6 +91,22 @@ class SessaoRepository {
     }
   }
 
+  /// Lista as sessões do atleta no período (PBI-22), mais recentes primeiro.
+  /// [de]/[ate] opcionais (só a data, sem hora).
+  Future<List<SessaoResumo>> listarSessoes({DateTime? de, DateTime? ate}) async {
+    final resposta = await _dio.get<List<dynamic>>(
+      '/sessoes',
+      queryParameters: {
+        if (de != null) 'de': _soData(de),
+        if (ate != null) 'ate': _soData(ate),
+      },
+    );
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(SessaoResumo.doJson)
+        .toList();
+  }
+
   /// Monta o corpo compartilhado por criar/editar sessão.
   Map<String, dynamic> _corpoSessao({
     required String? treinoId,
@@ -183,3 +199,13 @@ final sessaoDetalheProvider =
     FutureProvider.autoDispose.family<SessaoDetalhe, String>(
   (ref, sessaoId) => ref.watch(sessaoRepositoryProvider).obterSessao(sessaoId),
 );
+
+/// Sessões recentes (últimos ~60 dias), para a tela inicial (PBI-23A):
+/// recomendação da próxima ficha, data da última vez e checks da semana.
+final sessoesRecentesProvider =
+    FutureProvider.autoDispose<List<SessaoResumo>>((ref) {
+  final hoje = DateTime.now();
+  final de = DateTime(hoje.year, hoje.month, hoje.day)
+      .subtract(const Duration(days: 60));
+  return ref.watch(sessaoRepositoryProvider).listarSessoes(de: de);
+});
