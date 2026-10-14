@@ -564,8 +564,16 @@ opcional, validado como pertencente ao membro (a FK composta do banco também
 protege). `ExercicioResumo` agora traz membro/músculo (id + nome) para o front.
 Testes de integração: `GET /membros`, filtro por membro, criar sem membro (400),
 músculo de outro membro (400), criar válido classifica (201).
-**Falta:** etapa 3 (front: chips de membro + cadastro com membro/músculo),
-etapa 4 (migration remove `grupo_muscular`).
+**Status etapa 3 (front):** FEITO — chips de membro no lugar da modalidade no
+catálogo (tela 8) e no seletor de exercício, montados a partir de `GET /membros`
+(Todos + 8 membros, com rolagem horizontal). A legenda de cada item mostra
+"Membro · Músculo" (ou só o membro, ou vazio quando ainda não classificado),
+nunca o texto antigo. Busca e filtro por membro funcionam juntos. No cadastro
+(tela 9) o campo de grupo virou seleção: membro obrigatório (dropdown com
+validação) e músculo opcional, filtrado pelo membro e desabilitado quando o
+membro não tem músculos (ex.: Cardio, Mobilidade). Testes de widget cobrem a
+lista com legenda, os chips, o cadastro e o estado de carregamento.
+**Falta:** etapa 4 (migration remove `grupo_muscular`).
 
 #### PBI-32 · Ajustes de UX do seletor e da largura no web
 **História:** Como atleta, quero criar um exercício sem sair do registro quando ele não está no catálogo, e usar o app no computador sem a tela esticada.

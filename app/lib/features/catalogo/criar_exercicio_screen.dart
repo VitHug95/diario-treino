@@ -5,6 +5,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
+import 'membro.dart';
 import 'metrica.dart';
 
 /// Tela 9 (PBI-11): criar um exercício próprio. Ao escolher o tipo, as métricas
@@ -19,19 +20,19 @@ class CriarExercicioScreen extends ConsumerStatefulWidget {
 class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nome = TextEditingController();
-  final _grupo = TextEditingController();
 
   // Começa em Força (tipo mais comum).
   ModalidadeTipo _tipo = ModalidadeTipo.forca;
   int? _intensidadeId;
   int? _volumeId;
+  int? _membroId;
+  int? _musculoId;
   bool _usuarioTrocouMetricas = false;
   bool _salvando = false;
 
   @override
   void dispose() {
     _nome.dispose();
-    _grupo.dispose();
     super.dispose();
   }
 
@@ -48,6 +49,10 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
 
   Future<void> _salvar() async {
     if (_salvando || !_formKey.currentState!.validate()) return;
+    if (_membroId == null) {
+      _mostrar('Escolha o membro.');
+      return;
+    }
     if (_intensidadeId == null || _volumeId == null) {
       _mostrar('Escolha as métricas de intensidade e volume.');
       return;
@@ -57,7 +62,8 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
     try {
       final id = await ref.read(catalogoRepositoryProvider).criarExercicio(
             nome: _nome.text,
-            grupoMuscular: _grupo.text,
+            membroId: _membroId!,
+            musculoId: _musculoId,
             modalidade: _tipo.valorApi,
             intensidadeMetricaId: _intensidadeId!,
             volumeMetricaId: _volumeId!,
@@ -88,18 +94,33 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
   @override
   Widget build(BuildContext context) {
     final metricasAsync = ref.watch(metricasProvider);
+    final membrosAsync = ref.watch(membrosProvider);
+
+    // Precisa das métricas E dos membros para montar o formulário.
+    final carregando = metricasAsync.isLoading || membrosAsync.isLoading;
+    final erro = metricasAsync.hasError || membrosAsync.hasError;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Novo exercício')),
-      body: metricasAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ErroMetricas(
-          aoTentar: () => ref.invalidate(metricasProvider),
-        ),
-        data: (metricas) {
+      body: Builder(
+        builder: (context) {
+          if (carregando) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (erro) {
+            return _ErroCarregar(aoTentar: () {
+              ref.invalidate(metricasProvider);
+              ref.invalidate(membrosProvider);
+            });
+          }
+
+          final metricas = metricasAsync.value!;
+          final membros = membrosAsync.value!;
           _aplicarSugestao(metricas);
           final intensidades = metricas.where((m) => m.ehIntensidade).toList();
           final volumes = metricas.where((m) => m.ehVolume).toList();
+          final membroSelecionado =
+              membros.where((m) => m.id == _membroId).firstOrNull;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -119,13 +140,27 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
                         (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _grupo,
+                  DropdownButtonFormField<int>(
+                    value: _membroId,
                     decoration: const InputDecoration(
-                      labelText: 'Grupo (opcional)',
-                      hintText: 'Ex.: peito, pernas',
+                      labelText: 'Membro',
                       border: OutlineInputBorder(),
                     ),
+                    items: [
+                      for (final m in membros)
+                        DropdownMenuItem(value: m.id, child: Text(m.nome)),
+                    ],
+                    validator: (v) => v == null ? 'Escolha o membro' : null,
+                    onChanged: (id) => setState(() {
+                      _membroId = id;
+                      _musculoId = null; // troca de membro zera o músculo
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  _SeletorMusculo(
+                    membro: membroSelecionado,
+                    selecionadoId: _musculoId,
+                    aoSelecionar: (id) => setState(() => _musculoId = id),
                   ),
                   const SizedBox(height: 16),
                   Text('Tipo', style: Theme.of(context).textTheme.labelLarge),
@@ -335,8 +370,44 @@ class _Previa extends StatelessWidget {
   }
 }
 
-class _ErroMetricas extends StatelessWidget {
-  const _ErroMetricas({required this.aoTentar});
+/// Dropdown de músculo, filtrado pelo membro escolhido (PBI-31). Opcional:
+/// permite "Nenhum". Desabilita quando nenhum membro foi escolhido ou o membro
+/// não tem músculos (ex.: Cardio, Mobilidade).
+class _SeletorMusculo extends StatelessWidget {
+  const _SeletorMusculo({
+    required this.membro,
+    required this.selecionadoId,
+    required this.aoSelecionar,
+  });
+
+  final Membro? membro;
+  final int? selecionadoId;
+  final ValueChanged<int?> aoSelecionar;
+
+  @override
+  Widget build(BuildContext context) {
+    final musculos = membro?.musculos ?? const <Musculo>[];
+    final habilitado = musculos.isNotEmpty;
+
+    return DropdownButtonFormField<int?>(
+      value: selecionadoId,
+      decoration: InputDecoration(
+        labelText: 'Músculo (opcional)',
+        border: const OutlineInputBorder(),
+        helperText: habilitado ? null : 'Este membro não tem músculos para detalhar.',
+      ),
+      items: [
+        const DropdownMenuItem<int?>(value: null, child: Text('Nenhum')),
+        for (final mu in musculos)
+          DropdownMenuItem<int?>(value: mu.id, child: Text(mu.nome)),
+      ],
+      onChanged: habilitado ? aoSelecionar : null,
+    );
+  }
+}
+
+class _ErroCarregar extends StatelessWidget {
+  const _ErroCarregar({required this.aoTentar});
 
   final VoidCallback aoTentar;
 
@@ -346,7 +417,7 @@ class _ErroMetricas extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Não foi possível carregar as métricas.'),
+          const Text('Não foi possível carregar os dados do cadastro.'),
           const SizedBox(height: 12),
           FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
         ],

@@ -10,6 +10,10 @@ ExercicioResumo _ex(String nome) => ExercicioResumo(
       id: nome,
       nome: nome,
       grupoMuscular: 'peito',
+      membroId: 1,
+      membroNome: 'Peito',
+      musculoId: 1,
+      musculoNome: 'Peitoral',
       modalidade: 'FORCA',
       intensidadeMetricaCodigo: 'CARGA_KG',
       intensidadeMetricaNome: 'Carga',
@@ -20,7 +24,11 @@ ExercicioResumo _ex(String nome) => ExercicioResumo(
 
 Widget _app(Future<List<ExercicioResumo>> Function(Ref ref) resultado) =>
     ProviderScope(
-      overrides: [catalogoProvider.overrideWith(resultado)],
+      overrides: [
+        catalogoProvider.overrideWith(resultado),
+        // Chips de membro: sem rede nos testes.
+        membrosProvider.overrideWith((ref) async => []),
+      ],
       child: MaterialApp(
         theme: AppTheme.claro,
         home: const SelecionarExercicioScreen(),
@@ -60,13 +68,12 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         catalogoProvider.overrideWith((ref) async => [_ex('Supino reto')]),
+        membrosProvider.overrideWith((ref) async => []),
       ],
     );
     addTearDown(container.dispose);
     container.read(catalogoFiltroProvider.notifier).definirBusca('supino');
-    container
-        .read(catalogoFiltroProvider.notifier)
-        .definirModalidade(ModalidadeFiltro.forca);
+    container.read(catalogoFiltroProvider.notifier).definirMembro(1);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -83,7 +90,7 @@ void main() {
     // Depois de montar, o seletor zerou o filtro global.
     final filtro = container.read(catalogoFiltroProvider);
     expect(filtro.busca, '');
-    expect(filtro.modalidade, ModalidadeFiltro.todos);
+    expect(filtro.membroId, isNull);
     // E o campo de busca aparece vazio.
     final campo = tester.widget<TextField>(find.byType(TextField));
     expect(campo.controller?.text ?? '', '');

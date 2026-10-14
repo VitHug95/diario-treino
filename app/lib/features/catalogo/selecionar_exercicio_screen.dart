@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
+import 'catalogo_screen.dart';
 import 'criar_exercicio_screen.dart';
 import 'exercicio_resumo.dart';
 
@@ -116,24 +117,10 @@ class _SelecionarExercicioScreenState
               ),
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-            child: Row(
-              children: [
-                for (final m in ModalidadeFiltro.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.x8),
-                    child: ChoiceChip(
-                      label: Text(m.rotulo),
-                      selected: m == filtro.modalidade,
-                      showCheckmark: false,
-                      onSelected: (_) =>
-                          ref.read(catalogoFiltroProvider.notifier).definirModalidade(m),
-                    ),
-                  ),
-              ],
-            ),
+          FiltroMembro(
+            selecionado: filtro.membroId,
+            aoSelecionar: (id) =>
+                ref.read(catalogoFiltroProvider.notifier).definirMembro(id),
           ),
           const SizedBox(height: AppSpacing.x8),
           Expanded(
@@ -237,7 +224,7 @@ class _ItemSelecionavel extends StatelessWidget {
     final cores = AppColors.of(context);
     final e = exercicio;
     final subtitulo = [
-      if (e.grupoMuscular != null && e.grupoMuscular!.isNotEmpty) e.grupoMuscular!,
+      if (e.classificacao.isNotEmpty) e.classificacao,
       e.formaDeMedir,
     ].join(' · ');
 
