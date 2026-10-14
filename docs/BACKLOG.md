@@ -323,10 +323,22 @@ Vale para toda PBI, além dos critérios de aceite dela:
 não a maior reps da sessão —, porque o atleta progride também variando as reps
 na mesma carga. Isometria segue com o maior tempo sustentado. Pergunta da
 seção 10 resolvida.
-**Status back-end:** FEITO — `GET /progresso/exercicios/{id}` implementado
+**Status back-end:** FEITO — `GET /progresso/exercicios/{id}` e
+`GET /progresso/exercicios` (lista com histórico, para o seletor) implementados
 (ServicoProgresso + RepositorioProgresso), com força (carga + reps daquela
 carga), isometria (tempo), resumo (sessões, variação, sessões com obs) e filtro
-de/ate. Falta o front (gráfico com fl_chart).
+de/ate.
+**Status front-end:** FEITO — aba Progresso (`progresso_screen.dart`) com seletor
+de exercício (dropdown de `GET /progresso/exercicios`), `LineChart` (fl_chart)
+acima da lista de sessões. Título por métrica (CARGA → "Carga (kg)", TEMPO →
+"Tempo (s)"); tooltip da força mostra carga × reps daquela carga; resumo
+(sessões · variação · com obs.); estados loading/erro/sem-seleção/sem-dados.
+Reusa o filtro de período do PBI-22. Cores/tamanhos por token (`chartLine`).
+9 testes de widget em `progresso_screen_test.dart`.
+**Nota técnica:** fl_chart fixado em **1.0.0** (não 1.1.0): a 1.1.0 chama
+`Matrix4.translateByDouble`/`scaleByDouble`, que só existem no `vector_math` do
+Flutter 3.32+. O projeto/CI está no Flutter 3.29.3 (Dart 3.7.2). A 1.0.0 tem a
+mesma API usada (`getTooltipColor`, `SideTitleWidget(meta:)`) e compila no 3.29.
 
 #### PBI-21 · Observação no ponto do gráfico
 **História:** Como atleta, quero tocar num ponto do gráfico e ler o que anotei naquele dia, para entender por que o desempenho caiu ou subiu.

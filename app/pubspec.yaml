@@ -10,7 +10,9 @@ dependencies:
   dio: ^5.11.1
   firebase_auth: ^6.7.0
   firebase_core: ^4.15.0
-  fl_chart: ^1.1.0
+  # Fixado em 1.0.0: a 1.1.0 usa Matrix4.translateByDouble/scaleByDouble, que só
+  # existem no vector_math do Flutter 3.32+. Este projeto (e o CI) está no 3.29.3.
+  fl_chart: 1.0.0
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.3.2
