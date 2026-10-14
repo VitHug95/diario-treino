@@ -1,9 +1,36 @@
 # MER: Modelo Entidade-Relacionamento
 
 **Projeto:** Diário de Treino (nome provisório)
-**Versão:** 0.1
+**Versão:** 1.0 (MVP de registro publicado; progresso e tela inicial no ar)
+**Última atualização:** 14/10/2026
 **Banco:** PostgreSQL
-**Documentos relacionados:** [MAS.md](MAS.md)
+**Documentos relacionados:** [MAS.md](MAS.md), [BACKLOG.md](BACKLOG.md)
+
+---
+
+## 0. O que está aplicado no banco hoje
+
+Esta seção separa o que **já existe no banco em produção** do que ainda é
+**planejado** neste documento, para o MER não ser lido como se tudo estivesse
+pronto.
+
+**Aplicado (migrations na `main` e no Neon):**
+- Tabelas: `usuario`, `usuario_papel`, `vinculo` (estrutura pronta, sem uso),
+  `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
+  `treino_exercicio`, `etapa_prescrita`, `sessao`, `serie_executada`.
+- `exercicio` usa a coluna **`grupo_muscular` (texto livre, `varchar(40)`,
+  opcional)** — ver 3.5. O catálogo global tem **89 exercícios ativos** + 7
+  genéricos antigos inativos (`ativo=false`), carregados por seed/migration.
+- Extensão `unaccent` habilitada (busca sem acento).
+
+**Planejado, ainda NÃO aplicado:**
+- Tabelas **`membro`** e **`musculo`** e as colunas `exercicio.membro_id` /
+  `musculo_id` (seções 3.4.1, 3.4.2 e o trecho de membro em 3.5). É o
+  **PBI-31 / ADR-10**: enquanto não entra, o filtro do catálogo é por
+  **modalidade** e o grupo do exercício é o texto livre `grupo_muscular`.
+
+Migrations versionadas até aqui: `InitialCreate`, `HabilitaUnaccent`,
+`CatalogoExerciciosCompleto` (carga dos 89 exercícios).
 
 ---
 
@@ -18,6 +45,10 @@
 - Nada é apagado fisicamente se tiver histórico ligado: usa-se `ativo = false`.
 
 ## 2. Diagrama
+
+> No diagrama abaixo, `membro` e `musculo` (e as FKs de `exercicio` para elas)
+> são **planejados** (PBI-31) e ainda não existem no banco; hoje `exercicio`
+> usa o campo livre `grupo_muscular` (ver 0 e 3.5).
 
 ```mermaid
 erDiagram
@@ -90,8 +121,7 @@ erDiagram
     exercicio {
         uuid id PK
         varchar nome
-        smallint membro_id FK
-        smallint musculo_id FK "opcional"
+        varchar grupo_muscular "texto livre; vira membro_id/musculo_id no PBI-31"
         varchar modalidade "FORCA | ISOMETRIA | CARDIO"
         smallint intensidade_metrica_padrao_id FK
         smallint volume_metrica_padrao_id FK
@@ -223,7 +253,11 @@ Carga inicial (seed via migration):
 
 Os ids de intensidade e volume ficam em faixas separadas para facilitar leitura; novas métricas (escala de dor, amplitude) entram como novas linhas.
 
-### 3.4.1 `membro`
+### 3.4.1 `membro` — PLANEJADO (PBI-31, ainda não aplicado)
+> ⚠️ **Não existe no banco ainda.** Esta tabela entra com o PBI-31 (ADR-10) e
+> vai substituir o texto livre `grupo_muscular`. Até lá, o grupo do exercício é
+> o campo livre descrito em 3.5.
+
 Tabela de referência com os membros usados para filtrar e organizar exercícios. Substitui o antigo texto livre `grupo_muscular` (ADR-10 do MAS).
 
 | Coluna | Tipo | Nulo | Regra |
@@ -248,7 +282,9 @@ Carga inicial (seed via migration):
 
 `MOBILIDADE` cobre equilíbrio, alongamento e exercícios de reabilitação que não miram um músculo. Lista sujeita à validação do Vinicius; ajustes entram por migration de seed.
 
-### 3.4.2 `musculo`
+### 3.4.2 `musculo` — PLANEJADO (PBI-31, ainda não aplicado)
+> ⚠️ **Não existe no banco ainda.** Entra junto com `membro` no PBI-31.
+
 Detalhe opcional dentro de cada membro. Hoje serve para o cadastro mais preciso; no futuro, para contar séries por músculo.
 
 | Coluna | Tipo | Nulo | Regra |
@@ -276,25 +312,43 @@ Carga inicial:
 ### 3.5 `exercicio`
 Catálogo de exercícios. Global (`criado_por_id` nulo) ou próprio do usuário.
 
+**Esquema atual no banco (hoje):**
+
 | Coluna | Tipo | Nulo | Regra |
 |---|---|---|---|
 | id | uuid | não | PK |
 | nome | varchar(80) | não | |
-| membro_id | smallint | sim* | FK `membro`. Obrigatório na criação pela API; nulo só em exercício antigo que a migração não conseguiu classificar |
-| musculo_id | smallint | sim | FK composta `(musculo_id, membro_id)` → `musculo (id, membro_id)`, o que garante que o músculo pertence ao membro escolhido |
+| grupo_muscular | varchar(40) | sim | **Texto livre, opcional.** Classificação do exercício (ex.: "Peitoral", "Dorsal", "Quadríceps"). Será substituído por `membro_id`/`musculo_id` no PBI-31 |
 | modalidade | varchar(20) | não | `CHECK (modalidade IN ('FORCA','ISOMETRIA','CARDIO'))`. Define qual gráfico de progresso usar |
 | intensidade_metrica_padrao_id | smallint | não | FK `metrica`, eixo `INTENSIDADE` |
 | volume_metrica_padrao_id | smallint | não | FK `metrica`, eixo `VOLUME` |
-| criado_por_id | uuid | sim | FK `usuario`. Nulo = catálogo global |
+| criado_por_id | uuid | sim | FK `usuario` (`ON DELETE CASCADE`). Nulo = catálogo global |
 | ativo | boolean | não | Padrão `true`. Exercício com histórico é arquivado, nunca apagado |
 
 Índice único em `(lower(nome), coalesce(criado_por_id, '00000000-0000-0000-0000-000000000000'))` para evitar duplicata no mesmo catálogo.
 
-Exemplos de padrão: supino reto = carga x repetições; prancha = peso corporal x tempo; corrida = zona x tempo.
+Exemplos de padrão (forma de medir = par de métricas): força comum = carga ×
+repetições; força com peso corporal (flexão, barra fixa) = peso corporal ×
+repetições; isometria (prancha) = peso corporal × tempo; cardio (corrida) =
+zona × tempo.
 
-**Modalidade e membro são coisas diferentes.** A modalidade define como o exercício é medido e qual gráfico usar; é estrutural. O membro é classificação para filtrar e organizar. Um não substitui o outro.
+**Catálogo global carregado (migration `CatalogoExerciciosCompleto`):** 89
+exercícios ativos cobrindo peito, costas, ombros, braços, pernas, core, cardio e
+mobilidade, com `grupo_muscular` preenchido. Mais 7 genéricos antigos do seed
+original mantidos como **inativos** (`ativo=false`) para não quebrar histórico
+já ligado (FKs `Restrict`); eles somem do catálogo pelo filtro `Ativo`.
 
-**Migração do texto livre:** a migration que cria `membro_id` converte o antigo `grupo_muscular` comparando sem acento e sem maiúscula (ex.: "perna", "pernas", "quadríceps" → PERNAS; "bíceps" → BRAÇOS com músculo Bíceps; "abdomen", "core" → CORE). Exercício de modalidade `CARDIO` sem grupo vai para `CARDIO`; "equilíbrio" vai para `MOBILIDADE`. O que não bater fica com `membro_id` nulo e aparece no app como "sem membro", para o dono classificar. Depois da conversão, a coluna `grupo_muscular` é removida.
+> **PLANEJADO (PBI-31 / ADR-10):** `grupo_muscular` será trocado pelas colunas
+> `membro_id` (FK `membro`, obrigatório na criação) e `musculo_id` (FK composta
+> `(musculo_id, membro_id)` → `musculo`). A migration converte o texto existente
+> sem acento/maiúscula (ex.: "pernas" → PERNAS; "bíceps" → BRAÇOS/Bíceps; cardio
+> sem grupo → CARDIO; "equilíbrio" → MOBILIDADE); o que não bater fica "sem
+> membro" para o dono classificar; só depois a coluna `grupo_muscular` é
+> removida.
+>
+> **Modalidade e membro são coisas diferentes.** A modalidade define como o
+> exercício é medido e qual gráfico usar (estrutural); o membro é classificação
+> para filtrar. Um não substitui o outro.
 
 ### 3.6 `plano_treino`
 Conjunto de fichas de um atleta. No MVP, autor e atleta são a mesma pessoa.
@@ -394,7 +448,8 @@ O que de fato aconteceu, série por série.
 | `sessao (atleta_id, data DESC)` | Sessões do período, tela inicial, progresso |
 | `serie_executada (sessao_id)` | Detalhe da sessão |
 | `serie_executada (exercicio_id, sessao_id)` | Última execução do exercício (pré-preenchimento) e evolução por exercício |
-| `exercicio (membro_id)` | Filtro por membro no seletor e no catálogo |
+| `exercicio (lower(nome), coalesce(criado_por_id, uuid-zero))` único | Impede nome duplicado no mesmo catálogo |
+| `exercicio (membro_id)` *(planejado, PBI-31)* | Filtro por membro no seletor e no catálogo |
 | `treino (plano_id, ordem)` | Fichas do plano |
 | `treino_exercicio (treino_id, ordem)` | Exercícios da ficha |
 | `vinculo (aluno_id) WHERE status = 'ATIVO'` | Regra de acesso do educador |
@@ -402,10 +457,10 @@ O que de fato aconteceu, série por série.
 ## 5. Regras de negócio que dependem do modelo
 
 1. **Pré-preenchimento:** ao abrir a ficha X para registrar, cada exercício recebe as séries da sessão mais recente do mesmo atleta que contenha aquele exercício. Sem histórico, usa os alvos de `etapa_prescrita`.
-2. **Evolução de força:** por sessão, maior `intensidade` entre as séries de esforço do exercício, com o `volume` correspondente. Métrica do gráfico ainda a validar com o Vinicius (maior carga ou volume total).
-3. **Evolução de isometria:** maior `volume` (tempo) por sessão, na mesma intensidade.
-4. **Evolução de cardio:** tempo total por zona no período.
-5. **Observação no gráfico:** cada ponto carrega `sessao.observacao`; ponto com observação é destacado.
+2. **Evolução de força (implementado, PBI-20):** por sessão, a série de esforço de **maior carga** (`intensidade`), com o `volume` (repetições) **daquela** série — desempate por maior volume. Decisão do PO (14/10): usa a maior carga, não o volume total, e cada ponto mostra as reps feitas com aquela carga.
+3. **Evolução de isometria (implementado, PBI-20):** maior `volume` (tempo) por sessão.
+4. **Evolução de cardio:** tempo total por zona no período. *(Incremento 2, ainda não implementado.)*
+5. **Observação no gráfico (implementado, PBI-21):** cada `PontoProgresso` carrega `sessao.observacao` e o `sessaoId`; pontos com observação são destacados e abrem a nota do dia + link para o detalhe da sessão.
 6. **Acesso:** toda consulta filtra por `atleta_id` após passar pela regra de controle de acesso do MAS (seção 11.3).
 7. **Integridade de métrica:** a métrica gravada na série precisa pertencer ao eixo correto (validado na aplicação, porque `CHECK` não consulta outra tabela).
 
