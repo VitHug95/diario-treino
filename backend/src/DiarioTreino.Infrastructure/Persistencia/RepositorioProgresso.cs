@@ -37,6 +37,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
             var pontos = await sessoes
                 .Select(s => new
                 {
+                    s.Id,
                     s.Data,
                     s.Observacao,
                     Maior = s.Series
@@ -57,7 +58,8 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
                     x.Data,
                     x.Maior!.Intensidade!.Value,
                     x.Maior.Volume,
-                    x.Observacao != null))
+                    x.Id,
+                    x.Observacao))
                 .ToList();
         }
 
@@ -66,6 +68,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
         var pontosIso = await sessoes
             .Select(s => new
             {
+                s.Id,
                 s.Data,
                 s.Observacao,
                 MaiorTempo = s.Series
@@ -78,7 +81,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
             .ToListAsync(ct);
 
         return pontosIso
-            .Select(x => new PontoBruto(x.Data, x.MaiorTempo!.Value, null, x.Observacao != null))
+            .Select(x => new PontoBruto(x.Data, x.MaiorTempo!.Value, null, x.Id, x.Observacao))
             .ToList();
     }
 

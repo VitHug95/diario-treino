@@ -60,7 +60,8 @@ public sealed class ServicoProgresso
             usuarioLogadoId, exercicioId, forca, de, ate, ct);
 
         var pontos = brutos
-            .Select(b => new PontoProgresso(b.Data, b.Valor, b.Repeticoes))
+            .Select(b => new PontoProgresso(
+                b.Data, b.Valor, b.Repeticoes, b.SessaoId, b.Observacao))
             .ToList();
 
         var variacao = pontos.Count >= 2

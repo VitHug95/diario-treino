@@ -22,12 +22,16 @@ public sealed record ProgressoExercicio(
 /// Um ponto do gráfico (uma sessão). Para força, <see cref="Valor"/> é a maior
 /// carga e <see cref="Repeticoes"/> as reps daquela série de maior carga. Para
 /// isometria, <see cref="Valor"/> é o maior tempo e <see cref="Repeticoes"/> é
-/// nulo.
+/// nulo. <see cref="SessaoId"/> permite abrir o detalhe (PBI-18) e
+/// <see cref="Observacao"/> traz o texto anotado naquele dia, ou nulo quando não
+/// houve observação (PBI-21).
 /// </summary>
 public sealed record PontoProgresso(
     DateOnly Data,
     decimal Valor,
-    decimal? Repeticoes);
+    decimal? Repeticoes,
+    Guid SessaoId,
+    string? Observacao);
 
 /// <summary>
 /// Exercício que o atleta já treinou, para o seletor do gráfico (PBI-20).

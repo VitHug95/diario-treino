@@ -352,6 +352,16 @@ mesma API usada (`getTooltipColor`, `SideTitleWidget(meta:)`) e compila no 3.29.
 
 **Tela:** 4.
 **Depende de:** PBI-20.
+**Status back-end:** FEITO — cada `PontoProgresso` (`GET /progresso/exercicios/{id}`)
+agora traz `sessaoId` (para o link "Abrir sessão") e `observacao` (texto anotado
+naquele dia, ou nulo). O texto já era projetado no `RepositorioProgresso` (só era
+usado como booleano para o resumo); agora flui até o DTO. Observação nunca vai
+para log (regra de dados). 2 testes de integração: isometria confere o texto no
+ponto; força confere ponto com obs, ponto sem obs (nulo) e ids de sessão
+distintos por ponto.
+**Falta front:** cor própria + legenda nos pontos com obs, toque mostra
+data/valor/observação (ou "Sem observação neste dia"), última sessão com obs
+pré-selecionada, link "Abrir sessão" → detalhe (PBI-18), alvo de toque ≥ 44 px.
 
 #### PBI-22 · Sessões do período
 **História:** Como atleta, quero a lista das sessões recentes, para achar um treino específico rapidinho.

@@ -21,7 +21,8 @@ public sealed class ProgressoEndpointTests
     private sealed record ProgressoResp(
         Guid ExercicioId, string Nome, string Modalidade, string? Metrica,
         List<PontoResp> Pontos, ResumoResp Resumo);
-    private sealed record PontoResp(DateOnly Data, decimal Valor, decimal? Repeticoes);
+    private sealed record PontoResp(
+        DateOnly Data, decimal Valor, decimal? Repeticoes, Guid SessaoId, string? Observacao);
     private sealed record ResumoResp(int Sessoes, decimal? Variacao, int SessoesComObservacao);
 
     // Seed: supino (força, carga×reps) e prancha (isometria, peso corporal×tempo).
@@ -150,6 +151,36 @@ public sealed class ProgressoEndpointTests
         Assert.Equal(45m, ponto.Valor); // maior tempo
         Assert.Null(ponto.Repeticoes);
         Assert.Equal(1, prog.Resumo.SessoesComObservacao);
+        // PBI-21: o ponto carrega o texto da observação e o id da sessão.
+        Assert.Equal("Difícil", ponto.Observacao);
+        Assert.NotEqual(Guid.Empty, ponto.SessaoId);
+    }
+
+    [Fact]
+    public async Task Ponto_traz_sessaoId_e_observacao_quando_houver()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var teSupino = await CriarFichaComExercicio(client, SupinoReto);
+
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        // Mais antiga sem observação; mais recente com observação.
+        await CriarSessao(client, SupinoReto, teSupino, hoje.AddDays(-3),
+            [SerieForca(1, 40, 8)]);
+        await CriarSessao(client, SupinoReto, teSupino, hoje,
+            [SerieForca(1, 45, 6)], observacao: "Ombro incomodando");
+
+        var prog = await client.GetFromJsonAsync<ProgressoResp>(
+            $"/api/v1/progresso/exercicios/{SupinoReto}");
+
+        Assert.Equal(2, prog!.Pontos.Count);
+        // Ordem crescente de data: [0] sem obs, [1] com obs.
+        Assert.Null(prog.Pontos[0].Observacao);
+        Assert.NotEqual(Guid.Empty, prog.Pontos[0].SessaoId);
+        Assert.Equal("Ombro incomodando", prog.Pontos[1].Observacao);
+        Assert.NotEqual(Guid.Empty, prog.Pontos[1].SessaoId);
+        // Cada ponto tem o id da sua própria sessão (não repete).
+        Assert.NotEqual(prog.Pontos[0].SessaoId, prog.Pontos[1].SessaoId);
     }
 
     [Fact]
