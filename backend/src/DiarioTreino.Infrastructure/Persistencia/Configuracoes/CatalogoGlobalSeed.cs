@@ -19,51 +19,97 @@ namespace DiarioTreino.Infrastructure.Persistencia.Configuracoes;
 /// </summary>
 internal static class CatalogoGlobalSeed
 {
-    // CR: carga × repetições (Força).
-    private static Exercicio Cr(string id, string nome, string? grupo) => new()
+    /// <summary>
+    /// Mapeia o nome do músculo (valor de grupo_muscular) para o par
+    /// (musculoId, membroId). Nulo = sem músculo mapeado (ex.: "Levantamento
+    /// terra"). PBI-31: o membro vem do músculo.
+    /// </summary>
+    private static (short MusculoId, short MembroId)? MusculoDoGrupo(string? grupo) => grupo switch
     {
-        Id = Guid.Parse(id),
-        Nome = nome,
-        GrupoMuscular = grupo,
-        Modalidade = Modalidade.Forca,
-        IntensidadeMetricaPadraoId = MetricaCodigos.CargaKg,
-        VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,
-        CriadoPorId = null,
-        Ativo = true,
+        "Peitoral" => (MusculoCodigos.Peitoral, MembroCodigos.Peito),
+        "Dorsal" => (MusculoCodigos.Dorsal, MembroCodigos.Costas),
+        "Trapézio" => (MusculoCodigos.Trapezio, MembroCodigos.Costas),
+        "Deltoide" => (MusculoCodigos.Deltoide, MembroCodigos.Ombros),
+        "Bíceps" => (MusculoCodigos.Biceps, MembroCodigos.Bracos),
+        "Tríceps" => (MusculoCodigos.Triceps, MembroCodigos.Bracos),
+        "Antebraço" => (MusculoCodigos.Antebraco, MembroCodigos.Bracos),
+        "Quadríceps" => (MusculoCodigos.Quadriceps, MembroCodigos.Pernas),
+        "Posteriores de coxa" => (MusculoCodigos.PosterioresDeCoxa, MembroCodigos.Pernas),
+        "Glúteos" => (MusculoCodigos.Gluteos, MembroCodigos.Pernas),
+        "Panturrilha" => (MusculoCodigos.Panturrilha, MembroCodigos.Pernas),
+        "Adutores" => (MusculoCodigos.Adutores, MembroCodigos.Pernas),
+        "Abdômen" => (MusculoCodigos.Abdomen, MembroCodigos.Core),
+        "Oblíquos" => (MusculoCodigos.Obliquos, MembroCodigos.Core),
+        "Lombar" => (MusculoCodigos.Lombar, MembroCodigos.Core),
+        _ => null,
     };
+
+    // CR: carga × repetições (Força). Membro/músculo vêm do grupo.
+    private static Exercicio Cr(string id, string nome, string? grupo)
+    {
+        var m = MusculoDoGrupo(grupo);
+        return new()
+        {
+            Id = Guid.Parse(id),
+            Nome = nome,
+            GrupoMuscular = grupo,
+            MembroId = m?.MembroId,
+            MusculoId = m?.MusculoId,
+            Modalidade = Modalidade.Forca,
+            IntensidadeMetricaPadraoId = MetricaCodigos.CargaKg,
+            VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,
+            CriadoPorId = null,
+            Ativo = true,
+        };
+    }
 
     // PR: peso corporal × repetições (Força) — ex.: flexão, barra fixa.
-    private static Exercicio Pr(string id, string nome, string? grupo) => new()
+    private static Exercicio Pr(string id, string nome, string? grupo)
     {
-        Id = Guid.Parse(id),
-        Nome = nome,
-        GrupoMuscular = grupo,
-        Modalidade = Modalidade.Forca,
-        IntensidadeMetricaPadraoId = MetricaCodigos.PesoCorporal,
-        VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,
-        CriadoPorId = null,
-        Ativo = true,
-    };
+        var m = MusculoDoGrupo(grupo);
+        return new()
+        {
+            Id = Guid.Parse(id),
+            Nome = nome,
+            GrupoMuscular = grupo,
+            MembroId = m?.MembroId,
+            MusculoId = m?.MusculoId,
+            Modalidade = Modalidade.Forca,
+            IntensidadeMetricaPadraoId = MetricaCodigos.PesoCorporal,
+            VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,
+            CriadoPorId = null,
+            Ativo = true,
+        };
+    }
 
-    // PT: peso corporal × tempo (Isometria).
-    private static Exercicio Pt(string id, string nome, string? grupo) => new()
+    // PT: peso corporal × tempo (Isometria). Com músculo (ex.: core) ou, sem
+    // grupo (mobilidade), vai para o membro Mobilidade sem músculo.
+    private static Exercicio Pt(string id, string nome, string? grupo)
     {
-        Id = Guid.Parse(id),
-        Nome = nome,
-        GrupoMuscular = grupo,
-        Modalidade = Modalidade.Isometria,
-        IntensidadeMetricaPadraoId = MetricaCodigos.PesoCorporal,
-        VolumeMetricaPadraoId = MetricaCodigos.TempoSeg,
-        CriadoPorId = null,
-        Ativo = true,
-    };
+        var m = MusculoDoGrupo(grupo);
+        return new()
+        {
+            Id = Guid.Parse(id),
+            Nome = nome,
+            GrupoMuscular = grupo,
+            MembroId = m?.MembroId ?? MembroCodigos.Mobilidade,
+            MusculoId = m?.MusculoId,
+            Modalidade = Modalidade.Isometria,
+            IntensidadeMetricaPadraoId = MetricaCodigos.PesoCorporal,
+            VolumeMetricaPadraoId = MetricaCodigos.TempoSeg,
+            CriadoPorId = null,
+            Ativo = true,
+        };
+    }
 
-    // ZT: zona × tempo (Cardio).
+    // ZT: zona × tempo (Cardio). Sempre no membro Cardio, sem músculo.
     private static Exercicio Zt(string id, string nome) => new()
     {
         Id = Guid.Parse(id),
         Nome = nome,
         GrupoMuscular = null,
+        MembroId = MembroCodigos.Cardio,
+        MusculoId = null,
         Modalidade = Modalidade.Cardio,
         IntensidadeMetricaPadraoId = MetricaCodigos.Zona,
         VolumeMetricaPadraoId = MetricaCodigos.TempoSeg,

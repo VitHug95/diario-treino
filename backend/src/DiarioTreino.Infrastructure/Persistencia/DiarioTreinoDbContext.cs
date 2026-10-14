@@ -23,6 +23,8 @@ public class DiarioTreinoDbContext : DbContext
     public DbSet<UsuarioPapel> UsuarioPapeis => Set<UsuarioPapel>();
     public DbSet<Vinculo> Vinculos => Set<Vinculo>();
     public DbSet<Metrica> Metricas => Set<Metrica>();
+    public DbSet<Membro> Membros => Set<Membro>();
+    public DbSet<Musculo> Musculos => Set<Musculo>();
     public DbSet<Exercicio> Exercicios => Set<Exercicio>();
     public DbSet<PlanoTreino> PlanosTreino => Set<PlanoTreino>();
     public DbSet<Treino> Treinos => Set<Treino>();

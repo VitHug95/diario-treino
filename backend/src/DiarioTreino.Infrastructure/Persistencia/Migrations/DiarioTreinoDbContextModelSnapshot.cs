@@ -48,11 +48,19 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("intensidade_metrica_padrao_id");
 
+                    b.Property<short?>("MembroId")
+                        .HasColumnType("smallint")
+                        .HasColumnName("membro_id");
+
                     b.Property<string>("Modalidade")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("modalidade");
+
+                    b.Property<short?>("MusculoId")
+                        .HasColumnType("smallint")
+                        .HasColumnName("musculo_id");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -70,7 +78,11 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
                     b.HasIndex("IntensidadeMetricaPadraoId");
 
+                    b.HasIndex("MembroId");
+
                     b.HasIndex("VolumeMetricaPadraoId");
+
+                    b.HasIndex("MusculoId", "MembroId");
 
                     b.ToTable("exercicio", null, t =>
                         {
@@ -152,7 +164,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino reto com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -162,7 +176,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino reto com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -172,7 +188,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino inclinado com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -182,7 +200,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino inclinado com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -192,7 +212,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino declinado",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -202,7 +224,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Supino na máquina",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -212,7 +236,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Crucifixo reto com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -222,7 +248,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Crucifixo inclinado",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -232,7 +260,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Peck deck",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -242,7 +272,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Crossover na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -252,7 +284,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Flexão de braço",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -262,7 +296,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)1,
                             Modalidade = "FORCA",
+                            MusculoId = (short)1,
                             Nome = "Paralelas para peito",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -272,7 +308,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Puxada frontal",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -282,7 +320,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Puxada supinada",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -292,7 +332,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Barra fixa",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -302,7 +344,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Remada curvada com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -312,7 +356,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Remada unilateral com halter, o serrote",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -322,7 +368,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Remada baixa na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -332,7 +380,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Remada cavalinho",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -342,7 +392,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Remada na máquina",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -352,7 +404,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)2,
                             Nome = "Pulldown com braço estendido",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -362,7 +416,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Trapézio",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)3,
                             Nome = "Encolhimento com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -372,7 +428,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Trapézio",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)2,
                             Modalidade = "FORCA",
+                            MusculoId = (short)3,
                             Nome = "Encolhimento com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -391,7 +449,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Desenvolvimento com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -401,7 +461,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Desenvolvimento militar com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -411,7 +473,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Desenvolvimento na máquina",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -421,7 +485,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Elevação lateral com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -431,7 +497,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Elevação lateral na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -441,7 +509,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Elevação frontal",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -451,7 +521,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Crucifixo invertido",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -461,7 +533,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Face pull",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -471,7 +545,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)3,
                             Modalidade = "FORCA",
+                            MusculoId = (short)4,
                             Nome = "Remada alta",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -481,7 +557,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca direta com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -491,7 +569,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca alternada com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -501,7 +581,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca martelo",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -511,7 +593,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca scott",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -521,7 +605,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca concentrada",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -531,7 +617,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)5,
                             Nome = "Rosca na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -541,7 +629,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Tríceps corda",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -551,7 +641,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Tríceps pulley com barra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -561,7 +653,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Tríceps testa",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -571,7 +665,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Tríceps francês",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -581,7 +677,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Tríceps coice",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -591,7 +689,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Supino fechado",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -601,7 +701,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)6,
                             Nome = "Mergulho no banco",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -611,7 +713,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Antebraço",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)7,
                             Nome = "Rosca de punho",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -621,7 +725,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Antebraço",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)4,
                             Modalidade = "FORCA",
+                            MusculoId = (short)7,
                             Nome = "Rosca inversa",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -631,7 +737,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Agachamento livre",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -641,7 +749,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Agachamento no smith",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -651,7 +761,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Leg press 45°",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -661,7 +773,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Hack machine",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -671,7 +785,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Cadeira extensora",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -681,7 +797,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Afundo com halteres",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -691,7 +809,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)8,
                             Nome = "Agachamento búlgaro",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -701,7 +821,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)5,
                             Modalidade = "ISOMETRIA",
+                            MusculoId = (short)8,
                             Nome = "Agachamento isométrico na parede",
                             VolumeMetricaPadraoId = (short)11
                         },
@@ -711,7 +833,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)9,
                             Nome = "Mesa flexora",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -721,7 +845,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)9,
                             Nome = "Cadeira flexora",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -731,7 +857,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)9,
                             Nome = "Stiff",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -741,7 +869,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)10,
                             Nome = "Elevação pélvica",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -751,7 +881,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)10,
                             Nome = "Glúteo na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -761,7 +893,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)10,
                             Nome = "Cadeira abdutora",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -771,7 +905,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Adutores",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)12,
                             Nome = "Cadeira adutora",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -781,7 +917,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Adutores",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)12,
                             Nome = "Agachamento sumô",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -791,7 +929,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Panturrilha",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)11,
                             Nome = "Panturrilha em pé",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -801,7 +941,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Panturrilha",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)5,
                             Modalidade = "FORCA",
+                            MusculoId = (short)11,
                             Nome = "Panturrilha sentado",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -811,7 +953,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)13,
                             Nome = "Abdominal supra",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -821,7 +965,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)13,
                             Nome = "Elevação de pernas",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -831,7 +977,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)1,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)13,
                             Nome = "Abdominal na polia",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -841,7 +989,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)13,
                             Nome = "Roda abdominal",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -851,7 +1001,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "ISOMETRIA",
+                            MusculoId = (short)13,
                             Nome = "Prancha",
                             VolumeMetricaPadraoId = (short)11
                         },
@@ -861,7 +1013,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "ISOMETRIA",
+                            MusculoId = (short)14,
                             Nome = "Prancha lateral",
                             VolumeMetricaPadraoId = (short)11
                         },
@@ -871,7 +1025,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)14,
                             Nome = "Rotação russa",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -881,7 +1037,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)14,
                             Nome = "Abdominal bicicleta",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -891,7 +1049,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Lombar",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "FORCA",
+                            MusculoId = (short)15,
                             Nome = "Extensão lombar no banco romano",
                             VolumeMetricaPadraoId = (short)10
                         },
@@ -901,7 +1061,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Ativo = true,
                             GrupoMuscular = "Lombar",
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)6,
                             Modalidade = "ISOMETRIA",
+                            MusculoId = (short)15,
                             Nome = "Superman",
                             VolumeMetricaPadraoId = (short)11
                         },
@@ -910,6 +1072,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000001"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Corrida",
                             VolumeMetricaPadraoId = (short)11
@@ -919,6 +1082,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000002"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Esteira",
                             VolumeMetricaPadraoId = (short)11
@@ -928,6 +1092,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000003"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Bicicleta ergométrica",
                             VolumeMetricaPadraoId = (short)11
@@ -937,6 +1102,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000004"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Elíptico",
                             VolumeMetricaPadraoId = (short)11
@@ -946,6 +1112,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000005"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Simulador de escada",
                             VolumeMetricaPadraoId = (short)11
@@ -955,6 +1122,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000006"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Remo ergômetro",
                             VolumeMetricaPadraoId = (short)11
@@ -964,6 +1132,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000007"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Pular corda",
                             VolumeMetricaPadraoId = (short)11
@@ -973,6 +1142,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("77770000-0000-0000-0000-000000000008"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
+                            MembroId = (short)7,
                             Modalidade = "CARDIO",
                             Nome = "Caminhada",
                             VolumeMetricaPadraoId = (short)11
@@ -982,6 +1152,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("88880000-0000-0000-0000-000000000001"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)8,
                             Modalidade = "ISOMETRIA",
                             Nome = "Alongamento de posteriores",
                             VolumeMetricaPadraoId = (short)11
@@ -991,6 +1162,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("88880000-0000-0000-0000-000000000002"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)8,
                             Modalidade = "ISOMETRIA",
                             Nome = "Alongamento de quadríceps",
                             VolumeMetricaPadraoId = (short)11
@@ -1000,6 +1172,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("88880000-0000-0000-0000-000000000003"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)8,
                             Modalidade = "ISOMETRIA",
                             Nome = "Mobilidade de quadril",
                             VolumeMetricaPadraoId = (short)11
@@ -1009,6 +1182,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("88880000-0000-0000-0000-000000000004"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)8,
                             Modalidade = "ISOMETRIA",
                             Nome = "Mobilidade de ombro",
                             VolumeMetricaPadraoId = (short)11
@@ -1018,9 +1192,98 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Id = new Guid("88880000-0000-0000-0000-000000000005"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)2,
+                            MembroId = (short)8,
                             Modalidade = "ISOMETRIA",
                             Nome = "Equilíbrio unipodal",
                             VolumeMetricaPadraoId = (short)11
+                        });
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Catalogo.Membro", b =>
+                {
+                    b.Property<short>("Id")
+                        .HasColumnType("smallint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("nome");
+
+                    b.Property<short>("Ordem")
+                        .HasColumnType("smallint")
+                        .HasColumnName("ordem");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("membro", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = (short)1,
+                            Codigo = "PEITO",
+                            Nome = "Peito",
+                            Ordem = (short)1
+                        },
+                        new
+                        {
+                            Id = (short)2,
+                            Codigo = "COSTAS",
+                            Nome = "Costas",
+                            Ordem = (short)2
+                        },
+                        new
+                        {
+                            Id = (short)3,
+                            Codigo = "OMBROS",
+                            Nome = "Ombros",
+                            Ordem = (short)3
+                        },
+                        new
+                        {
+                            Id = (short)4,
+                            Codigo = "BRACOS",
+                            Nome = "Braços",
+                            Ordem = (short)4
+                        },
+                        new
+                        {
+                            Id = (short)5,
+                            Codigo = "PERNAS",
+                            Nome = "Pernas",
+                            Ordem = (short)5
+                        },
+                        new
+                        {
+                            Id = (short)6,
+                            Codigo = "CORE",
+                            Nome = "Core",
+                            Ordem = (short)6
+                        },
+                        new
+                        {
+                            Id = (short)7,
+                            Codigo = "CARDIO",
+                            Nome = "Cardio",
+                            Ordem = (short)7
+                        },
+                        new
+                        {
+                            Id = (short)8,
+                            Codigo = "MOBILIDADE",
+                            Nome = "Mobilidade",
+                            Ordem = (short)8
                         });
                 });
 
@@ -1112,6 +1375,145 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             Eixo = "VOLUME",
                             Nome = "Distância",
                             Unidade = "m"
+                        });
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Catalogo.Musculo", b =>
+                {
+                    b.Property<short>("Id")
+                        .HasColumnType("smallint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
+
+                    b.Property<short>("MembroId")
+                        .HasColumnType("smallint")
+                        .HasColumnName("membro_id");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("nome");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("MembroId");
+
+                    b.ToTable("musculo", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = (short)1,
+                            Codigo = "PEITORAL",
+                            MembroId = (short)1,
+                            Nome = "Peitoral"
+                        },
+                        new
+                        {
+                            Id = (short)2,
+                            Codigo = "DORSAL",
+                            MembroId = (short)2,
+                            Nome = "Dorsal"
+                        },
+                        new
+                        {
+                            Id = (short)3,
+                            Codigo = "TRAPEZIO",
+                            MembroId = (short)2,
+                            Nome = "Trapézio"
+                        },
+                        new
+                        {
+                            Id = (short)4,
+                            Codigo = "DELTOIDE",
+                            MembroId = (short)3,
+                            Nome = "Deltoide"
+                        },
+                        new
+                        {
+                            Id = (short)5,
+                            Codigo = "BICEPS",
+                            MembroId = (short)4,
+                            Nome = "Bíceps"
+                        },
+                        new
+                        {
+                            Id = (short)6,
+                            Codigo = "TRICEPS",
+                            MembroId = (short)4,
+                            Nome = "Tríceps"
+                        },
+                        new
+                        {
+                            Id = (short)7,
+                            Codigo = "ANTEBRACO",
+                            MembroId = (short)4,
+                            Nome = "Antebraço"
+                        },
+                        new
+                        {
+                            Id = (short)8,
+                            Codigo = "QUADRICEPS",
+                            MembroId = (short)5,
+                            Nome = "Quadríceps"
+                        },
+                        new
+                        {
+                            Id = (short)9,
+                            Codigo = "POSTERIORES_COXA",
+                            MembroId = (short)5,
+                            Nome = "Posteriores de coxa"
+                        },
+                        new
+                        {
+                            Id = (short)10,
+                            Codigo = "GLUTEOS",
+                            MembroId = (short)5,
+                            Nome = "Glúteos"
+                        },
+                        new
+                        {
+                            Id = (short)11,
+                            Codigo = "PANTURRILHA",
+                            MembroId = (short)5,
+                            Nome = "Panturrilha"
+                        },
+                        new
+                        {
+                            Id = (short)12,
+                            Codigo = "ADUTORES",
+                            MembroId = (short)5,
+                            Nome = "Adutores"
+                        },
+                        new
+                        {
+                            Id = (short)13,
+                            Codigo = "ABDOMEN",
+                            MembroId = (short)6,
+                            Nome = "Abdômen"
+                        },
+                        new
+                        {
+                            Id = (short)14,
+                            Codigo = "OBLIQUOS",
+                            MembroId = (short)6,
+                            Nome = "Oblíquos"
+                        },
+                        new
+                        {
+                            Id = (short)15,
+                            Codigo = "LOMBAR",
+                            MembroId = (short)6,
+                            Nome = "Lombar"
                         });
                 });
 
@@ -1564,15 +1966,39 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("DiarioTreino.Domain.Catalogo.Membro", "Membro")
+                        .WithMany()
+                        .HasForeignKey("MembroId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DiarioTreino.Domain.Catalogo.Metrica", "VolumeMetricaPadrao")
                         .WithMany()
                         .HasForeignKey("VolumeMetricaPadraoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("DiarioTreino.Domain.Catalogo.Musculo", "Musculo")
+                        .WithMany()
+                        .HasForeignKey("MusculoId", "MembroId")
+                        .HasPrincipalKey("Id", "MembroId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IntensidadeMetricaPadrao");
 
+                    b.Navigation("Membro");
+
+                    b.Navigation("Musculo");
+
                     b.Navigation("VolumeMetricaPadrao");
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Catalogo.Musculo", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Catalogo.Membro", null)
+                        .WithMany()
+                        .HasForeignKey("MembroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Execucao.SerieExecutada", b =>

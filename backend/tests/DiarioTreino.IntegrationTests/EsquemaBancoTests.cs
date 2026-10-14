@@ -52,6 +52,52 @@ public sealed class EsquemaBancoTests
     }
 
     [Fact]
+    public async Task Semeia_membros_e_musculos_e_classifica_o_catalogo_global()
+    {
+        await using var db = _postgres.CriarContexto();
+
+        // 8 membros (MER 3.4.1) e 15 músculos (MER 3.4.2).
+        var membros = await db.Membros.OrderBy(m => m.Ordem).ToListAsync();
+        Assert.Equal(8, membros.Count);
+        Assert.Equal(
+            new[] { "PEITO", "COSTAS", "OMBROS", "BRACOS", "PERNAS", "CORE", "CARDIO", "MOBILIDADE" },
+            membros.Select(m => m.Codigo).ToArray());
+        Assert.Equal(15, await db.Musculos.CountAsync());
+
+        // Exercícios do catálogo ativos ficaram classificados por membro.
+        var ativos = await db.Exercicios
+            .Where(e => e.CriadoPorId == null && e.Ativo).ToListAsync();
+
+        // Supino reto com barra → Peito/Peitoral.
+        var supino = ativos.Single(e => e.Nome == "Supino reto com barra");
+        Assert.Equal(MembroCodigos.Peito, supino.MembroId);
+        Assert.Equal(MusculoCodigos.Peitoral, supino.MusculoId);
+
+        // Corrida (cardio) → membro Cardio, sem músculo.
+        var corrida = ativos.Single(e => e.Nome == "Corrida");
+        Assert.Equal(MembroCodigos.Cardio, corrida.MembroId);
+        Assert.Null(corrida.MusculoId);
+
+        // Mobilidade sem grupo → membro Mobilidade, sem músculo.
+        var mobilidade = ativos.Single(e => e.Nome == "Mobilidade de quadril");
+        Assert.Equal(MembroCodigos.Mobilidade, mobilidade.MembroId);
+        Assert.Null(mobilidade.MusculoId);
+
+        // "Levantamento terra" (força sem grupo) fica sem membro (não casou).
+        var terra = ativos.Single(e => e.Nome == "Levantamento terra");
+        Assert.Null(terra.MembroId);
+        Assert.Null(terra.MusculoId);
+
+        // Todo exercício classificado respeita a FK composta: o músculo
+        // pertence ao membro.
+        foreach (var e in ativos.Where(x => x.MusculoId != null))
+        {
+            var mus = await db.Musculos.SingleAsync(m => m.Id == e.MusculoId);
+            Assert.Equal(e.MembroId, mus.MembroId);
+        }
+    }
+
+    [Fact]
     public async Task Indice_unico_impede_nome_de_exercicio_repetido_no_mesmo_catalogo()
     {
         await using var db = _postgres.CriarContexto();
