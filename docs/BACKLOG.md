@@ -182,6 +182,14 @@ por catálogo respeitados (`ux_exercicio_nome_catalogo`).
 - Depois que existe ao menos uma ficha ou sessão, a tela não aparece mais.
 
 **Depende de:** PBI-08. O destino do segundo botão depende de PBI-19.
+**Status:** FEITO. `PrimeiroAcessoScreen` (tela 6) aparece no lugar da inicial
+quando o atleta não tem nenhuma ficha **nem** sessão. O gate é client-side em
+`InicioScreen`, derivado dos providers já existentes (`planoAtivoProvider` +
+`sessoesRecentesProvider`): só mostra quando os dois carregaram e estão vazios
+(não pisca durante o carregamento nem em erro de rede). Botão "Montar minhas
+fichas" leva às fichas; "Registrar sem ficha" leva ao treino livre (PBI-19).
+Com ao menos uma ficha ou sessão, a tela inicial normal volta. Teste de widget
+cobre os dois caminhos e o caso "tem sessão, sem ficha".
 
 ### Épico E2: Catálogo de exercícios
 
@@ -314,6 +322,18 @@ por catálogo respeitados (`ux_exercicio_nome_catalogo`).
 
 **Tela:** 7.
 **Depende de:** PBI-16, PBI-17.
+**Status:** FEITO. Back-end: a gravação de sessão com `treino_id` nulo já era
+suportada (atleta = usuário logado, sem checagem de ficha); novo endpoint
+`GET /exercicios/{id}/ultima-execucao` monta o rascunho de um exercício avulso
+(séries da última execução do atleta ou uma série em branco das métricas padrão,
+404 se o exercício não estiver disponível ao usuário); novo
+`POST /planos/fichas-de-treino` cria uma ficha a partir dos exercícios do treino
+(garante o plano, cria o treino e adiciona os exercícios na ordem, 404 se algum
+não for acessível). Front: `TreinoLivreScreen` (tela 7) começa vazia (só data e
+duração), "Adicionar exercício" traz a última execução como referência e a opção
+"Salvar também como ficha" cria a ficha após gravar. Testes de integração cobrem
+o treino livre, a última execução (com/sem histórico) e os casos 404 de outro
+usuário; testes de widget da tela. CI roda a integração.
 
 ### Épico E5: Progresso
 

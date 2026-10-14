@@ -66,6 +66,29 @@ public static class PlanoEndpoints
         })
         .WithName("AdicionarFicha").WithTags("Fichas").WithSummary("Adiciona uma ficha");
 
+        // Cria uma ficha a partir dos exercícios de um treino livre (PBI-19,
+        // "Salvar também como ficha"). Garante o plano, cria a ficha e adiciona
+        // os exercícios na ordem informada.
+        grupo.MapPost("/planos/fichas-de-treino", async (
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<CriarFichaDeTreinoRequest> validator,
+            CriarFichaDeTreinoRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var treinoId = await planejamento.CriarFichaDeExerciciosAsync(perfil.Id, request, ct);
+            return Results.Created($"/api/v1/treinos/{treinoId}", new { id = treinoId });
+        })
+        .WithName("CriarFichaDeTreino").WithTags("Fichas")
+        .WithSummary("Cria uma ficha a partir dos exercícios de um treino livre");
+
         // Renomeia/edita a ficha.
         grupo.MapPut("/treinos/{id:guid}", async (
             Guid id,

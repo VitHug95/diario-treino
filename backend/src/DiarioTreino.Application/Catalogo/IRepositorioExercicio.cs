@@ -38,6 +38,14 @@ public interface IRepositorioExercicio
     /// </summary>
     public Task<IReadOnlyDictionary<Guid, ExercicioBasico>> ObterBasicosPorIdsAsync(
         IReadOnlyCollection<Guid> ids, CancellationToken ct);
+
+    /// <summary>
+    /// Exercício disponível ao usuário (global ou próprio), com as métricas
+    /// padrão, para montar o rascunho de treino livre (PBI-19). Nulo se não
+    /// existe ou não está disponível para o usuário.
+    /// </summary>
+    public Task<ExercicioParaRascunho?> ObterParaRascunhoAsync(
+        Guid exercicioId, Guid usuarioId, CancellationToken ct);
 }
 
 /// <summary>Dados mínimos de um exercício para exibição.</summary>
@@ -45,3 +53,14 @@ public sealed record ExercicioBasico(
     Guid Id,
     string Nome,
     string Modalidade);
+
+/// <summary>
+/// Exercício com as métricas padrão, para montar uma série em branco no treino
+/// livre (PBI-19).
+/// </summary>
+public sealed record ExercicioParaRascunho(
+    Guid Id,
+    string Nome,
+    string Modalidade,
+    short IntensidadeMetricaPadraoId,
+    short VolumeMetricaPadraoId);

@@ -40,7 +40,13 @@ Future<Widget> _tela(
 
 void main() {
   testWidgets('Saúda o atleta e alterna o tema', (tester) async {
-    await tester.pumpWidget(await _tela(null));
+    // Com ao menos uma ficha, fica na tela inicial (não cai no primeiro acesso).
+    final plano = PlanoAtivo(
+      id: 'p1',
+      nome: 'Plano',
+      treinos: [_ficha('A', 1, descricao: 'Peito')],
+    );
+    await tester.pumpWidget(await _tela(plano));
     await tester.pumpAndSettle();
 
     expect(find.text('BORA, ATLETA'), findsOneWidget);
@@ -52,12 +58,36 @@ void main() {
     expect(prefs.getString('tema_modo'), 'escuro');
   });
 
-  testWidgets('Sem fichas, convida a montar', (tester) async {
+  testWidgets('Primeiro acesso: sem ficha e sem sessão mostra a tela 6 (PBI-09)',
+      (tester) async {
     await tester.pumpWidget(await _tela(null));
     await tester.pumpAndSettle();
 
+    // Tela de boas-vindas com os dois caminhos.
+    expect(find.text('Seu diário de treino'), findsOneWidget);
+    expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
+    expect(find.text('Registrar sem ficha'), findsOneWidget);
+  });
+
+  testWidgets('Com sessão mas sem ficha, mostra a inicial (não o primeiro acesso)',
+      (tester) async {
+    // Já treinou (treino livre), então o primeiro acesso não aparece mais.
+    final sessoes = [
+      SessaoResumo(
+        id: 's1',
+        data: DateTime.now().subtract(const Duration(days: 1)),
+        treinoId: null,
+        treinoNome: null,
+        quantidadeExercicios: 2,
+        duracaoMin: 30,
+        temObservacao: false,
+      ),
+    ];
+    await tester.pumpWidget(await _tela(null, sessoes: sessoes));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seu diário de treino'), findsNothing);
     expect(find.text('Monte suas fichas'), findsOneWidget);
-    expect(find.text('MONTAR FICHAS'), findsOneWidget);
   });
 
   testWidgets('Sem histórico, sugere a primeira ficha da ordem', (tester) async {

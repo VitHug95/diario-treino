@@ -113,4 +113,16 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
 
         return itens.ToDictionary(e => e.Id);
     }
+
+    public async Task<ExercicioParaRascunho?> ObterParaRascunhoAsync(
+        Guid exercicioId, Guid usuarioId, CancellationToken ct) =>
+        await _db.Exercicios
+            .AsNoTracking()
+            .Where(e => e.Id == exercicioId
+                && e.Ativo
+                && (e.CriadoPorId == null || e.CriadoPorId == usuarioId))
+            .Select(e => new ExercicioParaRascunho(
+                e.Id, e.Nome, e.Modalidade,
+                e.IntensidadeMetricaPadraoId, e.VolumeMetricaPadraoId))
+            .FirstOrDefaultAsync(ct);
 }

@@ -27,8 +27,10 @@ abstract final class Rotas {
   static const exercicios = '/exercicios';
   static const criarExercicio = '/exercicios/novo';
   static const registrarSessao = '/fichas/registrar';
+  static const treinoLivre = '/fichas/treino-livre';
   static const detalheSessao = '/sessoes';
   static const perfil = '/perfil';
+  static const primeiroAcesso = '/primeiro-acesso';
 }
 
 /// Dados passados ao abrir o registro de sessão (via `extra`).
@@ -153,6 +155,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                         dataInicial: args?.data,
                       );
                     },
+                  ),
+                  // Treino livre (PBI-19), empilhado sobre a aba Fichas.
+                  GoRoute(
+                    path: 'treino-livre',
+                    name: 'treinoLivre',
+                    builder: (context, state) => const TreinoLivreScreen(),
                   ),
                 ],
               ),

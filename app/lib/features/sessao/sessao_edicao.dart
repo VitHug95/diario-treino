@@ -170,6 +170,22 @@ class ExercicioEdicao {
         foraDaFicha: e.foraDaFicha,
       );
 
+  /// Monta um exercício para o treino livre (PBI-19) a partir do rascunho
+  /// avulso: traz as séries da última execução (ou a série em branco das
+  /// métricas padrão) e o aviso de origem. Sempre "fora da ficha".
+  factory ExercicioEdicao.doRascunhoAvulso(RascunhoExercicioAvulso e) =>
+      ExercicioEdicao(
+        treinoExercicioId: null,
+        exercicioId: e.exercicioId,
+        nome: e.nome,
+        grupoMuscular: null,
+        modalidade: e.modalidade,
+        origemPreenchimento: e.origemPreenchimento,
+        series: e.series.map(SerieEdicao.doRascunho).toList(),
+        realizado: true,
+        foraDaFicha: true,
+      );
+
   /// Monta um exercício fora da ficha (PBI-17) a partir do item do catálogo.
   /// As métricas vêm por código; [porCodigo] resolve o id e o nome via a lista
   /// de métricas. Começa com uma série vazia para o atleta preencher.

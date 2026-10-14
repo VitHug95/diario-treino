@@ -89,6 +89,34 @@ public sealed class ServicoPlanejamento
     }
 
     /// <summary>
+    /// Cria uma ficha a partir dos exercícios de um treino livre (PBI-19,
+    /// "Salvar também como ficha"): garante o plano, cria o treino e adiciona
+    /// os exercícios na ordem informada. Cada exercício passa pela mesma
+    /// verificação de disponibilidade/acesso de <see cref="AdicionarExercicioAsync"/>
+    /// (exercício inexistente ou de outro usuário → 404). Devolve o id da ficha.
+    /// </summary>
+    public async Task<Guid> CriarFichaDeExerciciosAsync(
+        Guid usuarioLogadoId,
+        CriarFichaDeTreinoRequest request,
+        CancellationToken ct)
+    {
+        var treinoId = await AdicionarFichaAsync(
+            usuarioLogadoId,
+            new SalvarTreinoRequest(request.Nome, request.Descricao),
+            ct);
+
+        // Ignora ids repetidos preservando a ordem da primeira ocorrência.
+        var vistos = new HashSet<Guid>();
+        foreach (var exercicioId in request.ExercicioIds)
+        {
+            if (!vistos.Add(exercicioId)) continue;
+            await AdicionarExercicioAsync(usuarioLogadoId, treinoId, exercicioId, ct);
+        }
+
+        return treinoId;
+    }
+
+    /// <summary>
     /// Garante um plano ativo para o atleta (cria se não houver) e o devolve.
     /// Atende o POST /planos; o fluxo comum cria o plano junto da primeira ficha.
     /// </summary>

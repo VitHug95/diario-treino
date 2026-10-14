@@ -24,6 +24,22 @@ public sealed record RascunhoExercicio(
     string? OrigemPreenchimento,
     IReadOnlyList<SerieRascunho> Series);
 
+/// <summary>
+/// Rascunho de UM exercício avulso, para o treino livre (PBI-19, GET
+/// /exercicios/{id}/ultima-execucao). Sem ficha nem treino_exercicio: traz as
+/// séries da última vez que o atleta fez o exercício ou, se nunca fez, uma
+/// série em branco com as métricas padrão. É o "mostra a última execução como
+/// referência" montado no servidor.
+/// </summary>
+public sealed record RascunhoExercicioAvulso(
+    Guid ExercicioId,
+    string Nome,
+    string Modalidade,
+    /// <summary>Aviso de origem ("Preenchido com o último treino (27/09)") ou
+    /// nulo quando a série vem em branco.</summary>
+    string? OrigemPreenchimento,
+    IReadOnlyList<SerieRascunho> Series);
+
 /// <summary>Série sugerida no rascunho (espelha o par intensidade/volume).</summary>
 public sealed record SerieRascunho(
     short Rodada,

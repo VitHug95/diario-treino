@@ -88,6 +88,29 @@ class RegistrarSessaoScreen extends ConsumerWidget {
   }
 }
 
+/// Tela 7 do protótipo: registrar um treino livre (sem ficha, PBI-19). Começa
+/// vazio; cada exercício adicionado traz a última execução como referência e a
+/// sessão é gravada com `treinoId` nulo. Opção de também salvar como ficha.
+class TreinoLivreScreen extends StatelessWidget {
+  const TreinoLivreScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Treino livre')),
+      body: _Formulario(
+        treinoId: null,
+        sessaoId: null,
+        data: DateTime.now(),
+        duracaoMin: null,
+        observacao: null,
+        exercicios: [],
+        treinoLivre: true,
+      ),
+    );
+  }
+}
+
 class _Formulario extends ConsumerStatefulWidget {
   const _Formulario({
     required this.treinoId,
@@ -96,6 +119,7 @@ class _Formulario extends ConsumerStatefulWidget {
     required this.duracaoMin,
     required this.observacao,
     required this.exercicios,
+    this.treinoLivre = false,
   });
 
   final String? treinoId;
@@ -104,6 +128,10 @@ class _Formulario extends ConsumerStatefulWidget {
   final int? duracaoMin;
   final String? observacao;
   final List<ExercicioEdicao> exercicios;
+
+  /// Treino livre (PBI-19): começa vazio, cada exercício adicionado traz a
+  /// última execução como referência e há a opção "Salvar também como ficha".
+  final bool treinoLivre;
 
   @override
   ConsumerState<_Formulario> createState() => _FormularioState();
@@ -116,7 +144,11 @@ class _FormularioState extends ConsumerState<_Formulario> {
   final _observacao = TextEditingController();
   bool _salvando = false;
 
+  /// Treino livre (PBI-19): marcar para também salvar o treino como ficha nova.
+  bool _salvarComoFicha = false;
+
   bool get _editando => widget.sessaoId != null;
+  bool get _treinoLivre => widget.treinoLivre;
 
   @override
   void initState() {
@@ -159,6 +191,24 @@ class _FormularioState extends ConsumerState<_Formulario> {
       ),
     );
     if (escolhido == null || !mounted) return;
+
+    // Treino livre: traz a última execução como referência (PBI-19). Se falhar
+    // (ex.: offline), cai no modo "série em branco" para não travar o registro.
+    if (_treinoLivre) {
+      try {
+        final rascunho = await ref
+            .read(sessaoRepositoryProvider)
+            .obterUltimaExecucao(escolhido.id);
+        if (!mounted) return;
+        setState(() {
+          _exercicios.add(ExercicioEdicao.doRascunhoAvulso(rascunho));
+        });
+        return;
+      } on SessaoException {
+        // Segue para o fallback abaixo.
+      }
+      if (!mounted) return;
+    }
 
     // Resolve as métricas (código -> id/nome) para montar a série.
     final porCodigo = await ref.read(metricasPorCodigoProvider.future);
@@ -207,6 +257,14 @@ class _FormularioState extends ConsumerState<_Formulario> {
           observacao: obs,
           exercicios: _exercicios,
         );
+
+        // Treino livre com "Salvar também como ficha": cria a ficha com os
+        // exercícios realizados. Falha aqui não derruba o registro da sessão,
+        // que já foi salva — avisa e segue.
+        if (_treinoLivre && _salvarComoFicha) {
+          await _criarFichaDoTreino();
+        }
+
         // A sessão nova muda a recomendação, os checks da semana e a "última
         // vez" na tela inicial; invalida para refletir ao voltar (bug PBI-23A).
         _invalidarInicio();
@@ -217,6 +275,61 @@ class _FormularioState extends ConsumerState<_Formulario> {
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  /// Cria uma ficha com os exercícios realizados do treino livre (PBI-19).
+  /// Pede o nome da ficha; se o atleta cancelar, não cria. Erros aqui não
+  /// desfazem a sessão já salva — apenas avisam.
+  Future<void> _criarFichaDoTreino() async {
+    final ids = _exercicios
+        .where((e) => e.temSerieFeita)
+        .map((e) => e.exercicioId)
+        .toList();
+    if (ids.isEmpty) return;
+
+    final nome = await _pedirNomeDaFicha();
+    if (nome == null || !mounted) return;
+
+    try {
+      await ref.read(fichasRepositoryProvider).salvarComoFicha(
+            nome: nome,
+            exercicioIds: ids,
+          );
+      ref.invalidate(planoAtivoProvider);
+    } on FichasException catch (e) {
+      _erro('Treino salvo, mas não deu para criar a ficha: ${e.mensagem}');
+    }
+  }
+
+  /// Diálogo simples para o nome da nova ficha. Nulo = cancelou.
+  Future<String?> _pedirNomeDaFicha() async {
+    final controlador = TextEditingController(text: 'Treino livre');
+    final nome = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Salvar como ficha'),
+        content: TextField(
+          controller: controlador,
+          autofocus: true,
+          maxLength: 40,
+          decoration: const InputDecoration(labelText: 'Nome da ficha'),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controlador.text.trim()),
+            child: const Text('Salvar ficha'),
+          ),
+        ],
+      ),
+    );
+    controlador.dispose();
+    if (nome == null || nome.isEmpty) return null;
+    return nome;
   }
 
   Future<void> _confirmarRegistro(String sessaoId) async {
@@ -286,7 +399,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
                   style: AppText.overline.copyWith(color: cores.textSecondary)),
               const SizedBox(height: AppSpacing.x8),
               if (_exercicios.isEmpty)
-                _SemExercicios(cores: cores)
+                _SemExercicios(
+                  cores: cores,
+                  mensagem: _treinoLivre
+                      ? 'Nenhum exercício ainda. Toque em "Adicionar exercício" para montar o treino.'
+                      : 'Esta ficha ainda não tem exercícios. Adicione exercícios à ficha para registrar o treino.',
+                )
               else
                 for (var i = 0; i < _exercicios.length; i++)
                   _CardExercicio(
@@ -301,7 +419,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
                 child: OutlinedButton.icon(
                   onPressed: _adicionarForaDaFicha,
                   icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-                  label: const Text('Adicionar exercício fora da ficha'),
+                  label: Text(_treinoLivre
+                      ? 'Adicionar exercício'
+                      : 'Adicionar exercício fora da ficha'),
                 ),
               ),
               const SizedBox(height: AppSpacing.x16),
@@ -316,6 +436,17 @@ class _FormularioState extends ConsumerState<_Formulario> {
                   alignLabelWithHint: true,
                 ),
               ),
+              if (_treinoLivre) ...[
+                const SizedBox(height: AppSpacing.x8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _salvarComoFicha,
+                  onChanged: (v) => setState(() => _salvarComoFicha = v ?? false),
+                  title: const Text('Salvar também como ficha'),
+                  subtitle: const Text(
+                      'Cria uma ficha nova com os exercícios deste treino.'),
+                ),
+              ],
             ],
           ),
         ),
@@ -749,8 +880,9 @@ class _BarraSalvar extends StatelessWidget {
 }
 
 class _SemExercicios extends StatelessWidget {
-  const _SemExercicios({required this.cores});
+  const _SemExercicios({required this.cores, required this.mensagem});
   final AppColors cores;
+  final String mensagem;
 
   @override
   Widget build(BuildContext context) {
@@ -762,7 +894,7 @@ class _SemExercicios extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Text(
-        'Esta ficha ainda não tem exercícios. Adicione exercícios à ficha para registrar o treino.',
+        mensagem,
         style: AppText.body.copyWith(color: cores.textSecondary),
       ),
     );
