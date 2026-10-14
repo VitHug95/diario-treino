@@ -36,12 +36,29 @@ ProgressoExercicio _progressoCarga() => ProgressoExercicio(
       modalidade: 'FORCA',
       metrica: 'CARGA',
       pontos: [
-        PontoProgresso(data: DateTime(2026, 10, 1), valor: 40, repeticoes: 10),
-        PontoProgresso(data: DateTime(2026, 10, 8), valor: 45, repeticoes: 8),
-        PontoProgresso(data: DateTime(2026, 10, 15), valor: 50, repeticoes: 6),
+        _ponto(DateTime(2026, 10, 1), 40, reps: 10, id: 's1'),
+        _ponto(DateTime(2026, 10, 8), 45, reps: 8, id: 's2'),
+        // Última com observação: deve vir pré-selecionada.
+        _ponto(DateTime(2026, 10, 15), 50,
+            reps: 6, id: 's3', obs: 'Senti o ombro'),
       ],
       resumo: const ResumoProgresso(
           sessoes: 3, variacao: 10, sessoesComObservacao: 1),
+    );
+
+PontoProgresso _ponto(
+  DateTime data,
+  double valor, {
+  double? reps,
+  required String id,
+  String? obs,
+}) =>
+    PontoProgresso(
+      data: data,
+      valor: valor,
+      repeticoes: reps,
+      sessaoId: id,
+      observacao: obs,
     );
 
 /// Monta a tela controlando os três providers que ela observa. Por padrão não
@@ -177,8 +194,8 @@ void main() {
         modalidade: 'ISOMETRIA',
         metrica: 'TEMPO',
         pontos: [
-          PontoProgresso(data: DateTime(2026, 10, 1), valor: 30, repeticoes: null),
-          PontoProgresso(data: DateTime(2026, 10, 8), valor: 45, repeticoes: null),
+          _ponto(DateTime(2026, 10, 1), 30, id: 'i1'),
+          _ponto(DateTime(2026, 10, 8), 45, id: 'i2'),
         ],
         resumo: const ResumoProgresso(
             sessoes: 2, variacao: 15, sessoesComObservacao: 0),
@@ -215,6 +232,55 @@ void main() {
       expect(find.text('Sem dados no período para este exercício.'),
           findsOneWidget);
       expect(find.byType(LineChart), findsNothing);
+    });
+  });
+
+  group('Observação no ponto (PBI-21)', () {
+    testWidgets('Pré-seleciona a última sessão com observação e mostra a nota',
+        (tester) async {
+      await tester.pumpWidget(_tela(
+        exercicios: [_exercicio('e1', 'Supino')],
+        selecionado: 'e1',
+        progresso: _progressoCarga(),
+      ));
+      await tester.pumpAndSettle();
+
+      // O ponto pré-selecionado é o de 15/10 (último com observação).
+      expect(find.textContaining('15/10/2026'), findsOneWidget);
+      // Mostra o texto da observação daquele dia.
+      expect(find.text('Senti o ombro'), findsOneWidget);
+      // E o valor com reps (força).
+      expect(find.textContaining('50 kg × 6 reps'), findsWidgets);
+      // Link para abrir a sessão e legenda do destaque.
+      expect(find.text('Abrir sessão'), findsOneWidget);
+      expect(find.text('com observação'), findsOneWidget);
+    });
+
+    testWidgets('Sem observação no dia mostra o aviso', (tester) async {
+      final semObs = ProgressoExercicio(
+        exercicioId: 'e9',
+        nome: 'Rosca',
+        modalidade: 'FORCA',
+        metrica: 'CARGA',
+        pontos: [
+          _ponto(DateTime(2026, 10, 2), 20, reps: 12, id: 'x1'),
+          _ponto(DateTime(2026, 10, 9), 22, reps: 10, id: 'x2'),
+        ],
+        resumo: const ResumoProgresso(
+            sessoes: 2, variacao: 2, sessoesComObservacao: 0),
+      );
+      await tester.pumpWidget(_tela(
+        exercicios: [_exercicio('e9', 'Rosca')],
+        selecionado: 'e9',
+        progresso: semObs,
+      ));
+      await tester.pumpAndSettle();
+
+      // Nenhuma obs: pré-seleciona a mais recente (09/10) e avisa.
+      expect(find.text('Sem observação neste dia.'), findsOneWidget);
+      expect(find.textContaining('09/10/2026'), findsOneWidget);
+      // Sem obs em nenhum ponto: não mostra a legenda.
+      expect(find.text('com observação'), findsNothing);
     });
   });
 }
