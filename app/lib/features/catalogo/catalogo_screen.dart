@@ -11,6 +11,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
 import 'exercicio_resumo.dart';
+import 'membro.dart';
 
 /// Tela 8 do protótipo (ESCOLHER EXERCÍCIO): busca no catálogo (PBI-10).
 class CatalogoScreen extends ConsumerStatefulWidget {
@@ -75,10 +76,10 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
               ),
             ),
           ),
-          _FiltroModalidade(
-            selecionada: filtro.modalidade,
-            aoSelecionar: (m) =>
-                ref.read(catalogoFiltroProvider.notifier).definirModalidade(m),
+          FiltroMembro(
+            selecionado: filtro.membroId,
+            aoSelecionar: (id) =>
+                ref.read(catalogoFiltroProvider.notifier).definirMembro(id),
           ),
           const SizedBox(height: AppSpacing.x8),
           Expanded(
@@ -96,11 +97,44 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
   }
 }
 
-class _FiltroModalidade extends StatelessWidget {
-  const _FiltroModalidade({required this.selecionada, required this.aoSelecionar});
+/// Chips de filtro por membro (PBI-31): "Todos" + os 8 membros na ordem do
+/// `GET /membros`, com rolagem horizontal. Reaproveitado pelo catálogo e pelo
+/// seletor de exercício. `selecionado` nulo = "Todos".
+class FiltroMembro extends ConsumerWidget {
+  const FiltroMembro({
+    super.key,
+    required this.selecionado,
+    required this.aoSelecionar,
+  });
 
-  final ModalidadeFiltro selecionada;
-  final ValueChanged<ModalidadeFiltro> aoSelecionar;
+  final int? selecionado;
+  final ValueChanged<int?> aoSelecionar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membrosAsync = ref.watch(membrosProvider);
+
+    return membrosAsync.when(
+      // Enquanto carrega/erro, pelo menos o "Todos" para não deixar vazio.
+      loading: () => _Chips(membros: const [], selecionado: null, aoSelecionar: aoSelecionar),
+      error: (_, __) =>
+          _Chips(membros: const [], selecionado: null, aoSelecionar: aoSelecionar),
+      data: (membros) =>
+          _Chips(membros: membros, selecionado: selecionado, aoSelecionar: aoSelecionar),
+    );
+  }
+}
+
+class _Chips extends StatelessWidget {
+  const _Chips({
+    required this.membros,
+    required this.selecionado,
+    required this.aoSelecionar,
+  });
+
+  final List<Membro> membros;
+  final int? selecionado;
+  final ValueChanged<int?> aoSelecionar;
 
   @override
   Widget build(BuildContext context) {
@@ -109,14 +143,23 @@ class _FiltroModalidade extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
       child: Row(
         children: [
-          for (final m in ModalidadeFiltro.values)
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.x8),
+            child: ChoiceChip(
+              label: const Text('Todos'),
+              selected: selecionado == null,
+              showCheckmark: false,
+              onSelected: (_) => aoSelecionar(null),
+            ),
+          ),
+          for (final m in membros)
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.x8),
               child: ChoiceChip(
-                label: Text(m.rotulo),
-                selected: m == selecionada,
+                label: Text(m.nome),
+                selected: m.id == selecionado,
                 showCheckmark: false,
-                onSelected: (_) => aoSelecionar(m),
+                onSelected: (_) => aoSelecionar(m.id),
               ),
             ),
         ],
@@ -151,7 +194,7 @@ class _CardExercicio extends StatelessWidget {
     final cores = AppColors.of(context);
     final e = exercicio;
     final subtitulo = [
-      if (e.grupoMuscular != null && e.grupoMuscular!.isNotEmpty) e.grupoMuscular!,
+      if (e.classificacao.isNotEmpty) e.classificacao,
       e.formaDeMedir,
     ].join(' · ');
 

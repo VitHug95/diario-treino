@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
 import 'exercicio_resumo.dart';
+import 'membro.dart';
 import 'metrica.dart';
 
 /// Erro de negócio ao criar exercício, já com mensagem amigável
@@ -23,13 +24,13 @@ class CatalogoRepository {
 
   Future<List<ExercicioResumo>> buscar({
     String? busca,
-    String? modalidade,
+    int? membroId,
   }) async {
     final resposta = await _dio.get<List<dynamic>>(
       '/exercicios',
       queryParameters: {
         if (busca != null && busca.trim().isNotEmpty) 'busca': busca.trim(),
-        if (modalidade != null) 'modalidade': modalidade,
+        if (membroId != null) 'membro': membroId,
       },
     );
 
@@ -47,11 +48,21 @@ class CatalogoRepository {
         .toList();
   }
 
+  /// Membros com músculos, para os chips do filtro e o cadastro (PBI-31).
+  Future<List<Membro>> listarMembros() async {
+    final resposta = await _dio.get<List<dynamic>>('/membros');
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(Membro.doJson)
+        .toList();
+  }
+
   /// Cria um exercício próprio e devolve o id gerado. Traduz os erros da API
-  /// em [CatalogoException].
+  /// em [CatalogoException]. Membro obrigatório; músculo opcional.
   Future<String> criarExercicio({
     required String nome,
-    String? grupoMuscular,
+    required int membroId,
+    int? musculoId,
     required String modalidade,
     required int intensidadeMetricaId,
     required int volumeMetricaId,
@@ -59,7 +70,8 @@ class CatalogoRepository {
     try {
       final resposta = await _dio.post<Map<String, dynamic>>('/exercicios', data: {
         'nome': nome,
-        'grupoMuscular': grupoMuscular,
+        'membroId': membroId,
+        'musculoId': musculoId,
         'modalidade': modalidade,
         'intensidadeMetricaId': intensidadeMetricaId,
         'volumeMetricaId': volumeMetricaId,
@@ -92,18 +104,19 @@ final catalogoRepositoryProvider = Provider<CatalogoRepository>(
   (ref) => CatalogoRepository(ref.watch(dioProvider)),
 );
 
-/// Critério de busca atual (texto + modalidade), observado pela tela.
+/// Critério de busca atual (texto + membro), observado pela tela. membroId nulo
+/// = chip "Todos" (PBI-31).
 class CatalogoFiltro {
-  const CatalogoFiltro({this.busca = '', this.modalidade = ModalidadeFiltro.todos});
+  const CatalogoFiltro({this.busca = '', this.membroId});
 
   final String busca;
-  final ModalidadeFiltro modalidade;
+  final int? membroId;
 
-  CatalogoFiltro copyWith({String? busca, ModalidadeFiltro? modalidade}) =>
-      CatalogoFiltro(
-        busca: busca ?? this.busca,
-        modalidade: modalidade ?? this.modalidade,
-      );
+  CatalogoFiltro comBusca(String busca) =>
+      CatalogoFiltro(busca: busca, membroId: membroId);
+
+  CatalogoFiltro comMembro(int? membroId) =>
+      CatalogoFiltro(busca: busca, membroId: membroId);
 }
 
 final catalogoFiltroProvider =
@@ -115,12 +128,11 @@ class CatalogoFiltroController extends Notifier<CatalogoFiltro> {
   @override
   CatalogoFiltro build() => const CatalogoFiltro();
 
-  void definirBusca(String busca) => state = state.copyWith(busca: busca);
+  void definirBusca(String busca) => state = state.comBusca(busca);
 
-  void definirModalidade(ModalidadeFiltro modalidade) =>
-      state = state.copyWith(modalidade: modalidade);
+  void definirMembro(int? membroId) => state = state.comMembro(membroId);
 
-  /// Volta ao filtro inicial (busca vazia, modalidade Todos). Chamado ao abrir
+  /// Volta ao filtro inicial (busca vazia, membro "Todos"). Chamado ao abrir
   /// o catálogo ou o seletor, para a tela nunca reabrir com a busca anterior.
   void limpar() => state = const CatalogoFiltro();
 }
@@ -129,13 +141,15 @@ class CatalogoFiltroController extends Notifier<CatalogoFiltro> {
 final catalogoProvider = FutureProvider.autoDispose<List<ExercicioResumo>>((ref) {
   final filtro = ref.watch(catalogoFiltroProvider);
   final repo = ref.watch(catalogoRepositoryProvider);
-  return repo.buscar(
-    busca: filtro.busca,
-    modalidade: filtro.modalidade.valorApi,
-  );
+  return repo.buscar(busca: filtro.busca, membroId: filtro.membroId);
 });
 
 /// Métricas disponíveis para a tela de criar exercício.
 final metricasProvider = FutureProvider<List<Metrica>>(
   (ref) => ref.watch(catalogoRepositoryProvider).listarMetricas(),
+);
+
+/// Membros com músculos, para os chips de filtro e o cadastro.
+final membrosProvider = FutureProvider<List<Membro>>(
+  (ref) => ref.watch(catalogoRepositoryProvider).listarMembros(),
 );
