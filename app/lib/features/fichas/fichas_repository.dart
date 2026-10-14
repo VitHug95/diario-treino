@@ -44,6 +44,22 @@ class FichasRepository {
             data: {'nome': nome, 'descricao': descricao},
           ));
 
+  /// Cria uma ficha a partir dos exercícios de um treino livre (PBI-19,
+  /// "Salvar também como ficha"). Garante o plano no servidor.
+  Future<void> salvarComoFicha({
+    required String nome,
+    String? descricao,
+    required List<String> exercicioIds,
+  }) =>
+      _executar(() => _dio.post<Map<String, dynamic>>(
+            '/planos/fichas-de-treino',
+            data: {
+              'nome': nome,
+              'descricao': descricao,
+              'exercicioIds': exercicioIds,
+            },
+          ));
+
   Future<void> editarFicha({
     required String treinoId,
     required String nome,

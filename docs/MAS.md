@@ -306,6 +306,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/planos/ativo` | Plano ativo com fichas e exercícios | ✅ |
 | POST | `/planos` | Cria plano (idempotente) | ✅ |
 | POST | `/planos/{id}/treinos` | Adiciona ficha | ✅ |
+| POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre | ✅ (PBI-19) |
 | GET | `/treinos/{id}` | Detalhe da ficha com exercícios | ✅ |
 | PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
 | DELETE | `/treinos/{id}` | Arquiva ficha | ✅ |
@@ -314,7 +315,8 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha | ✅ |
 | PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
 | GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
-| POST | `/sessoes` | Salva sessão com séries | ✅ |
+| GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
+| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre) | ✅ |
 | GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
 | PUT | `/sessoes/{id}` | Edita sessão | ✅ |
 | DELETE | `/sessoes/{id}` | Exclui sessão | ✅ |

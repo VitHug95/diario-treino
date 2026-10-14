@@ -342,4 +342,213 @@ public sealed class SessaoEndpointTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
+
+    // ---------- Treino livre (PBI-19) ----------
+
+    private sealed record RascunhoAvulsoResp(
+        Guid ExercicioId, string Nome, string Modalidade,
+        string? OrigemPreenchimento, List<SerieRascunhoResp> Series);
+
+    [Fact]
+    public async Task Ultima_execucao_sem_historico_vem_serie_em_branco()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var rascunho = await client.GetFromJsonAsync<RascunhoAvulsoResp>(
+            $"/api/v1/exercicios/{SupinoReto}/ultima-execucao");
+
+        Assert.Equal(SupinoReto, rascunho!.ExercicioId);
+        Assert.Null(rascunho.OrigemPreenchimento);
+        var serie = Assert.Single(rascunho.Series);
+        Assert.Equal(CargaKg, serie.IntensidadeMetricaId);
+        Assert.Equal(Repeticoes, serie.VolumeMetricaId);
+        Assert.Null(serie.Intensidade);
+        Assert.Null(serie.Volume);
+    }
+
+    [Fact]
+    public async Task Ultima_execucao_com_historico_vem_da_ultima_sessao()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        // Registra uma sessão de treino livre (sem ficha) com o exercício.
+        var ontem = DateOnly.FromDateTime(DateTime.UtcNow.Date).AddDays(-1);
+        var criar = await client.PostAsJsonAsync("/api/v1/sessoes", new
+        {
+            treinoId = (Guid?)null,
+            data = ontem,
+            duracaoMin = (short?)null,
+            observacao = (string?)null,
+            exercicios = new[]
+            {
+                new
+                {
+                    exercicioId = SupinoReto,
+                    treinoExercicioId = (Guid?)null,
+                    series = new[]
+                    {
+                        new { rodada = (short)1, ordem = (short)1, tipo = "ESFORCO",
+                              intensidadeMetricaId = CargaKg, intensidade = 42m,
+                              volumeMetricaId = Repeticoes, volume = 6m, descansoSeg = (short?)null },
+                    },
+                },
+            },
+        });
+        Assert.Equal(HttpStatusCode.Created, criar.StatusCode);
+
+        var rascunho = await client.GetFromJsonAsync<RascunhoAvulsoResp>(
+            $"/api/v1/exercicios/{SupinoReto}/ultima-execucao");
+
+        Assert.StartsWith("Preenchido com o último treino", rascunho!.OrigemPreenchimento);
+        var serie = Assert.Single(rascunho.Series);
+        Assert.Equal(42m, serie.Intensidade);
+        Assert.Equal(6m, serie.Volume);
+    }
+
+    [Fact]
+    public async Task Ultima_execucao_de_exercicio_inexistente_responde_404()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var resposta = await client.GetAsync(
+            $"/api/v1/exercicios/{Guid.NewGuid()}/ultima-execucao");
+
+        Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Ultima_execucao_de_exercicio_proprio_de_outro_usuario_responde_404()
+    {
+        // Exercício próprio do usuário A não é acessível ao usuário B (404).
+        var (apiA, clientA, _) = Autenticar(_postgres);
+        await using var _apiA = apiA;
+        var criado = await clientA.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome = $"Rosca secreta {Guid.NewGuid():n}",
+            membroId = (short)4,
+            modalidade = "FORCA",
+            intensidadeMetricaId = 1,
+            volumeMetricaId = 10,
+        });
+        criado.EnsureSuccessStatusCode();
+        var exId = (await criado.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var (apiB, clientB, _) = Autenticar(_postgres);
+        await using var _apiB = apiB;
+        var resposta = await clientB.GetAsync($"/api/v1/exercicios/{exId}/ultima-execucao");
+
+        Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Treino_livre_grava_sessao_sem_ficha()
+    {
+        var (api, client, uid) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var criar = await client.PostAsJsonAsync("/api/v1/sessoes", new
+        {
+            treinoId = (Guid?)null,
+            data = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+            duracaoMin = 40,
+            observacao = (string?)null,
+            exercicios = new[]
+            {
+                new
+                {
+                    exercicioId = SupinoReto,
+                    treinoExercicioId = (Guid?)null,
+                    series = new[]
+                    {
+                        new { rodada = (short)1, ordem = (short)1, tipo = "ESFORCO",
+                              intensidadeMetricaId = CargaKg, intensidade = 30m,
+                              volumeMetricaId = Repeticoes, volume = 10m, descansoSeg = (short?)null },
+                    },
+                },
+            },
+        });
+        Assert.Equal(HttpStatusCode.Created, criar.StatusCode);
+        var sessaoId = (await criar.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        await using var db = _postgres.CriarContexto();
+        var meuId = await db.Usuarios.Where(u => u.FirebaseUid == uid).Select(u => u.Id).SingleAsync();
+        var sessao = await db.Sessoes.SingleAsync(s => s.Id == sessaoId);
+        Assert.Equal(meuId, sessao.AtletaId);
+        Assert.Null(sessao.TreinoId); // treino livre
+        var serie = await db.SeriesExecutadas.SingleAsync(s => s.SessaoId == sessaoId);
+        Assert.Null(serie.TreinoExercicioId); // fora da ficha
+    }
+
+    [Fact]
+    public async Task Salvar_como_ficha_cria_ficha_com_os_exercicios()
+    {
+        var (api, client, uid) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var resp = await client.PostAsJsonAsync("/api/v1/planos/fichas-de-treino", new
+        {
+            nome = "Treino de hoje",
+            descricao = (string?)null,
+            exercicioIds = new[] { SupinoReto },
+        });
+        Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+        var treinoId = (await resp.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        // A ficha aparece no plano ativo e tem o exercício.
+        await using var db = _postgres.CriarContexto();
+        var meuId = await db.Usuarios.Where(u => u.FirebaseUid == uid).Select(u => u.Id).SingleAsync();
+        var treino = await db.Treinos.SingleAsync(t => t.Id == treinoId);
+        Assert.Equal("Treino de hoje", treino.Nome);
+        var itens = await db.TreinoExercicios.Where(te => te.TreinoId == treinoId).ToListAsync();
+        var item = Assert.Single(itens);
+        Assert.Equal(SupinoReto, item.ExercicioId);
+    }
+
+    [Fact]
+    public async Task Salvar_como_ficha_sem_exercicios_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var resp = await client.PostAsJsonAsync("/api/v1/planos/fichas-de-treino", new
+        {
+            nome = "Vazia",
+            descricao = (string?)null,
+            exercicioIds = Array.Empty<Guid>(),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Salvar_como_ficha_com_exercicio_proprio_de_outro_usuario_responde_404()
+    {
+        // B tenta criar uma ficha incluindo um exercício próprio de A: 404.
+        var (apiA, clientA, _) = Autenticar(_postgres);
+        await using var _apiA = apiA;
+        var criado = await clientA.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome = $"Exclusivo A {Guid.NewGuid():n}",
+            membroId = (short)1,
+            modalidade = "FORCA",
+            intensidadeMetricaId = 1,
+            volumeMetricaId = 10,
+        });
+        criado.EnsureSuccessStatusCode();
+        var exId = (await criado.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var (apiB, clientB, _) = Autenticar(_postgres);
+        await using var _apiB = apiB;
+        var resp = await clientB.PostAsJsonAsync("/api/v1/planos/fichas-de-treino", new
+        {
+            nome = "Tentando roubar",
+            descricao = (string?)null,
+            exercicioIds = new[] { exId },
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
 }

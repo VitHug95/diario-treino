@@ -14,6 +14,7 @@ import '../fichas/plano_models.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
 import 'inicio_logica.dart';
+import 'primeiro_acesso_screen.dart';
 
 /// Tela inicial (tela 2 do protótipo), PBI-23 (partes B e A).
 ///
@@ -32,6 +33,17 @@ class InicioScreen extends ConsumerWidget {
     final primeiroNome = (usuario?.displayName ?? 'Atleta').split(' ').first;
     final planoAsync = ref.watch(planoAtivoProvider);
     final sessoesAsync = ref.watch(sessoesRecentesProvider);
+
+    // Primeiro acesso (PBI-09): sem nenhuma ficha E sem nenhuma sessão, mostra
+    // a tela 6 no lugar da inicial. Exige os dois carregados para não piscar a
+    // tela de boas-vindas durante o carregamento ou um erro de rede.
+    final plano = planoAsync.value;
+    final sessoes = sessoesAsync.value;
+    final semFichas = plano == null || plano.treinos.isEmpty;
+    final semSessoes = sessoes != null && sessoes.isEmpty;
+    if (planoAsync.hasValue && sessoesAsync.hasValue && semFichas && semSessoes) {
+      return const PrimeiroAcessoScreen();
+    }
 
     return Scaffold(
       body: SafeArea(

@@ -30,6 +30,15 @@ class SessaoRepository {
     return RascunhoSessao.doJson(resposta.data!);
   }
 
+  /// Rascunho de um exercício avulso para o treino livre (PBI-19): a última
+  /// execução do atleta, ou uma série em branco se nunca fez o exercício.
+  Future<RascunhoExercicioAvulso> obterUltimaExecucao(String exercicioId) async {
+    final resposta = await _dio.get<Map<String, dynamic>>(
+      '/exercicios/$exercicioId/ultima-execucao',
+    );
+    return RascunhoExercicioAvulso.doJson(resposta.data!);
+  }
+
   /// Grava a sessão e devolve o id criado. Exercícios não realizados ou sem
   /// séries ficam de fora.
   Future<String> criarSessao({

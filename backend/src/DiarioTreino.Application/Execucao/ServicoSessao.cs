@@ -71,6 +71,52 @@ public sealed class ServicoSessao
             exercicios);
     }
 
+    /// <summary>
+    /// Rascunho de um exercício avulso para o treino livre (PBI-19): as séries
+    /// da última execução do atleta com esse exercício ou, sem histórico, uma
+    /// série em branco com as métricas padrão. O atleta é o usuário logado; se o
+    /// exercício não está disponível para ele, responde "não encontrado" (404).
+    /// </summary>
+    public async Task<RascunhoExercicioAvulso> MontarRascunhoExercicioAsync(
+        Guid usuarioLogadoId, Guid exercicioId, CancellationToken ct)
+    {
+        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, usuarioLogadoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+
+        // 1) Histórico: última execução do atleta com este exercício.
+        var ultima = await _sessoes.ObterUltimaExecucaoAsync(usuarioLogadoId, exercicioId, ct);
+        if (ultima is { Series.Count: > 0 })
+        {
+            var series = new List<SerieRascunho>();
+            foreach (var se in ultima.Value.Series)
+            {
+                series.Add(await MapearSerieHistoricoAsync(se, ct));
+            }
+            var origem = $"Preenchido com o último treino ({ultima.Value.Data:dd/MM})";
+            return new RascunhoExercicioAvulso(
+                exercicio.Id, exercicio.Nome, exercicio.Modalidade, origem, series);
+        }
+
+        // 2) Sem histórico: uma série em branco com as métricas padrão.
+        var i = await ObterMetricaAsync(exercicio.IntensidadeMetricaPadraoId, ct);
+        var v = await ObterMetricaAsync(exercicio.VolumeMetricaPadraoId, ct);
+        var serieBranco = new SerieRascunho(
+            Rodada: 1,
+            Ordem: 1,
+            Tipo: TipoEtapa.Esforco,
+            IntensidadeMetricaId: exercicio.IntensidadeMetricaPadraoId,
+            IntensidadeMetricaCodigo: i.Codigo,
+            IntensidadeMetricaNome: i.Nome,
+            Intensidade: null,
+            VolumeMetricaId: exercicio.VolumeMetricaPadraoId,
+            VolumeMetricaCodigo: v.Codigo,
+            VolumeMetricaNome: v.Nome,
+            Volume: null,
+            DescansoSeg: null);
+        return new RascunhoExercicioAvulso(
+            exercicio.Id, exercicio.Nome, exercicio.Modalidade, null, [serieBranco]);
+    }
+
     private async Task<RascunhoExercicio> MontarExercicioAsync(
         Guid atletaId, TreinoExercicio te, CancellationToken ct)
     {

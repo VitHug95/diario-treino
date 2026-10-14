@@ -66,6 +66,37 @@ class RascunhoExercicio {
       );
 }
 
+/// Rascunho de um exercício avulso para o treino livre (GET
+/// /api/v1/exercicios/{id}/ultima-execucao, PBI-19). Traz a última execução do
+/// atleta como referência, ou uma série em branco se nunca fez o exercício.
+class RascunhoExercicioAvulso {
+  const RascunhoExercicioAvulso({
+    required this.exercicioId,
+    required this.nome,
+    required this.modalidade,
+    required this.origemPreenchimento,
+    required this.series,
+  });
+
+  final String exercicioId;
+  final String nome;
+  final String modalidade;
+  final String? origemPreenchimento;
+  final List<SerieRascunho> series;
+
+  factory RascunhoExercicioAvulso.doJson(Map<String, dynamic> json) =>
+      RascunhoExercicioAvulso(
+        exercicioId: json['exercicioId'] as String,
+        nome: json['nome'] as String,
+        modalidade: json['modalidade'] as String,
+        origemPreenchimento: json['origemPreenchimento'] as String?,
+        series: (json['series'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map(SerieRascunho.doJson)
+            .toList(),
+      );
+}
+
 /// Série sugerida no rascunho (par intensidade/volume).
 class SerieRascunho {
   const SerieRascunho({

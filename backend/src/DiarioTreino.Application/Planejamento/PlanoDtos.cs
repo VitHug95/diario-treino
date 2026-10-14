@@ -16,6 +16,16 @@ public sealed record TreinoResumo(
 /// <summary>Dados para criar/renomear uma ficha.</summary>
 public sealed record SalvarTreinoRequest(string Nome, string? Descricao);
 
+/// <summary>
+/// Pedido para criar uma ficha a partir dos exercícios de um treino livre
+/// (PBI-19, "Salvar também como ficha"). <see cref="ExercicioIds"/> entram na
+/// ordem informada; os alvos ficam para o atleta definir depois (PBI-14).
+/// </summary>
+public sealed record CriarFichaDeTreinoRequest(
+    string Nome,
+    string? Descricao,
+    IReadOnlyList<Guid> ExercicioIds);
+
 /// <summary>Ficha com seus exercícios prescritos (PBI-13).</summary>
 public sealed record TreinoDetalhe(
     Guid Id,

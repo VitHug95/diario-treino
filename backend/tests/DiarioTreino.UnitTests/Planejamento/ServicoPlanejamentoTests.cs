@@ -118,6 +118,10 @@ public sealed class ServicoPlanejamentoTests
             IReadOnlyCollection<Guid> ids, CancellationToken ct)
             => Task.FromResult<IReadOnlyDictionary<Guid, ExercicioBasico>>(
                 new Dictionary<Guid, ExercicioBasico>());
+
+        public Task<ExercicioParaRascunho?> ObterParaRascunhoAsync(
+            Guid exercicioId, Guid usuarioId, CancellationToken ct)
+            => Task.FromResult<ExercicioParaRascunho?>(null);
     }
 
     private static ServicoPlanejamento Montar(

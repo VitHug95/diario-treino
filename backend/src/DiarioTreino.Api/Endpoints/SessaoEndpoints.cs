@@ -33,6 +33,24 @@ public static class SessaoEndpoints
         .WithName("RascunhoSessao").WithTags("Sessões")
         .WithSummary("Rascunho de sessão pré-preenchido a partir da ficha");
 
+        // Rascunho de um exercício avulso para o treino livre (PBI-19): a última
+        // execução do atleta com o exercício, ou uma série em branco se nunca fez.
+        grupo.MapGet("/exercicios/{id:guid}/ultima-execucao", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoSessao sessoes,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var rascunho = await sessoes.MontarRascunhoExercicioAsync(perfil.Id, id, ct);
+            return Results.Ok(rascunho);
+        })
+        .WithName("UltimaExecucaoExercicio").WithTags("Sessões")
+        .WithSummary("Última execução do exercício para o treino livre");
+
         // Grava a sessão com as séries feitas.
         grupo.MapPost("/sessoes", async (
             HttpContext http,
