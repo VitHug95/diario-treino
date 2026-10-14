@@ -57,3 +57,38 @@ public static class MetricaCodigos
     public const short TempoSeg = 11;
     public const short DistanciaM = 12;
 }
+
+/// <summary>Ids dos membros de referência (MER 3.4.1 / ADR-10 / PBI-31).</summary>
+public static class MembroCodigos
+{
+    public const short Peito = 1;
+    public const short Costas = 2;
+    public const short Ombros = 3;
+    public const short Bracos = 4;
+    public const short Pernas = 5;
+    public const short Core = 6;
+    public const short Cardio = 7;
+    public const short Mobilidade = 8;
+}
+
+/// <summary>Ids dos músculos de referência (MER 3.4.2 / PBI-31). Agrupados por
+/// membro; os nomes são idênticos aos valores de grupo_muscular do catálogo
+/// para a conversão casar por nome.</summary>
+public static class MusculoCodigos
+{
+    public const short Peitoral = 1;
+    public const short Dorsal = 2;
+    public const short Trapezio = 3;
+    public const short Deltoide = 4;
+    public const short Biceps = 5;
+    public const short Triceps = 6;
+    public const short Antebraco = 7;
+    public const short Quadriceps = 8;
+    public const short PosterioresDeCoxa = 9;
+    public const short Gluteos = 10;
+    public const short Panturrilha = 11;
+    public const short Adutores = 12;
+    public const short Abdomen = 13;
+    public const short Obliquos = 14;
+    public const short Lombar = 15;
+}

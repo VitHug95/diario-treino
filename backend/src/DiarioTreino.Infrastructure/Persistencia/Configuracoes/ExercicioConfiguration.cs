@@ -17,6 +17,8 @@ public sealed class ExercicioConfiguration : IEntityTypeConfiguration<Exercicio>
         builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.Nome).HasColumnName("nome").HasMaxLength(80).IsRequired();
         builder.Property(e => e.GrupoMuscular).HasColumnName("grupo_muscular").HasMaxLength(40);
+        builder.Property(e => e.MembroId).HasColumnName("membro_id");
+        builder.Property(e => e.MusculoId).HasColumnName("musculo_id");
         builder.Property(e => e.Modalidade).HasColumnName("modalidade").HasMaxLength(20).IsRequired();
         builder.Property(e => e.IntensidadeMetricaPadraoId).HasColumnName("intensidade_metrica_padrao_id").IsRequired();
         builder.Property(e => e.VolumeMetricaPadraoId).HasColumnName("volume_metrica_padrao_id").IsRequired();
@@ -37,6 +39,23 @@ public sealed class ExercicioConfiguration : IEntityTypeConfiguration<Exercicio>
             .WithMany()
             .HasForeignKey(e => e.CriadoPorId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Membro (PBI-31). Nulo = ainda não classificado. Restrict: não apaga
+        // exercício ao mexer na tabela de referência.
+        builder.HasOne(e => e.Membro)
+            .WithMany()
+            .HasForeignKey(e => e.MembroId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Músculo via FK composta (musculo_id, membro_id) → musculo(id, membro_id),
+        // garantindo que o músculo pertence ao membro escolhido (MER 3.5).
+        builder.HasOne(e => e.Musculo)
+            .WithMany()
+            .HasForeignKey(e => new { e.MusculoId, e.MembroId })
+            .HasPrincipalKey(m => new { m.Id, m.MembroId })
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => e.MembroId);
 
         // O índice único por catálogo usa coalesce(criado_por_id, uuid-zero) e
         // lower(nome); criado via SQL cru na migration (EF não modela expressões).

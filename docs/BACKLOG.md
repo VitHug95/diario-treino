@@ -547,6 +547,19 @@ Itens que surgiram com o app em uso real.
 **API:** `GET /membros`, `GET /exercicios?busca=&membro=`, `POST /exercicios` (passa a exigir `membroId`). **Tabelas:** `membro`, `musculo`, `exercicio`. **Telas:** 8 e 9.
 **Notas técnicas:** ADR-10 do MAS. Seed dos membros e músculos conforme MER 3.4.1 e 3.4.2. Fazer em etapas, sem quebrar o que está no ar: (1) migration cria `membro` e `musculo`, adiciona `membro_id` e `musculo_id` em `exercicio` e converte o texto, **mantendo** `grupo_muscular`; (2) API passa a ler e gravar o membro; (3) front troca os chips e o cadastro; (4) só então uma segunda migration remove `grupo_muscular`. Cada etapa vai para produção sozinha e o app continua funcionando entre elas.
 **Depende de:** PBI-10, PBI-11.
+**Status etapa 1 (banco):** FEITO — migration `MembroMusculoEtapa1`. Cria `membro`
+(8) e `musculo` (15, com AK `(id, membro_id)`), adiciona `membro_id`/`musculo_id`
+nulos em `exercicio` (FK composta garante que o músculo pertence ao membro),
+mantém `grupo_muscular`. O catálogo global (89) já nasce classificado via seed;
+exercícios próprios dos usuários são convertidos por SQL (unaccent+lower pelo
+nome do músculo, depois pelo nome/código do membro; cardio/isometria sem grupo →
+Cardio/Mobilidade). **Resíduo** (próprio que não casa) é **excluído** junto das
+dependências (séries, sessões que ficarem vazias, itens de ficha) — decisão do PO
+(tudo é teste). Teste de integração confere seed + classificação + consistência
+da FK composta.
+**Falta:** etapa 2 (API: `GET /membros`, filtro por membro, `POST /exercicios`
+exige `membroId`), etapa 3 (front: chips + cadastro), etapa 4 (migration remove
+`grupo_muscular`).
 
 #### PBI-32 · Ajustes de UX do seletor e da largura no web
 **História:** Como atleta, quero criar um exercício sem sair do registro quando ele não está no catálogo, e usar o app no computador sem a tela esticada.

@@ -253,10 +253,11 @@ Carga inicial (seed via migration):
 
 Os ids de intensidade e volume ficam em faixas separadas para facilitar leitura; novas métricas (escala de dor, amplitude) entram como novas linhas.
 
-### 3.4.1 `membro` — PLANEJADO (PBI-31, ainda não aplicado)
-> ⚠️ **Não existe no banco ainda.** Esta tabela entra com o PBI-31 (ADR-10) e
-> vai substituir o texto livre `grupo_muscular`. Até lá, o grupo do exercício é
-> o campo livre descrito em 3.5.
+### 3.4.1 `membro` — APLICADO (PBI-31 etapa 1)
+> ✅ **Existe no banco** (migration `MembroMusculoEtapa1`). O catálogo global já
+> está classificado por membro. A coluna `grupo_muscular` ainda convive com
+> `membro_id`/`musculo_id` até a etapa 4 do PBI-31 (quando a API e o front já
+> usam o membro); só então ela é removida.
 
 Tabela de referência com os membros usados para filtrar e organizar exercícios. Substitui o antigo texto livre `grupo_muscular` (ADR-10 do MAS).
 
@@ -282,8 +283,10 @@ Carga inicial (seed via migration):
 
 `MOBILIDADE` cobre equilíbrio, alongamento e exercícios de reabilitação que não miram um músculo. Lista sujeita à validação do Vinicius; ajustes entram por migration de seed.
 
-### 3.4.2 `musculo` — PLANEJADO (PBI-31, ainda não aplicado)
-> ⚠️ **Não existe no banco ainda.** Entra junto com `membro` no PBI-31.
+### 3.4.2 `musculo` — APLICADO (PBI-31 etapa 1)
+> ✅ **Existe no banco** (migration `MembroMusculoEtapa1`), com 15 músculos. A
+> restrição única `(id, membro_id)` é a `AK_musculo_id_membro_id`, alvo da FK
+> composta de `exercicio`.
 
 Detalhe opcional dentro de cada membro. Hoje serve para o cadastro mais preciso; no futuro, para contar séries por músculo.
 
