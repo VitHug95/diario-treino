@@ -23,7 +23,7 @@ public sealed class SessaoCrudEndpointTests
         Guid Id, Guid? TreinoId, string? TreinoNome, DateOnly Data, short? DuracaoMin,
         string? Observacao, List<ExDetalheResp> Exercicios);
     private sealed record ExDetalheResp(
-        Guid ExercicioId, Guid? TreinoExercicioId, string Nome, string? GrupoMuscular,
+        Guid ExercicioId, Guid? TreinoExercicioId, string Nome,
         string Modalidade, short Ordem, bool NaoRealizado, bool ForaDaFicha,
         string? Plano, List<SerieDetalheResp> Series);
     private sealed record SerieDetalheResp(

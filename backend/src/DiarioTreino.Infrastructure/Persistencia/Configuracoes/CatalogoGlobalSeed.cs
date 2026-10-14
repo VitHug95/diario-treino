@@ -52,7 +52,6 @@ internal static class CatalogoGlobalSeed
         {
             Id = Guid.Parse(id),
             Nome = nome,
-            GrupoMuscular = grupo,
             MembroId = m?.MembroId,
             MusculoId = m?.MusculoId,
             Modalidade = Modalidade.Forca,
@@ -71,7 +70,6 @@ internal static class CatalogoGlobalSeed
         {
             Id = Guid.Parse(id),
             Nome = nome,
-            GrupoMuscular = grupo,
             MembroId = m?.MembroId,
             MusculoId = m?.MusculoId,
             Modalidade = Modalidade.Forca,
@@ -91,7 +89,6 @@ internal static class CatalogoGlobalSeed
         {
             Id = Guid.Parse(id),
             Nome = nome,
-            GrupoMuscular = grupo,
             MembroId = m?.MembroId ?? MembroCodigos.Mobilidade,
             MusculoId = m?.MusculoId,
             Modalidade = Modalidade.Isometria,
@@ -107,7 +104,6 @@ internal static class CatalogoGlobalSeed
     {
         Id = Guid.Parse(id),
         Nome = nome,
-        GrupoMuscular = null,
         MembroId = MembroCodigos.Cardio,
         MusculoId = null,
         Modalidade = Modalidade.Cardio,
@@ -122,12 +118,11 @@ internal static class CatalogoGlobalSeed
     // em treino_exercicio e serie_executada; regra de dados: nada é apagado
     // fisicamente quando há histórico ligado). Some do catálogo (filtro Ativo).
     private static Exercicio Aposentado(
-        string id, string nome, string? grupo, string modalidade,
+        string id, string nome, string modalidade,
         short intensidade, short volume) => new()
     {
         Id = Guid.Parse(id),
         Nome = nome,
-        GrupoMuscular = grupo,
         Modalidade = modalidade,
         IntensidadeMetricaPadraoId = intensidade,
         VolumeMetricaPadraoId = volume,
@@ -140,13 +135,13 @@ internal static class CatalogoGlobalSeed
         // ───────── Genéricos do seed original, aposentados ─────────
         // Substituídos por versões mais específicas (ex.: "Supino inclinado"
         // virou "...com barra" / "...com halteres"). Mantidos inativos.
-        Aposentado("11111111-0000-0000-0000-000000000002", "Supino inclinado", "peito", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
-        Aposentado("11111111-0000-0000-0000-000000000003", "Crucifixo", "peito", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
-        Aposentado("11111111-0000-0000-0000-000000000004", "Tríceps corda (antigo)", "tríceps", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
-        Aposentado("11111111-0000-0000-0000-000000000006", "Remada curvada", "costas", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
-        Aposentado("22222222-0000-0000-0000-000000000002", "Agachamento isométrico", "pernas", Modalidade.Isometria, MetricaCodigos.PesoCorporal, MetricaCodigos.TempoSeg),
-        Aposentado("33333333-0000-0000-0000-000000000001", "Corrida (antigo)", null, Modalidade.Cardio, MetricaCodigos.Zona, MetricaCodigos.TempoSeg),
-        Aposentado("33333333-0000-0000-0000-000000000002", "Bicicleta", null, Modalidade.Cardio, MetricaCodigos.Zona, MetricaCodigos.TempoSeg),
+        Aposentado("11111111-0000-0000-0000-000000000002", "Supino inclinado", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
+        Aposentado("11111111-0000-0000-0000-000000000003", "Crucifixo", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
+        Aposentado("11111111-0000-0000-0000-000000000004", "Tríceps corda (antigo)", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
+        Aposentado("11111111-0000-0000-0000-000000000006", "Remada curvada", Modalidade.Forca, MetricaCodigos.CargaKg, MetricaCodigos.Repeticoes),
+        Aposentado("22222222-0000-0000-0000-000000000002", "Agachamento isométrico", Modalidade.Isometria, MetricaCodigos.PesoCorporal, MetricaCodigos.TempoSeg),
+        Aposentado("33333333-0000-0000-0000-000000000001", "Corrida (antigo)", Modalidade.Cardio, MetricaCodigos.Zona, MetricaCodigos.TempoSeg),
+        Aposentado("33333333-0000-0000-0000-000000000002", "Bicicleta", Modalidade.Cardio, MetricaCodigos.Zona, MetricaCodigos.TempoSeg),
 
         // ───────── Peito (Peitoral) ─────────
         Cr("11111111-0000-0000-0000-000000000001", "Supino reto com barra", "Peitoral"),

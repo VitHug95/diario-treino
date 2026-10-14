@@ -18,19 +18,20 @@ pronto.
 - Tabelas: `usuario`, `usuario_papel`, `vinculo` (estrutura pronta, sem uso),
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
   `treino_exercicio`, `etapa_prescrita`, `sessao`, `serie_executada`.
-- `exercicio` usa a coluna **`grupo_muscular` (texto livre, `varchar(40)`,
-  opcional)** — ver 3.5. O catálogo global tem **89 exercícios ativos** + 7
-  genéricos antigos inativos (`ativo=false`), carregados por seed/migration.
+- `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
+  criar) e **`musculo_id`** opcional (FK composta `(musculo_id, membro_id)` →
+  `musculo`) — ver 3.4.1, 3.4.2 e 3.5. O catálogo global tem **89 exercícios
+  ativos** + 7 genéricos antigos inativos (`ativo=false`), carregados por
+  seed/migration.
 - Extensão `unaccent` habilitada (busca sem acento).
 
-**Planejado, ainda NÃO aplicado:**
-- Tabelas **`membro`** e **`musculo`** e as colunas `exercicio.membro_id` /
-  `musculo_id` (seções 3.4.1, 3.4.2 e o trecho de membro em 3.5). É o
-  **PBI-31 / ADR-10**: enquanto não entra, o filtro do catálogo é por
-  **modalidade** e o grupo do exercício é o texto livre `grupo_muscular`.
+**PBI-31 / ADR-10 concluído.** Tabelas `membro` (8) e `musculo` (15) existem; o
+antigo texto livre `grupo_muscular` foi **removido** (coluna dropada na etapa 4).
 
 Migrations versionadas até aqui: `InitialCreate`, `HabilitaUnaccent`,
-`CatalogoExerciciosCompleto` (carga dos 89 exercícios).
+`CatalogoExerciciosCompleto` (carga dos 89 exercícios), `MembroMusculoEtapa1`
+(cria `membro`/`musculo`, classifica o catálogo), `MembroMusculoEtapa4RemoveGrupo`
+(remove `grupo_muscular`).
 
 ---
 
@@ -46,9 +47,8 @@ Migrations versionadas até aqui: `InitialCreate`, `HabilitaUnaccent`,
 
 ## 2. Diagrama
 
-> No diagrama abaixo, `membro` e `musculo` (e as FKs de `exercicio` para elas)
-> são **planejados** (PBI-31) e ainda não existem no banco; hoje `exercicio`
-> usa o campo livre `grupo_muscular` (ver 0 e 3.5).
+> `membro` e `musculo` (e as FKs de `exercicio` para elas) **existem no banco**
+> (PBI-31). O antigo campo livre `grupo_muscular` foi removido na etapa 4.
 
 ```mermaid
 erDiagram
@@ -121,7 +121,8 @@ erDiagram
     exercicio {
         uuid id PK
         varchar nome
-        varchar grupo_muscular "texto livre; vira membro_id/musculo_id no PBI-31"
+        smallint membro_id FK "null = não classificado"
+        smallint musculo_id FK "opcional; FK composta com membro_id"
         varchar modalidade "FORCA | ISOMETRIA | CARDIO"
         smallint intensidade_metrica_padrao_id FK
         smallint volume_metrica_padrao_id FK
@@ -253,11 +254,10 @@ Carga inicial (seed via migration):
 
 Os ids de intensidade e volume ficam em faixas separadas para facilitar leitura; novas métricas (escala de dor, amplitude) entram como novas linhas.
 
-### 3.4.1 `membro` — APLICADO (PBI-31 etapa 1)
+### 3.4.1 `membro` — APLICADO (PBI-31)
 > ✅ **Existe no banco** (migration `MembroMusculoEtapa1`). O catálogo global já
-> está classificado por membro. A coluna `grupo_muscular` ainda convive com
-> `membro_id`/`musculo_id` até a etapa 4 do PBI-31 (quando a API e o front já
-> usam o membro); só então ela é removida.
+> está classificado por membro. A coluna `grupo_muscular` foi **removida** na
+> etapa 4 (`MembroMusculoEtapa4RemoveGrupo`); o membro é a classificação oficial.
 
 Tabela de referência com os membros usados para filtrar e organizar exercícios. Substitui o antigo texto livre `grupo_muscular` (ADR-10 do MAS).
 
@@ -321,7 +321,8 @@ Catálogo de exercícios. Global (`criado_por_id` nulo) ou próprio do usuário.
 |---|---|---|---|
 | id | uuid | não | PK |
 | nome | varchar(80) | não | |
-| grupo_muscular | varchar(40) | sim | **Texto livre, opcional.** Classificação do exercício (ex.: "Peitoral", "Dorsal", "Quadríceps"). Será substituído por `membro_id`/`musculo_id` no PBI-31 |
+| membro_id | smallint | sim | FK `membro`. Obrigatório ao criar um exercício; nulo só nos globais ainda não classificados (ex.: "Levantamento terra") |
+| musculo_id | smallint | sim | Opcional. FK composta `(musculo_id, membro_id)` → `musculo(id, membro_id)`, garante que o músculo pertence ao membro |
 | modalidade | varchar(20) | não | `CHECK (modalidade IN ('FORCA','ISOMETRIA','CARDIO'))`. Define qual gráfico de progresso usar |
 | intensidade_metrica_padrao_id | smallint | não | FK `metrica`, eixo `INTENSIDADE` |
 | volume_metrica_padrao_id | smallint | não | FK `metrica`, eixo `VOLUME` |
@@ -337,17 +338,16 @@ zona × tempo.
 
 **Catálogo global carregado (migration `CatalogoExerciciosCompleto`):** 89
 exercícios ativos cobrindo peito, costas, ombros, braços, pernas, core, cardio e
-mobilidade, com `grupo_muscular` preenchido. Mais 7 genéricos antigos do seed
-original mantidos como **inativos** (`ativo=false`) para não quebrar histórico
-já ligado (FKs `Restrict`); eles somem do catálogo pelo filtro `Ativo`.
+mobilidade, já classificados por `membro_id`/`musculo_id`. Mais 7 genéricos
+antigos do seed original mantidos como **inativos** (`ativo=false`) para não
+quebrar histórico já ligado (FKs `Restrict`); eles somem do catálogo pelo
+filtro `Ativo`.
 
-> **PLANEJADO (PBI-31 / ADR-10):** `grupo_muscular` será trocado pelas colunas
-> `membro_id` (FK `membro`, obrigatório na criação) e `musculo_id` (FK composta
-> `(musculo_id, membro_id)` → `musculo`). A migration converte o texto existente
-> sem acento/maiúscula (ex.: "pernas" → PERNAS; "bíceps" → BRAÇOS/Bíceps; cardio
-> sem grupo → CARDIO; "equilíbrio" → MOBILIDADE); o que não bater fica "sem
-> membro" para o dono classificar; só depois a coluna `grupo_muscular` é
-> removida.
+> **APLICADO (PBI-31 / ADR-10, concluído):** `grupo_muscular` foi substituído
+> por `membro_id` (FK `membro`, obrigatório na criação) e `musculo_id` (FK
+> composta `(musculo_id, membro_id)` → `musculo`). A etapa 1 criou as tabelas e
+> converteu os dados; a etapa 4 (`MembroMusculoEtapa4RemoveGrupo`) **removeu a
+> coluna `grupo_muscular`**.
 >
 > **Modalidade e membro são coisas diferentes.** A modalidade define como o
 > exercício é medido e qual gráfico usar (estrutural); o membro é classificação

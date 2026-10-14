@@ -58,7 +58,6 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
             select new ExercicioResumo(
                 e.Id,
                 e.Nome,
-                e.GrupoMuscular,
                 e.MembroId,
                 mb != null ? mb.Nome : null,
                 e.MusculoId,
@@ -109,7 +108,7 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
         var itens = await _db.Exercicios
             .AsNoTracking()
             .Where(e => ids.Contains(e.Id))
-            .Select(e => new ExercicioBasico(e.Id, e.Nome, e.GrupoMuscular, e.Modalidade))
+            .Select(e => new ExercicioBasico(e.Id, e.Nome, e.Modalidade))
             .ToListAsync(ct);
 
         return itens.ToDictionary(e => e.Id);

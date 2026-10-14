@@ -39,11 +39,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("criado_por_id");
 
-                    b.Property<string>("GrupoMuscular")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("grupo_muscular");
-
                     b.Property<short>("IntensidadeMetricaPadraoId")
                         .HasColumnType("smallint")
                         .HasColumnName("intensidade_metrica_padrao_id");
@@ -94,7 +89,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000002"),
                             Ativo = false,
-                            GrupoMuscular = "peito",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
                             Nome = "Supino inclinado",
@@ -104,7 +98,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000003"),
                             Ativo = false,
-                            GrupoMuscular = "peito",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
                             Nome = "Crucifixo",
@@ -114,7 +107,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000004"),
                             Ativo = false,
-                            GrupoMuscular = "tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
                             Nome = "Tríceps corda (antigo)",
@@ -124,7 +116,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000006"),
                             Ativo = false,
-                            GrupoMuscular = "costas",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
                             Nome = "Remada curvada",
@@ -134,7 +125,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22222222-0000-0000-0000-000000000002"),
                             Ativo = false,
-                            GrupoMuscular = "pernas",
                             IntensidadeMetricaPadraoId = (short)2,
                             Modalidade = "ISOMETRIA",
                             Nome = "Agachamento isométrico",
@@ -162,7 +152,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -174,7 +163,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000011"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -186,7 +174,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000012"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -198,7 +185,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000013"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -210,7 +196,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000014"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -222,7 +207,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000015"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -234,7 +218,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000016"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -246,7 +229,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000017"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -258,7 +240,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000018"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -270,7 +251,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000019"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -282,7 +262,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-00000000001a"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -294,7 +273,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-00000000001b"),
                             Ativo = true,
-                            GrupoMuscular = "Peitoral",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)1,
                             Modalidade = "FORCA",
@@ -306,7 +284,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -318,7 +295,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000002"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -330,7 +306,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000003"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -342,7 +317,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000004"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -354,7 +328,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000005"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -366,7 +339,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000006"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -378,7 +350,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000007"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -390,7 +361,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000008"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -402,7 +372,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-000000000009"),
                             Ativo = true,
-                            GrupoMuscular = "Dorsal",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -414,7 +383,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-00000000000a"),
                             Ativo = true,
-                            GrupoMuscular = "Trapézio",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -426,7 +394,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22220000-0000-0000-0000-00000000000b"),
                             Ativo = true,
-                            GrupoMuscular = "Trapézio",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)2,
                             Modalidade = "FORCA",
@@ -447,7 +414,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -459,7 +425,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000002"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -471,7 +436,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000003"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -483,7 +447,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000004"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -495,7 +458,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000005"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -507,7 +469,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000006"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -519,7 +480,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000007"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -531,7 +491,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000008"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -543,7 +502,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("33330000-0000-0000-0000-000000000009"),
                             Ativo = true,
-                            GrupoMuscular = "Deltoide",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)3,
                             Modalidade = "FORCA",
@@ -555,7 +513,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -567,7 +524,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000002"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -579,7 +535,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000003"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -591,7 +546,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000004"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -603,7 +557,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000005"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -615,7 +568,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000006"),
                             Ativo = true,
-                            GrupoMuscular = "Bíceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -627,7 +579,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000007"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -639,7 +590,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000008"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -651,7 +601,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-000000000009"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -663,7 +612,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000a"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -675,7 +623,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000b"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -687,7 +634,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000c"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -699,7 +645,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000d"),
                             Ativo = true,
-                            GrupoMuscular = "Tríceps",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -711,7 +656,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000e"),
                             Ativo = true,
-                            GrupoMuscular = "Antebraço",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -723,7 +667,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("44440000-0000-0000-0000-00000000000f"),
                             Ativo = true,
-                            GrupoMuscular = "Antebraço",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)4,
                             Modalidade = "FORCA",
@@ -735,7 +678,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000005"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -747,7 +689,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000002"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -759,7 +700,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000003"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -771,7 +711,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000004"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -783,7 +722,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000005"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -795,7 +733,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000006"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -807,7 +744,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000007"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -819,7 +755,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000008"),
                             Ativo = true,
-                            GrupoMuscular = "Quadríceps",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)5,
                             Modalidade = "ISOMETRIA",
@@ -831,7 +766,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000009"),
                             Ativo = true,
-                            GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -843,7 +777,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000a"),
                             Ativo = true,
-                            GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -855,7 +788,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000b"),
                             Ativo = true,
-                            GrupoMuscular = "Posteriores de coxa",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -867,7 +799,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000c"),
                             Ativo = true,
-                            GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -879,7 +810,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000d"),
                             Ativo = true,
-                            GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -891,7 +821,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000e"),
                             Ativo = true,
-                            GrupoMuscular = "Glúteos",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -903,7 +832,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-00000000000f"),
                             Ativo = true,
-                            GrupoMuscular = "Adutores",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -915,7 +843,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000010"),
                             Ativo = true,
-                            GrupoMuscular = "Adutores",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -927,7 +854,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000011"),
                             Ativo = true,
-                            GrupoMuscular = "Panturrilha",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -939,7 +865,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("55550000-0000-0000-0000-000000000012"),
                             Ativo = true,
-                            GrupoMuscular = "Panturrilha",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)5,
                             Modalidade = "FORCA",
@@ -951,7 +876,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -963,7 +887,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000002"),
                             Ativo = true,
-                            GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -975,7 +898,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000003"),
                             Ativo = true,
-                            GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)1,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -987,7 +909,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000004"),
                             Ativo = true,
-                            GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -999,7 +920,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("22222222-0000-0000-0000-000000000001"),
                             Ativo = true,
-                            GrupoMuscular = "Abdômen",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "ISOMETRIA",
@@ -1011,7 +931,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000006"),
                             Ativo = true,
-                            GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "ISOMETRIA",
@@ -1023,7 +942,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000007"),
                             Ativo = true,
-                            GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -1035,7 +953,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000008"),
                             Ativo = true,
-                            GrupoMuscular = "Oblíquos",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -1047,7 +964,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-000000000009"),
                             Ativo = true,
-                            GrupoMuscular = "Lombar",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "FORCA",
@@ -1059,7 +975,6 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             Id = new Guid("66660000-0000-0000-0000-00000000000a"),
                             Ativo = true,
-                            GrupoMuscular = "Lombar",
                             IntensidadeMetricaPadraoId = (short)2,
                             MembroId = (short)6,
                             Modalidade = "ISOMETRIA",

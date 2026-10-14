@@ -22,7 +22,7 @@ public sealed class FichaExerciciosEndpointTests
     private sealed record TreinoResp(Guid Id, string Nome, string? Descricao, short Ordem);
     private sealed record FichaResp(Guid Id, string Nome, string? Descricao, short Ordem, List<TeResp> Exercicios);
     private sealed record TeResp(
-        Guid Id, Guid ExercicioId, string Nome, string? GrupoMuscular, string Modalidade,
+        Guid Id, Guid ExercicioId, string Nome, string Modalidade,
         short Ordem, short Rodadas, short? DescansoSeg, string? Instrucao, AlvoResp? Alvo);
     private sealed record AlvoResp(
         short IntensidadeMetricaId, string IntensidadeMetricaCodigo, string IntensidadeMetricaNome,

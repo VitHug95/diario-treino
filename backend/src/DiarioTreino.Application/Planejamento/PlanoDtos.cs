@@ -32,7 +32,6 @@ public sealed record TreinoExercicioResumo(
     Guid Id,
     Guid ExercicioId,
     string Nome,
-    string? GrupoMuscular,
     string Modalidade,
     short Ordem,
     short Rodadas,

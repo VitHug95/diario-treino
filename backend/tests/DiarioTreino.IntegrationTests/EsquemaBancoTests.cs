@@ -107,7 +107,6 @@ public sealed class EsquemaBancoTests
         {
             Id = Guid.NewGuid(),
             Nome = "supino reto com barra", // case-insensitive pelo índice lower(nome)
-            GrupoMuscular = "peito",
             Modalidade = Modalidade.Forca,
             IntensidadeMetricaPadraoId = MetricaCodigos.CargaKg,
             VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,

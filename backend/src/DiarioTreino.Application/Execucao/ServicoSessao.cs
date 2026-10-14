@@ -75,7 +75,6 @@ public sealed class ServicoSessao
         Guid atletaId, TreinoExercicio te, CancellationToken ct)
     {
         var nome = te.Exercicio?.Nome ?? string.Empty;
-        var grupo = te.Exercicio?.GrupoMuscular;
         var modalidade = te.Exercicio?.Modalidade ?? string.Empty;
 
         // 1) Histórico: última execução do atleta com este exercício.
@@ -89,7 +88,7 @@ public sealed class ServicoSessao
             }
             var origem = $"Preenchido com o último treino ({ultima.Value.Data:dd/MM})";
             return new RascunhoExercicio(
-                te.Id, te.ExercicioId, nome, grupo, modalidade, te.Ordem, origem, series);
+                te.Id, te.ExercicioId, nome, modalidade, te.Ordem, origem, series);
         }
 
         // 2) Sem histórico: alvos prescritos (etapas × rodadas).
@@ -97,7 +96,7 @@ public sealed class ServicoSessao
         {
             var series = await MontarSeriesDosAlvosAsync(te, ct);
             return new RascunhoExercicio(
-                te.Id, te.ExercicioId, nome, grupo, modalidade, te.Ordem,
+                te.Id, te.ExercicioId, nome, modalidade, te.Ordem,
                 "Preenchido com os alvos da ficha", series);
         }
 
@@ -107,7 +106,7 @@ public sealed class ServicoSessao
         var serieBranco = await MontarSerieEmBrancoAsync(te, ct);
         var seriesIniciais = serieBranco is null ? new List<SerieRascunho>() : [serieBranco];
         return new RascunhoExercicio(
-            te.Id, te.ExercicioId, nome, grupo, modalidade, te.Ordem, null, seriesIniciais);
+            te.Id, te.ExercicioId, nome, modalidade, te.Ordem, null, seriesIniciais);
     }
 
     /// <summary>
@@ -317,7 +316,6 @@ public sealed class ServicoSessao
                 exId,
                 teId,
                 basico?.Nome ?? string.Empty,
-                basico?.GrupoMuscular,
                 basico?.Modalidade ?? string.Empty,
                 tePrescrito?.Ordem ?? (short)(exercicios.Count + 1),
                 NaoRealizado: false,
@@ -336,7 +334,6 @@ public sealed class ServicoSessao
                     te.ExercicioId,
                     te.Id,
                     te.Exercicio?.Nome ?? string.Empty,
-                    te.Exercicio?.GrupoMuscular,
                     te.Exercicio?.Modalidade ?? string.Empty,
                     te.Ordem,
                     NaoRealizado: true,

@@ -44,5 +44,4 @@ public interface IRepositorioExercicio
 public sealed record ExercicioBasico(
     Guid Id,
     string Nome,
-    string? GrupoMuscular,
     string Modalidade);
