@@ -211,7 +211,11 @@ class _GraficoEvolucao extends ConsumerWidget {
             texto: 'Sem dados no período para este exercício.',
           ));
         }
-        return _GraficoComDados(progresso: progresso);
+        // key por exercício+período: reinicia o ponto selecionado ao trocar.
+        return _GraficoComDados(
+          key: ValueKey('${progresso.exercicioId}-${progresso.pontos.length}'),
+          progresso: progresso,
+        );
       },
     );
   }
@@ -273,42 +277,78 @@ class _MensagemGrafico extends StatelessWidget {
   }
 }
 
-/// Resumo + LineChart quando há pontos. O título do eixo muda conforme a
-/// métrica (CARGA → "Carga (kg)", TEMPO → "Tempo (s)").
-class _GraficoComDados extends StatelessWidget {
-  const _GraficoComDados({required this.progresso});
+/// Resumo + LineChart interativo (PBI-21). O título do eixo muda conforme a
+/// métrica (CARGA → "Carga (kg)", TEMPO → "Tempo (s)"). Pontos de sessões com
+/// observação têm cor própria; tocar num ponto seleciona-o e mostra a nota do
+/// dia abaixo, com link para o detalhe. Ao abrir, já vem selecionada a última
+/// sessão com observação (ou a mais recente, se nenhuma tiver).
+class _GraficoComDados extends StatefulWidget {
+  const _GraficoComDados({super.key, required this.progresso});
   final ProgressoExercicio progresso;
 
-  bool get _ehCarga => progresso.metrica == 'CARGA';
+  @override
+  State<_GraficoComDados> createState() => _GraficoComDadosState();
+}
+
+class _GraficoComDadosState extends State<_GraficoComDados> {
+  late int _selecionado;
+
+  bool get _ehCarga => widget.progresso.metrica == 'CARGA';
   String get _unidade => _ehCarga ? 'kg' : 's';
   String get _tituloEixo => _ehCarga ? 'Carga (kg)' : 'Tempo (s)';
+  List<PontoProgresso> get _pontos => widget.progresso.pontos;
+
+  @override
+  void initState() {
+    super.initState();
+    _selecionado = _indiceInicial();
+  }
+
+  /// Última sessão com observação; se nenhuma tiver, o ponto mais recente.
+  int _indiceInicial() {
+    for (var i = _pontos.length - 1; i >= 0; i--) {
+      if (_pontos[i].temObservacao) return i;
+    }
+    return _pontos.length - 1;
+  }
 
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
-    final pontos = progresso.pontos;
+    final temAlgumaObs = _pontos.any((p) => p.temObservacao);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Resumo(progresso: progresso, unidade: _unidade, ehCarga: _ehCarga),
+        _Resumo(
+            progresso: widget.progresso, unidade: _unidade, ehCarga: _ehCarga),
         const SizedBox(height: AppSpacing.x12),
-        Text(_tituloEixo,
-            style: AppText.caption.copyWith(color: cores.textSecondary)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(_tituloEixo,
+                style: AppText.caption.copyWith(color: cores.textSecondary)),
+            if (temAlgumaObs) _Legenda(cores: cores),
+          ],
+        ),
         const SizedBox(height: AppSpacing.x8),
         SizedBox(
           height: 220,
-          child: LineChart(
-            _dadosGrafico(context, pontos),
-          ),
+          child: LineChart(_dadosGrafico(context)),
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        _DetalhePonto(
+          ponto: _pontos[_selecionado],
+          unidade: _unidade,
+          ehCarga: _ehCarga,
         ),
       ],
     );
   }
 
-  LineChartData _dadosGrafico(
-      BuildContext context, List<PontoProgresso> pontos) {
+  LineChartData _dadosGrafico(BuildContext context) {
     final cores = AppColors.of(context);
+    final pontos = _pontos;
     final valores = pontos.map((p) => p.valor).toList();
     final minY = valores.reduce((a, b) => a < b ? a : b);
     final maxY = valores.reduce((a, b) => a > b ? a : b);
@@ -379,15 +419,16 @@ class _GraficoComDados extends StatelessWidget {
           barWidth: 3,
           dotData: FlDotData(
             show: true,
-            getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
-              radius: 4,
-              color: cores.chartLine,
-              strokeWidth: 2,
-              strokeColor: Theme.of(context).colorScheme.surface,
+            getDotPainter: (spot, _, __, indice) => _pintorPonto(
+              context,
+              indice: indice,
+              comObs: pontos[indice].temObservacao,
+              selecionado: indice == _selecionado,
             ),
           ),
         ),
       ],
+      // Pontos tocáveis: tocar seleciona o ponto (mostra o detalhe abaixo).
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (_) => cores.textStrong,
@@ -402,7 +443,34 @@ class _GraficoComDados extends StatelessWidget {
               ),
           ],
         ),
+        touchCallback: (evento, resposta) {
+          if (!evento.isInterestedForInteractions) return;
+          final spot = resposta?.lineBarSpots?.firstOrNull;
+          if (spot == null) return;
+          final i = spot.x.round();
+          if (i >= 0 && i < pontos.length && i != _selecionado) {
+            setState(() => _selecionado = i);
+          }
+        },
       ),
+    );
+  }
+
+  /// Ponto da linha: cor de observação (laranja) quando a sessão tem nota,
+  /// senão a cor da linha. O selecionado fica maior, para dar o alvo de toque.
+  FlDotCirclePainter _pintorPonto(
+    BuildContext context, {
+    required int indice,
+    required bool comObs,
+    required bool selecionado,
+  }) {
+    final cores = AppColors.of(context);
+    final cor = comObs ? cores.obs : cores.chartLine;
+    return FlDotCirclePainter(
+      radius: selecionado ? 7 : 4,
+      color: cor,
+      strokeWidth: selecionado ? 3 : 2,
+      strokeColor: Theme.of(context).colorScheme.surface,
     );
   }
 
@@ -433,6 +501,123 @@ class _GraficoComDados extends StatelessWidget {
   }
 
   /// Sem casa decimal quando é inteiro; senão, uma casa.
+  static String _numeroCurto(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
+}
+
+/// Legenda do ponto com observação (bolinha laranja + texto).
+class _Legenda extends StatelessWidget {
+  const _Legenda({required this.cores});
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Pontos em destaque têm observação',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: AppSpacing.x10,
+            height: AppSpacing.x10,
+            decoration: BoxDecoration(color: cores.obs, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.x6),
+          Text('com observação',
+              style: AppText.caption.copyWith(color: cores.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cartão abaixo do gráfico com os dados do ponto selecionado: data, valor
+/// (e reps na força) e a observação do dia — ou "Sem observação neste dia". Tem
+/// link "Abrir sessão" que leva ao detalhe (PBI-18).
+class _DetalhePonto extends StatelessWidget {
+  const _DetalhePonto({
+    required this.ponto,
+    required this.unidade,
+    required this.ehCarga,
+  });
+
+  final PontoProgresso ponto;
+  final String unidade;
+  final bool ehCarga;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final temObs = ponto.temObservacao;
+
+    final valorTxt = StringBuffer('${_numeroCurto(ponto.valor)} $unidade');
+    if (ehCarga && ponto.repeticoes != null) {
+      final reps = ponto.repeticoes!.round();
+      valorTxt.write(' × $reps ${reps == 1 ? 'rep' : 'reps'}');
+    }
+
+    return Semantics(
+      label: temObs
+          ? 'Sessão de ${_dataLonga(ponto.data)}, $valorTxt. '
+              'Observação: ${ponto.observacao}'
+          : 'Sessão de ${_dataLonga(ponto.data)}, $valorTxt. '
+              'Sem observação neste dia.',
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: temObs ? cores.obsTint : Theme.of(context).colorScheme.surface,
+          border: Border.all(color: temObs ? cores.obsLine : cores.lineDefault),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        padding: const EdgeInsets.all(AppSpacing.paddingCard),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(_dataLonga(ponto.data),
+                      style: AppText.titleS.copyWith(
+                          color: temObs ? cores.obsTitle : cores.textStrong)),
+                ),
+                Text(valorTxt.toString(),
+                    style: AppText.label.copyWith(color: cores.textStrong)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Text(
+              temObs ? ponto.observacao! : 'Sem observação neste dia.',
+              style: AppText.body.copyWith(
+                  color: temObs ? cores.obsBody : cores.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => context.push(
+                  Rotas.detalheSessao,
+                  extra: DetalheSessaoArgs(sessaoId: ponto.sessaoId),
+                ),
+                icon: const Icon(LucideIcons.externalLink,
+                    size: AppSizes.iconeSm),
+                label: const Text('Abrir sessão'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "ter, 13/10/2026".
+  static String _dataLonga(DateTime d) {
+    const dias = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+    final dia = dias[d.weekday - 1];
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    return '$dia, $dd/$mm/${d.year}';
+  }
+
   static String _numeroCurto(double v) =>
       v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
 }

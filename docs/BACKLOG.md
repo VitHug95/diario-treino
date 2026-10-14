@@ -359,9 +359,18 @@ usado como booleano para o resumo); agora flui até o DTO. Observação nunca va
 para log (regra de dados). 2 testes de integração: isometria confere o texto no
 ponto; força confere ponto com obs, ponto sem obs (nulo) e ids de sessão
 distintos por ponto.
-**Falta front:** cor própria + legenda nos pontos com obs, toque mostra
-data/valor/observação (ou "Sem observação neste dia"), última sessão com obs
-pré-selecionada, link "Abrir sessão" → detalhe (PBI-18), alvo de toque ≥ 44 px.
+**Status front-end:** FEITO — gráfico interativo em `progresso_screen.dart`.
+Pontos de sessões com observação usam a cor `obs` (laranja) + legenda "com
+observação"; tocar num ponto o seleciona (fica maior, aumentando o alvo de
+toque) e abre, abaixo do gráfico, um cartão com data longa, valor (e reps na
+força) e o texto da observação, ou "Sem observação neste dia." quando não houve.
+Ao abrir, a última sessão com observação já vem pré-selecionada (ou a mais
+recente, se nenhuma tiver). Botão "Abrir sessão" navega para o detalhe (PBI-18)
+via `DetalheSessaoArgs(sessaoId)`. O cartão tem rótulo de acessibilidade
+(`Semantics`) com data + valor + observação. Cores/tamanhos por token. 2 testes
+de widget novos (pré-seleção + nota; estado "sem observação"). Model Dart
+`PontoProgresso` estendido com `sessaoId`/`observacao`.
+**PBI-21 COMPLETO** (back + front).
 
 #### PBI-22 · Sessões do período
 **História:** Como atleta, quero a lista das sessões recentes, para achar um treino específico rapidinho.

@@ -57,22 +57,31 @@ class ProgressoExercicio {
 }
 
 /// Um ponto do gráfico (uma sessão). Força: valor = carga, repeticoes = reps
-/// daquela carga. Isometria: valor = tempo, repeticoes nulo.
+/// daquela carga. Isometria: valor = tempo, repeticoes nulo. [sessaoId] abre o
+/// detalhe (PBI-18) e [observacao] traz a nota do dia, ou nulo (PBI-21).
 class PontoProgresso {
   const PontoProgresso({
     required this.data,
     required this.valor,
     required this.repeticoes,
+    required this.sessaoId,
+    required this.observacao,
   });
 
   final DateTime data;
   final double valor;
   final double? repeticoes;
+  final String sessaoId;
+  final String? observacao;
+
+  bool get temObservacao => observacao != null && observacao!.trim().isNotEmpty;
 
   factory PontoProgresso.doJson(Map<String, dynamic> json) => PontoProgresso(
         data: DateTime.parse(json['data'] as String),
         valor: (json['valor'] as num).toDouble(),
         repeticoes: (json['repeticoes'] as num?)?.toDouble(),
+        sessaoId: json['sessaoId'] as String,
+        observacao: json['observacao'] as String?,
       );
 }
 
