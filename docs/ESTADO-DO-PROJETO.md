@@ -1,10 +1,11 @@
 # Estado do projeto — Diário de Treino
 
 Documento de passagem: tudo que já foi feito até aqui (telas, front, back e
-publicação). Base: histórico Git (`main` até o merge do PBI-18 + correções de
-publicação da PBI-04), código em `app/` e `backend/`, e o `BACKLOG.md`.
+publicação). Base: histórico Git (`main`), código em `app/` e `backend/`, e o
+`BACKLOG.md`.
 
-Data do levantamento: 12/10/2026.
+Data do levantamento: 14/10/2026 (atualizado após progresso completo, tela
+inicial e carga do catálogo).
 
 ---
 
@@ -77,10 +78,21 @@ Pela ordem do backlog. "✅" = na `main` e publicado.
 | PBI-16 | Editar séries durante o registro | ✅ | front |
 | PBI-17 | Adicionar exercício fora da ficha | ✅ | front |
 | PBI-18 | Ver, editar e excluir sessão | ✅ | back + front |
+| PBI-20 | Gráfico de evolução por exercício | ✅ | back + front |
+| PBI-21 | Observação no ponto do gráfico | ✅ | back + front |
+| PBI-22 | Sessões do período (lista) | ✅ | back + front |
+| PBI-23 | Tela inicial (fichas + rotação A→B→C) | ✅ | front |
+| PBI-32 | UX do seletor + largura 600px no web | ✅ | front |
+| PBI-33 | Bug sessão "salva" vazia | ✅ | front |
+| — | Carga do catálogo: 89 exercícios globais | ✅ | banco |
+| — | Deploy automático da API no CI (Fly) | ✅ | infra |
+| PBI-26 | Teste E2E do fluxo principal | 🟡 parcial (fluxo via `flutter test`; Robot pendente) | teste |
 
 **Ainda NÃO feitas:** PBI-05 (backup), PBI-09 (primeiro acesso), PBI-19 (treino
-livre), PBI-20/21/22 (progresso), PBI-23 (tela inicial), PBI-24 (tema claro/escuro
-completo), PBI-25 (perfil/conta), PBI-26 (E2E), e todo o incremento 2 (cardio).
+livre), PBI-24 (tema claro/escuro completo), PBI-25 (perfil/conta), PBI-26 (E2E
+Robot completo), PBI-31 (filtro por membro / ADR-10), PBI-34 (métrica flexível no
+registro), PBI-35 (cronograma semanal) e todo o incremento 2 (cardio: PBI-27 a
+PBI-30).
 
 ---
 
@@ -95,9 +107,11 @@ Caminhos em `app/lib/features/`.
 - Após login, o go_router redireciona para a tela inicial.
 
 ### Início (`inicio/`)
-- **`inicio_screen.dart`** — **estrutural/placeholder.** Mostra saudação, botão de
-  tema, um cartão "PRÓXIMO DA SEQUÊNCIA" **hardcoded** (não lê fichas) e um botão
-  "Ver exercícios". **Não lista fichas nem inicia treino.** (A PBI-23 completará.)
+- **`inicio_screen.dart`** — **implementado (PBI-23).** Saudação, botão de tema,
+  faixa semanal (dias treinados), cartão "Próximo da sequência" com a ficha
+  seguinte à última registrada (rotação A→B→C) e lista de fichas com a data da
+  última vez; tocar abre o registro daquela ficha. `inicio_logica.dart` tem a
+  lógica (proximaFicha, ultimaVezPorFicha, diasDaSemana) coberta por testes.
 
 ### Catálogo de exercícios (`catalogo/`)
 - **`catalogo_screen.dart`** — busca por nome (debounce), filtro por modalidade
@@ -124,8 +138,14 @@ Caminhos em `app/lib/features/`.
   lado, "não realizado"); editar; excluir com confirmação.
 
 ### Progresso (`progresso/`)
-- **`progresso_screen.dart`** — **placeholder.** O gráfico de evolução (PBI-20/21)
-  e a lista de sessões (PBI-22) ainda não foram implementados.
+- **`progresso_screen.dart`** — **implementado (PBI-20/21/22).** Seletor de
+  exercício (dropdown dos que têm histórico), gráfico de evolução `fl_chart`
+  (força = maior carga + reps; isometria = tempo), pontos com observação
+  destacados (toque mostra data/valor/nota e "Abrir sessão"), resumo do período
+  e, abaixo, a lista de sessões do período com filtro 15/30/90 dias.
+- **`progresso_models.dart` / `progresso_repository.dart`** — modelos e acesso à
+  API de progresso (providers Riverpod). `fl_chart` fixado em 1.0.0 (a 1.1.0 não
+  compila no Flutter 3.29.3).
 
 ### Navegação (`core/rotas/`)
 - `app_router.dart` — go_router com casca de abas (Início / Fichas / Progresso) e
@@ -170,12 +190,18 @@ outro usuário responde **404** (regra do `IControleAcesso`).
 - `DELETE /treinos/{id}/exercicios/{treinoExercicioId}` — remove da ficha.
 - `PUT /treinos/{id}/exercicios/{treinoExercicioId}/alvos` — define os alvos.
 
-### Sessões (PBI-15, PBI-18)
+### Sessões (PBI-15, PBI-18, PBI-22)
 - `GET /treinos/{id}/rascunho-sessao` — rascunho pré-preenchido para registrar.
 - `POST /sessoes` — grava a sessão com as séries.
 - `GET /sessoes/{id}` — detalhe da sessão.
 - `PUT /sessoes/{id}` — edita a sessão.
 - `DELETE /sessoes/{id}` — exclui a sessão.
+- `GET /sessoes?de=&ate=` — sessões do período (lista da aba Progresso).
+
+### Progresso (PBI-20, PBI-21)
+- `GET /progresso/exercicios` — exercícios com histórico (seletor do gráfico).
+- `GET /progresso/exercicios/{id}?de=&ate=` — série de evolução; cada ponto traz
+  valor, reps (força), `sessaoId` e a observação do dia.
 
 ### Camadas (projetos .NET)
 - `DiarioTreino.Domain` — entidades e regras, sem dependência de EF/HTTP/Firebase.
@@ -193,10 +219,15 @@ outro usuário responde **404** (regra do `IControleAcesso`).
   - `20261002204136_InitialCreate` — todas as tabelas do MER, constraints,
     índices, `CHECK`s e seed (métricas + catálogo global do protótipo).
   - `20261006183645_HabilitaUnaccent` — extensão `unaccent` (busca sem acento).
+  - `20261014143254_CatalogoExerciciosCompleto` — carga de 89 exercícios globais
+    (7 genéricos antigos ficam inativos, não apagados).
 - **Aplicação:** automática no startup da API em produção
   (`Banco:AplicarMigracoesNoStartup`, liga sozinho em Production).
-- **Grupo muscular:** hoje é **texto livre e opcional** no exercício — não é
-  categoria padronizada (relevante para a futura mudança de filtro por grupo).
+- **Grupo muscular:** hoje é **texto livre e opcional** no exercício
+  (`grupo_muscular`, `varchar(40)`) — ainda **não** é a tabela `membro`/`musculo`
+  do MER (isso é o PBI-31 / ADR-10, pendente). A carga de catálogo preencheu o
+  texto com valores padronizados (Peitoral, Dorsal, Quadríceps...), o que
+  facilita a futura conversão.
 
 ---
 
@@ -237,15 +268,25 @@ outro usuário responde **404** (regra do `IControleAcesso`).
 
 ## 9. Resumo em uma frase
 
-O MVP de registro de treino está **publicado e funcionando** (login → fichas →
-registrar/editar/excluir sessão), com API no Fly, front no Netlify e banco no Neon.
-Faltam, do incremento 1: tela inicial com fichas (PBI-23), progresso (PBI-20/21/22),
-treino livre (PBI-19), primeiro acesso (PBI-09), perfil/conta (PBI-25), tema
-completo (PBI-24), E2E (PBI-26) e backup (PBI-05).
+O MVP de registro de treino está **publicado e funcionando** (login → tela inicial
+com rotação de fichas → registrar/editar/excluir sessão → progresso com gráfico de
+evolução, observação no ponto e lista de sessões), com API no Fly, front no Netlify
+e banco no Neon, e deploy automático no CI. O catálogo tem 89 exercícios globais.
+Faltam, do incremento 1: primeiro acesso (PBI-09), treino livre (PBI-19),
+perfil/conta (PBI-25), tema completo (PBI-24), E2E Robot (PBI-26), backup (PBI-05) e
+filtro por membro (PBI-31). O incremento 2 (cardio) não começou.
 
 ---
 
-## 10. Ponto de retomada (continuar amanhã)
+## 10. Ponto de retomada
+
+> ⚠️ **Histórico (12/10/2026).** O snapshot abaixo ficou para trás: PBI-33,
+> PBI-22 (front), PBI-23A, deploy automático, **PBI-20, PBI-21 e a carga do
+> catálogo (89 exercícios)** já foram feitos e mergeados depois dele. **Próximo
+> passo atual: PBI-25 (Perfil e conta)** — ver dados, sair e excluir conta;
+> decisões em aberto do "excluir conta" (apagar no Firebase via cliente vs Admin
+> SDK; hard vs soft delete no Postgres) a confirmar com o PO. Mantido abaixo só
+> como registro.
 
 Atualizado ao fim da sessão de 12/10/2026.
 

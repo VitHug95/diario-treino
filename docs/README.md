@@ -35,15 +35,26 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 - Tem acesso ao treino e ao progresso de cada aluno vinculado
 - Pode exportar os dados do aluno em PDF
 
+## Estado atual (14/10/2026)
+
+O app está **publicado e em uso** (API no Fly, front no Netlify, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios, fichas, registro de sessão (editar/excluir), tela inicial com rotação de fichas e o progresso completo (gráfico de evolução, observação no ponto, lista de sessões).
+
+**Pronto:** login/cadastro · catálogo (buscar/criar) · fichas A/B/C com alvos · registro de sessão com pré-preenchimento, edição e exercício fora da ficha · tela inicial · gráfico de evolução por exercício + observação no ponto + lista de sessões · temas claro/escuro (com botão na Início).
+
+**Falta no Incremento 1:** primeiro acesso (tela de boas-vindas), treino livre sem ficha, tela de Perfil (ver dados/sair/excluir conta), tema completo (opção em Perfil + conferência de contraste), backup do banco, E2E Robot completo, e o filtro de exercícios por membro (ADR-10). O **Incremento 2** (cardio e resumo do período) ainda não começou.
+
+O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o modelo de dados, no [MAS.md](MAS.md) e [MER.md](MER.md).
+
 ## Incrementos
 
-**Incremento 1 (MVP)**
-- Login
-- Cadastro de fichas A/B/C com exercícios
-- Registro da sessão com carga pré-preenchida e observação
-- Gráfico de carga por exercício com filtro de período
+**Incremento 1 (MVP)** — em finalização
+- Login ✅
+- Cadastro de fichas A/B/C com exercícios ✅
+- Registro da sessão com carga pré-preenchida e observação ✅
+- Gráfico de carga por exercício com filtro de período ✅
+- Falta: primeiro acesso, treino livre, perfil/conta, tema completo, backup
 
-**Incremento 2**
+**Incremento 2** — não iniciado
 - Registro de cardio
 - Contagem de treinos no período
 
@@ -80,10 +91,12 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 
 ## Documentação técnica
 
-- [docs/MAS.md](docs/MAS.md): arquitetura, decisões (ADRs), autenticação, contrato da API, implantação e testes
-- [docs/MER.md](docs/MER.md): modelo de dados completo, dicionário, índices e regras
-- [docs/DESIGN.md](docs/DESIGN.md) e [docs/design-tokens.json](docs/design-tokens.json): fontes, cores dos temas claro e escuro, espaçamentos, raios e tamanhos
-- [docs/BACKLOG.md](docs/BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e proposta de Sprints
+- [MAS.md](MAS.md): arquitetura, decisões (ADRs), autenticação, contrato da API, implantação e testes
+- [MER.md](MER.md): modelo de dados completo, dicionário, índices e regras
+- [DESIGN.md](DESIGN.md): fontes, cores dos temas claro e escuro, espaçamentos, raios e tamanhos
+- [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
+- [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
+- [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
 
 O modelo de dados oficial é o do MER. Este README guarda a visão de produto e as decisões em alto nível.
 

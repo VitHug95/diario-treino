@@ -1,14 +1,23 @@
 # MAS: Modelo de Arquitetura de Software
 
 **Projeto:** Diário de Treino (nome provisório)
-**Versão:** 0.1 (antes do início do desenvolvimento)
-**Documentos relacionados:** [MER.md](MER.md), [README.md](../README.md)
+**Versão:** 1.0 (MVP de registro publicado; progresso, tela inicial e catálogo no ar)
+**Última atualização:** 14/10/2026
+**Documentos relacionados:** [MER.md](MER.md), [BACKLOG.md](BACKLOG.md), [README.md](README.md)
 
 ---
 
 ## 1. Objetivo do documento
 
-Registrar as decisões de arquitetura do aplicativo antes do desenvolvimento, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
+Registrar as decisões de arquitetura do aplicativo, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
+
+### 1.1 Estado de implementação (14/10/2026)
+
+O MVP de registro está **publicado e em uso** (Fly + Netlify + Neon). Resumo do que a arquitetura já tem no ar vs. o que falta:
+
+**Concluído e na `main`:** fundação back/front (PBI-01/02/03), publicação (PBI-04) com **deploy automático** da API no CI (ADR-09), autenticação Firebase + `/me` (PBI-06), controle de acesso centralizado (PBI-07), login/cadastro (PBI-08), catálogo buscar/criar (PBI-10/11) com **carga de 89 exercícios globais**, fichas (PBI-12/13/14), registro de sessão com edição e treino fora da ficha (PBI-15/16/17/18), tela inicial com fichas e rotação (PBI-23), **progresso completo** — gráfico de evolução + observação no ponto + lista de sessões (PBI-20/21/22), design system (temas claro/escuro por tokens), e correções de uso real (PBI-32/33). Teste de fluxo via `flutter test` no lugar do E2E Robot (PBI-26 parcial).
+
+**Pendente:** backup do banco (PBI-05), primeiro acesso (PBI-09), treino livre (PBI-19), **tema completo com persistência e opção em Perfil (PBI-24)**, **perfil e conta — ver dados / sair / excluir conta (PBI-25)**, E2E Robot completo (PBI-26), filtro por membro (PBI-31, ADR-10), métrica flexível no registro (PBI-34), cronograma semanal (PBI-35) e todo o incremento 2 de cardio (PBI-27 a PBI-30).
 
 ## 2. Visão do produto em uma frase
 
@@ -96,6 +105,7 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Consequência:** o Flutter web desenha em canvas; sem semântica, o Robot não encontra elementos no DOM. Com ela, os testes ficam estáveis e o app ganha acessibilidade de brinde.
 
 ### ADR-08: Tema claro e escuro no mesmo app
+- **Status:** parcialmente implementado. O design system (ADR por tokens) está no ar e a tela inicial já tem o botão sol/lua (`TemaController` + `shared_preferences`, padrão `ThemeMode.system`). Falta a opção tríplice (Sistema/Claro/Escuro) em **Perfil (PBI-25)** e a conferência final de contraste dos dois temas em todas as telas do MVP (**PBI-24**).
 - **Contexto:** o cliente aprovou as opções A (clara) e B (escura) e quer as duas.
 - **Decisão:** dois temas com a mesma estrutura de telas. Padrão "seguir o sistema" do celular, com troca manual por um botão na tela inicial e uma opção em Perfil (Sistema, Claro, Escuro). A escolha fica salva no aparelho.
 - **Consequência:** nenhuma cor é escrita direto nas telas; tudo vem de tokens de tema (`ThemeData` claro e escuro + `ThemeExtension` para cores próprias, como a de observação). Cada componente precisa ser conferido nos dois temas, inclusive o contraste mínimo de texto.
@@ -104,6 +114,7 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Contexto:** para validar o app em uso real sem montar a infraestrutura definitiva, a publicação da PBI-04 foi feita em serviços gerenciados.
 - **Decisão:** durante a fase de testes, a API roda no Fly.io (`diario-treino-api.fly.dev`) e o front no Netlify (`diario-treino.netlify.app`), com o banco no Neon e login no Firebase. É uma situação **provisória**. A implantação final segue a seção 14: máquina própria com Docker e Caddy, e domínio próprio.
 - **Consequência:** nada no código pode depender de recurso exclusivo do Fly ou do Netlify. Configuração só por variável de ambiente, API empacotada em Docker e front como arquivos estáticos, para a migração ser só troca de destino do deploy. Na migração: registrar o domínio, atualizar `Cors__OrigensPermitidas`, autorizar o domínio novo no Firebase e apontar o deploy do CI para a máquina.
+- **Deploy automático (implementado):** o CI (`.github/workflows/ci.yml`) publica a API no Fly a cada merge na `main` depois do build + testes (job `deploy-api`, secret `FLY_API_TOKEN`); o front tem deploy automático pelo Netlify. Migrations aplicam no startup da API em produção. Ver `docs/DEPLOY-AUTOMATICO.md`.
 
 ### ADR-10: Exercícios classificados por membro, em lista fechada
 - **Status:** aceito, a implementar na PBI-31. Até lá, o banco em produção ainda usa o texto livre `grupo_muscular`.
@@ -208,11 +219,12 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 lib/
   core/          cliente HTTP (Dio), interceptor do token, tema, rotas (go_router)
   features/
-    auth/        login, cadastro
-    inicio/      tela inicial, próximo treino
-    fichas/      montar e editar fichas
-    sessao/      registrar treino
-    progresso/   gráficos e filtros
+    auth/        login, cadastro, perfil (GET /me)
+    inicio/      tela inicial, próximo treino, rotação de fichas, botão de tema
+    catalogo/    buscar/criar exercício, seletor reaproveitado
+    fichas/      montar e editar fichas, definir alvos
+    sessao/      registrar/editar/ver/excluir treino
+    progresso/   gráfico de evolução, observação no ponto, lista de sessões
   shared/        componentes reutilizáveis
   theme/         tokens de cor e tipografia dos temas claro e escuro
 ```
@@ -280,29 +292,39 @@ PodeAcessarAtleta(usuarioLogado, atletaId) =
 
 Prefixo `/api/v1`, JSON, datas em ISO 8601, ids em UUID. Erros no formato Problem Details (RFC 9457).
 
-| Método | Rota | Descrição | Incremento |
+Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 incremento 2 · 🟣 futuro (modo educador).
+
+| Método | Rota | Descrição | Status |
 |---|---|---|---|
-| GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | 1 |
-| GET | `/metricas` | Métricas disponíveis | 1 |
-| GET | `/membros` | Membros e seus músculos, na ordem dos chips | 1 |
-| GET | `/exercicios?busca=&membro=` | Catálogo global + exercícios do usuário, filtrável por membro | 1 |
-| POST | `/exercicios` | Cria exercício próprio | 1 |
-| GET | `/planos/ativo` | Plano ativo com fichas e exercícios | 1 |
-| POST | `/planos` | Cria plano | 1 |
-| POST | `/planos/{id}/treinos` | Adiciona ficha | 1 |
-| PUT | `/treinos/{id}` | Edita ficha (nome, exercícios, ordem, alvos) | 1 |
-| DELETE | `/treinos/{id}` | Arquiva ficha | 1 |
-| GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | 1 |
-| POST | `/sessoes` | Salva sessão com séries | 1 |
-| GET | `/sessoes/{id}` | Detalhe da sessão | 1 |
-| PUT | `/sessoes/{id}` | Edita sessão | 1 |
-| DELETE | `/sessoes/{id}` | Exclui sessão | 1 |
-| GET | `/sessoes?de=&ate=` | Sessões do período | 1 |
-| GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício com observações | 1 |
-| GET | `/progresso/resumo?de=&ate=` | Contagem de treinos e sessões de cardio | 2 |
-| GET | `/alunos` | Alunos com vínculo ativo | Futuro |
-| POST | `/vinculos` | Convida aluno | Futuro |
-| GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | Futuro |
+| GET | `/health`, `/health/ready` | Liveness e readiness (readiness confere o banco) | ✅ |
+| GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | ✅ |
+| DELETE | `/me` (ou `/conta`) | Exclui a conta e os dados do usuário | ⏳ PBI-25 |
+| GET | `/metricas` | Métricas disponíveis | ✅ |
+| GET | `/membros` | Membros e seus músculos, na ordem dos chips | ⏳ PBI-31 |
+| GET | `/exercicios?busca=&modalidade=` | Catálogo global + exercícios do usuário (hoje filtra por **modalidade**; vira `membro` no PBI-31) | ✅ |
+| POST | `/exercicios` | Cria exercício próprio | ✅ |
+| GET | `/planos/ativo` | Plano ativo com fichas e exercícios | ✅ |
+| POST | `/planos` | Cria plano (idempotente) | ✅ |
+| POST | `/planos/{id}/treinos` | Adiciona ficha | ✅ |
+| GET | `/treinos/{id}` | Detalhe da ficha com exercícios | ✅ |
+| PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
+| DELETE | `/treinos/{id}` | Arquiva ficha | ✅ |
+| POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha | ✅ |
+| PUT | `/treinos/{id}/exercicios/ordem` | Reordena exercícios | ✅ |
+| DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha | ✅ |
+| PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
+| GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
+| POST | `/sessoes` | Salva sessão com séries | ✅ |
+| GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
+| PUT | `/sessoes/{id}` | Edita sessão | ✅ |
+| DELETE | `/sessoes/{id}` | Exclui sessão | ✅ |
+| GET | `/sessoes?de=&ate=` | Sessões do período | ✅ |
+| GET | `/progresso/exercicios` | Exercícios com histórico (seletor do gráfico) | ✅ |
+| GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício, com reps, `sessaoId` e observação por ponto | ✅ |
+| GET | `/progresso/resumo?de=&ate=` | Contagem de treinos e sessões de cardio | 🔵 PBI-30 |
+| GET | `/alunos` | Alunos com vínculo ativo | 🟣 |
+| POST | `/vinculos` | Convida aluno | 🟣 |
+| GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | 🟣 |
 
 Rotas de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre.
 
@@ -349,7 +371,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 - Sem senha armazenada pela aplicação.
 - CORS restrito ao domínio do app.
 - Logs nunca registram token nem texto de observação.
-- Exclusão de conta remove os dados do usuário no banco e no Firebase.
+- Exclusão de conta remove os dados do usuário no banco e no Firebase. *(A implementar no PBI-25: as FKs de `plano_treino`/`sessao`/`vinculo` para `usuario` são `Restrict`, então a exclusão apaga os dependentes do usuário em ordem, numa transação, antes do `usuario`; a remoção no Firebase é feita pelo próprio cliente ou via Admin SDK — a decidir no PBI-25.)*
 - Antes do modo educador: termo de consentimento cobrindo acesso do educador às observações e exportação em PDF.
 
 ## 17. Observabilidade
@@ -367,7 +389,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 | Mudança nos limites do plano gratuito do Neon | Custo inesperado | Backup próprio permite migrar de provedor |
 | Definição de zona (FC, pace ou percepção) | Afeta modelo do modo corrida | Pergunta enviada ao Vinicius |
 | Privacidade das observações frente ao educador | Afeta regra de acesso | Decidir antes do modo educador |
-| Métrica do gráfico (maior carga ou volume) | Afeta consulta de progresso | Validar com o Vinicius antes da PBI de progresso |
+| ~~Métrica do gráfico (maior carga ou volume)~~ | ~~Afeta consulta de progresso~~ | **Resolvido (PO, 14/10):** maior carga da sessão + reps daquela série; isometria = maior tempo. Implementado no PBI-20 |
 
 ## 19. Evolução prevista
 
