@@ -62,25 +62,29 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     }
   }
 
-  Future<void> _arquivar(TreinoResumo ficha) async {
+  Future<void> _excluir(TreinoResumo ficha) async {
+    final cores = AppColors.of(context);
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Arquivar ficha?'),
+        title: const Text('Excluir ficha?'),
         content: Text(
-            'A ficha "${ficha.nome}" sai da lista, mas o histórico de treinos dela continua.'),
+            'A ficha "${ficha.nome}" sai da lista. '
+            'Os treinos já registrados com esta ficha continuam no seu histórico.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true), child: const Text('Arquivar')),
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: cores.danger),
+              child: const Text('Excluir ficha')),
         ],
       ),
     );
     if (confirmar != true) return;
 
     try {
-      await ref.read(fichasRepositoryProvider).arquivarFicha(ficha.id);
+      await ref.read(fichasRepositoryProvider).excluirFicha(ficha.id);
       setState(() => _selecionada = 0);
       await _recarregar();
     } on FichasException catch (e) {
@@ -125,7 +129,7 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
             selecionada: indice,
             aoSelecionar: (i) => setState(() => _selecionada = i),
             aoRenomear: () => _renomear(fichas[indice]),
-            aoArquivar: () => _arquivar(fichas[indice]),
+            aoExcluir: () => _excluir(fichas[indice]),
           );
         },
       ),
@@ -140,14 +144,14 @@ class _ConteudoFichas extends ConsumerWidget {
     required this.selecionada,
     required this.aoSelecionar,
     required this.aoRenomear,
-    required this.aoArquivar,
+    required this.aoExcluir,
   });
 
   final List<TreinoResumo> fichas;
   final int selecionada;
   final ValueChanged<int> aoSelecionar;
   final VoidCallback aoRenomear;
-  final VoidCallback aoArquivar;
+  final VoidCallback aoExcluir;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -202,9 +206,10 @@ class _ConteudoFichas extends ConsumerWidget {
                 tooltip: 'Renomear ficha',
               ),
               IconButton(
-                onPressed: aoArquivar,
-                icon: const Icon(LucideIcons.archive, size: AppSizes.iconeSm),
-                tooltip: 'Arquivar ficha',
+                onPressed: aoExcluir,
+                icon: Icon(LucideIcons.trash2,
+                    size: AppSizes.iconeSm, color: cores.danger),
+                tooltip: 'Excluir ficha',
               ),
             ],
           ),

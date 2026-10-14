@@ -80,4 +80,26 @@ void main() {
     expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'CRIAR FICHA'), findsOneWidget);
   });
+
+  testWidgets('Excluir ficha pede confirmação explicando o histórico (PBI-36)',
+      (tester) async {
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([_ficha('A', 1)]),
+      detalhe: (id) => _detalhe(id, const []),
+    ));
+    await tester.pumpAndSettle();
+
+    // Aciona "Excluir ficha" (ícone com tooltip).
+    await tester.tap(find.byTooltip('Excluir ficha'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Excluir ficha?'), findsOneWidget);
+    expect(
+      find.textContaining(
+          'Os treinos já registrados com esta ficha continuam no seu histórico'),
+      findsOneWidget,
+    );
+    // Botão de confirmar com o rótulo da ação.
+    expect(find.widgetWithText(FilledButton, 'Excluir ficha'), findsOneWidget);
+  });
 }

@@ -134,15 +134,33 @@ public sealed class ServicoPlanejamento
         await _repositorio.SalvarAsync(ct);
     }
 
-    /// <summary>Arquiva a ficha (ativo = false). O histórico de sessões continua.</summary>
-    public async Task ArquivarFichaAsync(
+    /// <summary>
+    /// Exclui a ficha (PBI-36). Se nunca foi usada numa sessão, apaga de verdade
+    /// (itens e etapas caem em cascata). Se já tem sessões registradas, arquiva
+    /// (ativo = false) para o histórico e o gráfico continuarem com o nome dela.
+    /// Devolve <c>true</c> quando apagou de verdade, <c>false</c> quando arquivou.
+    /// </summary>
+    public async Task<bool> ExcluirFichaAsync(
         Guid usuarioLogadoId,
         Guid treinoId,
         CancellationToken ct)
     {
         var treino = await ResolverComAcessoAsync(usuarioLogadoId, treinoId, ct);
-        treino.Ativo = false;
+
+        if (await _repositorio.TreinoTemSessoesAsync(treinoId, ct))
+        {
+            treino.Ativo = false;
+            await _repositorio.SalvarAsync(ct);
+            return false;
+        }
+
+        // Apaga de verdade. Carrega os itens e etapas para o EF remover o grafo
+        // inteiro de forma determinística, sem depender do cascade do banco.
+        var completo = await _repositorio.ObterTreinoComExerciciosAsync(treinoId, ct)
+            ?? treino;
+        _repositorio.RemoverTreino(completo);
         await _repositorio.SalvarAsync(ct);
+        return true;
     }
 
     /// <summary>

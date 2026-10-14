@@ -54,7 +54,9 @@ class FichasRepository {
             data: {'nome': nome, 'descricao': descricao},
           ));
 
-  Future<void> arquivarFicha(String treinoId) =>
+  /// Exclui a ficha (PBI-36). O back apaga de verdade se não houver sessões, ou
+  /// arquiva (ativo=false) se já houver treinos registrados com ela.
+  Future<void> excluirFicha(String treinoId) =>
       _executar(() => _dio.delete<void>('/treinos/$treinoId'));
 
   // ---- Exercícios da ficha (PBI-13) ----

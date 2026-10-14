@@ -16,6 +16,14 @@ public interface IRepositorioPlano
     /// atleta e aplicar o controle de acesso.</summary>
     public Task<Treino?> ObterTreinoAsync(Guid treinoId, CancellationToken ct);
 
+    /// <summary>Indica se a ficha já foi usada em alguma sessão registrada.
+    /// Decide entre apagar de verdade (sem sessões) ou arquivar (com sessões).</summary>
+    public Task<bool> TreinoTemSessoesAsync(Guid treinoId, CancellationToken ct);
+
+    /// <summary>Apaga a ficha de verdade (itens e etapas caem em cascata). Só
+    /// deve ser chamado quando não há sessões ligadas a ela.</summary>
+    public void RemoverTreino(Treino treino);
+
     /// <summary>Atleta dono do plano a que o treino pertence, ou nulo se o
     /// treino não existe.</summary>
     public Task<Guid?> ObterAtletaDoTreinoAsync(Guid treinoId, CancellationToken ct);

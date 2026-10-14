@@ -31,6 +31,12 @@ public sealed class ServicoPlanejamentoTests
         public Task<Treino?> ObterTreinoAsync(Guid treinoId, CancellationToken ct)
             => Task.FromResult(Treinos.FirstOrDefault(t => t.Id == treinoId));
 
+        public bool TemSessoes;
+        public Task<bool> TreinoTemSessoesAsync(Guid treinoId, CancellationToken ct)
+            => Task.FromResult(TemSessoes);
+
+        public void RemoverTreino(Treino treino) => Treinos.Remove(treino);
+
         public Task<Guid?> ObterAtletaDoTreinoAsync(Guid treinoId, CancellationToken ct)
             => Task.FromResult(AtletaDoTreino);
 
@@ -173,7 +179,7 @@ public sealed class ServicoPlanejamentoTests
     }
 
     [Fact]
-    public async Task Arquivar_marca_ativo_falso_sem_remover()
+    public async Task Excluir_ficha_com_sessoes_apenas_arquiva()
     {
         var dono = Guid.NewGuid();
         var treinoId = Guid.NewGuid();
@@ -181,22 +187,43 @@ public sealed class ServicoPlanejamentoTests
         var repo = new RepositorioPlanoFake
         {
             AtletaDoTreino = dono,
+            TemSessoes = true,
             Treinos = { treino },
         };
 
-        await Montar(repo).ArquivarFichaAsync(dono, treinoId, CancellationToken.None);
+        var apagou = await Montar(repo).ExcluirFichaAsync(dono, treinoId, CancellationToken.None);
 
+        Assert.False(apagou); // arquivou, não apagou
         Assert.False(treino.Ativo);
         Assert.Contains(treino, repo.Treinos);
     }
 
     [Fact]
-    public async Task Arquivar_treino_inexistente_lanca_recurso_nao_encontrado()
+    public async Task Excluir_ficha_sem_sessoes_apaga_de_verdade()
+    {
+        var dono = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var treino = new Treino { Id = treinoId, Nome = "A", Ativo = true };
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TemSessoes = false,
+            Treinos = { treino },
+        };
+
+        var apagou = await Montar(repo).ExcluirFichaAsync(dono, treinoId, CancellationToken.None);
+
+        Assert.True(apagou);
+        Assert.DoesNotContain(treino, repo.Treinos);
+    }
+
+    [Fact]
+    public async Task Excluir_treino_inexistente_lanca_recurso_nao_encontrado()
     {
         var repo = new RepositorioPlanoFake { AtletaDoTreino = null };
 
         await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
-            Montar(repo).ArquivarFichaAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
+            Montar(repo).ExcluirFichaAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
     }
 
     [Fact]

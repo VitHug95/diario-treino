@@ -112,8 +112,10 @@ public sealed class PlanoEndpointTests
     }
 
     [Fact]
-    public async Task Arquivar_ficha_some_do_plano_mas_nao_e_apagada()
+    public async Task Excluir_ficha_sem_sessoes_apaga_de_verdade_e_some_do_plano()
     {
+        // PBI-36: uma ficha nunca usada numa sessão é apagada de verdade (não
+        // arquivada). O caso "com sessões arquiva" está em ExcluirFichaEndpointTests.
         var (api, client, _) = Autenticar(_postgres);
         await using var _api = api;
 
@@ -121,8 +123,8 @@ public sealed class PlanoEndpointTests
         var criar = await AdicionarFicha(client, planoId, "A", null);
         var treinoId = (await criar.Content.ReadFromJsonAsync<CriadoResposta>())!.Id;
 
-        var arquivar = await client.DeleteAsync($"/api/v1/treinos/{treinoId}");
-        Assert.Equal(HttpStatusCode.NoContent, arquivar.StatusCode);
+        var excluir = await client.DeleteAsync($"/api/v1/treinos/{treinoId}");
+        Assert.Equal(HttpStatusCode.NoContent, excluir.StatusCode);
 
         // Sumiu do plano ativo...
         var ativo = await client.GetAsync("/api/v1/planos/ativo");
@@ -132,10 +134,9 @@ public sealed class PlanoEndpointTests
             Assert.DoesNotContain(plano!.Treinos, t => t.Id == treinoId);
         }
 
-        // ...mas continua no banco (ativo = false).
+        // ...e foi apagada do banco (sem sessões ligadas).
         await using var db = _postgres.CriarContexto();
-        var treino = await db.Treinos.SingleAsync(t => t.Id == treinoId);
-        Assert.False(treino.Ativo);
+        Assert.False(await db.Treinos.AnyAsync(t => t.Id == treinoId));
     }
 
     [Fact]
