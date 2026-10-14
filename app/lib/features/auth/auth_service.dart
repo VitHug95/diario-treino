@@ -72,6 +72,21 @@ class AuthService {
 
   Future<void> sair() => _auth.signOut();
 
+  /// Remove o usuário no Firebase (chamado após o back excluir os dados).
+  /// Se o Firebase exigir login recente (`requires-recent-login`), lança
+  /// [AuthException] pedindo para entrar de novo — o app orienta o usuário.
+  Future<void> excluirUsuarioFirebase() async {
+    try {
+      await _auth.currentUser?.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw const AuthException(
+          'Por segurança, entre de novo antes de excluir a conta.');
+      }
+      throw AuthException(_traduzir(e));
+    }
+  }
+
   /// Traduz os códigos do Firebase para mensagens claras (critério do PBI-08).
   static String _traduzir(FirebaseAuthException e) {
     return switch (e.code) {

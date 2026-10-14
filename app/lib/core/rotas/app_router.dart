@@ -8,6 +8,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
+import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
 import '../../features/sessao/detalhe_sessao_screen.dart';
@@ -27,6 +28,7 @@ abstract final class Rotas {
   static const criarExercicio = '/exercicios/novo';
   static const registrarSessao = '/fichas/registrar';
   static const detalheSessao = '/sessoes';
+  static const perfil = '/perfil';
 }
 
 /// Dados passados ao abrir o registro de sessão (via `extra`).
@@ -121,6 +123,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                         treinoNome: args?.treinoNome,
                       );
                     },
+                  ),
+                  // Perfil e conta (PBI-25), empilhado sobre a Início.
+                  GoRoute(
+                    path: 'perfil',
+                    name: 'perfil',
+                    builder: (context, state) => const PerfilScreen(),
                   ),
                 ],
               ),

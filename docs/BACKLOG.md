@@ -424,6 +424,11 @@ de widget novos (pré-seleção + nota; estado "sem observação"). Model Dart
 
 **Notas técnicas:** ADR-08 do MAS.
 **Depende de:** PBI-02, PBI-25.
+**Status:** PARCIAL — a opção tríplice (Sistema/Claro/Escuro) foi para a tela de
+Perfil (`SegmentedButton` reusando o `TemaController`), somando-se ao botão
+sol/lua da Início e à persistência em `shared_preferences` (já existentes). Falta
+a **conferência final de contraste 4,5:1 em todas as telas do MVP nos dois
+temas** para fechar o PBI-24.
 
 #### PBI-25 · Perfil e conta
 **História:** Como atleta, quero ver meus dados, sair da conta e poder excluí-la, para ter controle sobre o que fica guardado.
@@ -435,6 +440,15 @@ de widget novos (pré-seleção + nota; estado "sem observação"). Model Dart
 - Exclusão coberta por teste de integração.
 
 **Depende de:** PBI-08.
+**Status:** ✅ FEITO (back + front). Decisão do PO: **1A + 2A** — o back apaga os
+dados no Postgres (`DELETE /api/v1/me`, hard delete transacional: sessões →
+planos/fichas → vínculos → exercícios próprios → papéis → usuário, já que as FKs
+para `usuario` são `Restrict`) e o app remove o usuário no Firebase em seguida
+(`FirebaseAuth.currentUser.delete()`; se pedir login recente, orienta a entrar de
+novo). Tela de Perfil (`perfil_screen.dart`) alcançada por ícone no cabeçalho da
+Início: nome/e-mail do `GET /me`, seletor de tema (PBI-24), "Sair" e "Excluir
+conta" com confirmação digitada ("EXCLUIR"). Testes: integração (apaga tudo do
+usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
 #### PBI-26 · Teste E2E do fluxo principal
 **História:** Como time, queremos um teste automatizado do caminho mais importante, para publicar sem medo de quebrar o que já funciona.

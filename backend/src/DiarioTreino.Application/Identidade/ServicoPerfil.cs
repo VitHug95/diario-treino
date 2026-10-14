@@ -29,6 +29,13 @@ public sealed class ServicoPerfil
         return new PerfilUsuario(usuario.Id, usuario.Nome, usuario.Email, papeis);
     }
 
+    /// <summary>
+    /// Exclui a conta do usuário logado e todos os seus dados (PBI-25). A
+    /// remoção do usuário no Firebase é feita pelo app depois do 204.
+    /// </summary>
+    public Task ExcluirContaAsync(Guid usuarioId, CancellationToken ct) =>
+        _repositorio.ExcluirContaAsync(usuarioId, ct);
+
     private async Task<Usuario> ProvisionarAsync(
         IdentidadeDoChamador identidade,
         CancellationToken ct)
