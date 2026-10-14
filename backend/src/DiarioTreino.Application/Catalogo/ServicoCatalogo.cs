@@ -9,17 +9,23 @@ public sealed class ServicoCatalogo
 {
     private readonly IRepositorioExercicio _repositorio;
     private readonly IRepositorioMetrica _metricas;
+    private readonly IRepositorioMembro _membros;
 
-    public ServicoCatalogo(IRepositorioExercicio repositorio, IRepositorioMetrica metricas)
+    public ServicoCatalogo(
+        IRepositorioExercicio repositorio,
+        IRepositorioMetrica metricas,
+        IRepositorioMembro membros)
     {
         _repositorio = repositorio;
         _metricas = metricas;
+        _membros = membros;
     }
 
     public async Task<IReadOnlyList<ExercicioResumo>> ListarAsync(
         Guid usuarioId,
         string? busca,
         string? modalidade,
+        short? membroId,
         CancellationToken ct)
     {
         var modalidadeNormalizada = NormalizarModalidade(modalidade);
@@ -29,8 +35,13 @@ public sealed class ServicoCatalogo
             usuarioId,
             buscaNormalizada,
             modalidadeNormalizada,
+            membroId,
             ct);
     }
+
+    /// <summary>Membros com seus músculos, para os chips e o cadastro (PBI-31).</summary>
+    public Task<IReadOnlyList<MembroResumo>> ListarMembrosAsync(CancellationToken ct) =>
+        _membros.ListarAsync(ct);
 
     /// <summary>
     /// Aceita vazio/"TODOS" como "sem filtro" (null). Qualquer outro valor
@@ -82,6 +93,20 @@ public sealed class ServicoCatalogo
         await ValidarEixoAsync(request.IntensidadeMetricaId, EixoMetrica.Intensidade, ct);
         await ValidarEixoAsync(request.VolumeMetricaId, EixoMetrica.Volume, ct);
 
+        // Membro obrigatório; músculo opcional, mas tem de pertencer ao membro
+        // (a FK composta do banco também protege, mas validamos antes para dar
+        // mensagem clara, não erro de constraint).
+        if (!await _membros.ExisteMembroAsync(request.MembroId, ct))
+        {
+            throw new ArgumentException("Membro inválido.", nameof(request));
+        }
+        if (request.MusculoId is { } musculoId &&
+            !await _membros.MusculoPertenceAoMembroAsync(musculoId, request.MembroId, ct))
+        {
+            throw new ArgumentException(
+                "O músculo escolhido não pertence ao membro.", nameof(request));
+        }
+
         var nome = request.Nome.Trim();
         if (await _repositorio.ExisteNomeNoCatalogoAsync(usuarioId, nome, ct))
         {
@@ -93,6 +118,8 @@ public sealed class ServicoCatalogo
         {
             Id = Guid.NewGuid(),
             Nome = nome,
+            MembroId = request.MembroId,
+            MusculoId = request.MusculoId,
             GrupoMuscular = string.IsNullOrWhiteSpace(request.GrupoMuscular)
                 ? null
                 : request.GrupoMuscular.Trim(),

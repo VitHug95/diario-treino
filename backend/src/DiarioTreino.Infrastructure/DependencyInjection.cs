@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
         services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
         services.AddScoped<IRepositorioMetrica, RepositorioMetrica>();
+        services.AddScoped<IRepositorioMembro, RepositorioMembro>();
         services.AddScoped<IRepositorioPlano, RepositorioPlano>();
         services.AddScoped<IRepositorioSessao, RepositorioSessao>();
         services.AddScoped<IRepositorioProgresso, RepositorioProgresso>();

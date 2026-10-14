@@ -16,6 +16,7 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
         Guid usuarioId,
         string? busca,
         string? modalidade,
+        short? membroId,
         CancellationToken ct)
     {
         // Catálogo global (sem dono) + exercícios do próprio usuário, só ativos.
@@ -28,6 +29,11 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
             query = query.Where(e => e.Modalidade == modalidade);
         }
 
+        if (membroId is { } mId)
+        {
+            query = query.Where(e => e.MembroId == mId);
+        }
+
         if (!string.IsNullOrWhiteSpace(busca))
         {
             // Busca sem diferenciar maiúsculas nem acentos (PBI-10).
@@ -38,16 +44,25 @@ public sealed class RepositorioExercicio : IRepositorioExercicio
                     "%" + DiarioTreinoDbContext.Unaccent(alvo) + "%"));
         }
 
-        // Junta às métricas padrão para trazer código e nome da forma de medir.
+        // Junta às métricas padrão (forma de medir) e, por LEFT JOIN, ao membro
+        // e músculo (podem ser nulos enquanto a etapa 1 convive com o legado).
         var consulta =
             from e in query
             join mi in _db.Metricas on e.IntensidadeMetricaPadraoId equals mi.Id
             join mv in _db.Metricas on e.VolumeMetricaPadraoId equals mv.Id
+            join mbJoin in _db.Membros on e.MembroId equals mbJoin.Id into mbg
+            from mb in mbg.DefaultIfEmpty()
+            join muJoin in _db.Musculos on e.MusculoId equals muJoin.Id into mug
+            from mu in mug.DefaultIfEmpty()
             orderby e.Nome
             select new ExercicioResumo(
                 e.Id,
                 e.Nome,
                 e.GrupoMuscular,
+                e.MembroId,
+                mb != null ? mb.Nome : null,
+                e.MusculoId,
+                mu != null ? mu.Nome : null,
                 e.Modalidade,
                 mi.Codigo,
                 mi.Nome,

@@ -31,12 +31,24 @@ public static class ExercicioEndpoints
         .WithTags("Catálogo")
         .WithSummary("Métricas disponíveis");
 
+        grupo.MapGet("/membros", async (
+            ServicoCatalogo catalogo,
+            CancellationToken ct) =>
+        {
+            var membros = await catalogo.ListarMembrosAsync(ct);
+            return Results.Ok(membros);
+        })
+        .WithName("ListarMembros")
+        .WithTags("Catálogo")
+        .WithSummary("Membros e seus músculos (filtro e cadastro)");
+
         grupo.MapGet("/exercicios", async (
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoCatalogo catalogo,
             string? busca,
             string? modalidade,
+            short? membro,
             CancellationToken ct) =>
         {
             var perfil = await ResolverPerfilAsync(http, perfilServico, ct);
@@ -47,7 +59,7 @@ public static class ExercicioEndpoints
 
             try
             {
-                var itens = await catalogo.ListarAsync(perfil.Id, busca, modalidade, ct);
+                var itens = await catalogo.ListarAsync(perfil.Id, busca, modalidade, membro, ct);
                 return Results.Ok(itens);
             }
             catch (ArgumentException ex)
@@ -57,7 +69,7 @@ public static class ExercicioEndpoints
         })
         .WithName("ListarExercicios")
         .WithTags("Catálogo")
-        .WithSummary("Catálogo global + exercícios do usuário");
+        .WithSummary("Catálogo global + exercícios do usuário (filtra por membro)");
 
         grupo.MapPost("/exercicios", async (
             HttpContext http,

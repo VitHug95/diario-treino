@@ -5,13 +5,14 @@ public interface IRepositorioExercicio
 {
     /// <summary>
     /// Lista o catálogo global (sem dono) mais os exercícios do próprio usuário,
-    /// aplicando busca por nome (sem diferenciar maiúsculas e acentos) e filtro
-    /// de modalidade. <paramref name="modalidade"/> nulo = todas.
+    /// aplicando busca por nome (sem diferenciar maiúsculas e acentos), filtro de
+    /// modalidade e filtro de membro (PBI-31). Qualquer filtro nulo = sem filtro.
     /// </summary>
     public Task<IReadOnlyList<ExercicioResumo>> BuscarAsync(
         Guid usuarioId,
         string? busca,
         string? modalidade,
+        short? membroId,
         CancellationToken ct);
 
     /// <summary>
