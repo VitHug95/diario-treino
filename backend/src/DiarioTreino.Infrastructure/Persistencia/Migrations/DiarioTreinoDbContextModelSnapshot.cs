@@ -80,18 +80,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("11111111-0000-0000-0000-000000000001"),
-                            Ativo = true,
-                            GrupoMuscular = "peito",
-                            IntensidadeMetricaPadraoId = (short)1,
-                            Modalidade = "FORCA",
-                            Nome = "Supino reto",
-                            VolumeMetricaPadraoId = (short)10
-                        },
-                        new
-                        {
                             Id = new Guid("11111111-0000-0000-0000-000000000002"),
-                            Ativo = true,
+                            Ativo = false,
                             GrupoMuscular = "peito",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
@@ -101,7 +91,7 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         new
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000003"),
-                            Ativo = true,
+                            Ativo = false,
                             GrupoMuscular = "peito",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
@@ -111,27 +101,17 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         new
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000004"),
-                            Ativo = true,
+                            Ativo = false,
                             GrupoMuscular = "tríceps",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
-                            Nome = "Tríceps corda",
-                            VolumeMetricaPadraoId = (short)10
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-0000-0000-0000-000000000005"),
-                            Ativo = true,
-                            GrupoMuscular = "pernas",
-                            IntensidadeMetricaPadraoId = (short)1,
-                            Modalidade = "FORCA",
-                            Nome = "Agachamento livre",
+                            Nome = "Tríceps corda (antigo)",
                             VolumeMetricaPadraoId = (short)10
                         },
                         new
                         {
                             Id = new Guid("11111111-0000-0000-0000-000000000006"),
-                            Ativo = true,
+                            Ativo = false,
                             GrupoMuscular = "costas",
                             IntensidadeMetricaPadraoId = (short)1,
                             Modalidade = "FORCA",
@@ -140,18 +120,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         },
                         new
                         {
-                            Id = new Guid("22222222-0000-0000-0000-000000000001"),
-                            Ativo = true,
-                            GrupoMuscular = "core",
-                            IntensidadeMetricaPadraoId = (short)2,
-                            Modalidade = "ISOMETRIA",
-                            Nome = "Prancha",
-                            VolumeMetricaPadraoId = (short)11
-                        },
-                        new
-                        {
                             Id = new Guid("22222222-0000-0000-0000-000000000002"),
-                            Ativo = true,
+                            Ativo = false,
                             GrupoMuscular = "pernas",
                             IntensidadeMetricaPadraoId = (short)2,
                             Modalidade = "ISOMETRIA",
@@ -161,6 +131,783 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         new
                         {
                             Id = new Guid("33333333-0000-0000-0000-000000000001"),
+                            Ativo = false,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Corrida (antigo)",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-0000-0000-0000-000000000002"),
+                            Ativo = false,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Bicicleta",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino reto com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000011"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino reto com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000012"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino inclinado com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000013"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino inclinado com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000014"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino declinado",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000015"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino na máquina",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000016"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Crucifixo reto com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000017"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Crucifixo inclinado",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000018"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Peck deck",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000019"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Crossover na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-00000000001a"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Flexão de braço",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-00000000001b"),
+                            Ativo = true,
+                            GrupoMuscular = "Peitoral",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Paralelas para peito",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Puxada frontal",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Puxada supinada",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Barra fixa",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada curvada com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada unilateral com halter, o serrote",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada baixa na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada cavalinho",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada na máquina",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-000000000009"),
+                            Ativo = true,
+                            GrupoMuscular = "Dorsal",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Pulldown com braço estendido",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-00000000000a"),
+                            Ativo = true,
+                            GrupoMuscular = "Trapézio",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Encolhimento com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-00000000000b"),
+                            Ativo = true,
+                            GrupoMuscular = "Trapézio",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Encolhimento com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22220000-0000-0000-0000-00000000000c"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Levantamento terra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Desenvolvimento com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Desenvolvimento militar com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Desenvolvimento na máquina",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Elevação lateral com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Elevação lateral na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Elevação frontal",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Crucifixo invertido",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Face pull",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("33330000-0000-0000-0000-000000000009"),
+                            Ativo = true,
+                            GrupoMuscular = "Deltoide",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Remada alta",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca direta com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca alternada com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca martelo",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca scott",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca concentrada",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            GrupoMuscular = "Bíceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Tríceps corda",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Tríceps pulley com barra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-000000000009"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Tríceps testa",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000a"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Tríceps francês",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000b"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Tríceps coice",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000c"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Supino fechado",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000d"),
+                            Ativo = true,
+                            GrupoMuscular = "Tríceps",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Mergulho no banco",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000e"),
+                            Ativo = true,
+                            GrupoMuscular = "Antebraço",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca de punho",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("44440000-0000-0000-0000-00000000000f"),
+                            Ativo = true,
+                            GrupoMuscular = "Antebraço",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Rosca inversa",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Agachamento livre",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Agachamento no smith",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Leg press 45°",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Hack machine",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Cadeira extensora",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Afundo com halteres",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Agachamento búlgaro",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            GrupoMuscular = "Quadríceps",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Agachamento isométrico na parede",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000009"),
+                            Ativo = true,
+                            GrupoMuscular = "Posteriores de coxa",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Mesa flexora",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000a"),
+                            Ativo = true,
+                            GrupoMuscular = "Posteriores de coxa",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Cadeira flexora",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000b"),
+                            Ativo = true,
+                            GrupoMuscular = "Posteriores de coxa",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Stiff",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000c"),
+                            Ativo = true,
+                            GrupoMuscular = "Glúteos",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Elevação pélvica",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000d"),
+                            Ativo = true,
+                            GrupoMuscular = "Glúteos",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Glúteo na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000e"),
+                            Ativo = true,
+                            GrupoMuscular = "Glúteos",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Cadeira abdutora",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-00000000000f"),
+                            Ativo = true,
+                            GrupoMuscular = "Adutores",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Cadeira adutora",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000010"),
+                            Ativo = true,
+                            GrupoMuscular = "Adutores",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Agachamento sumô",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000011"),
+                            Ativo = true,
+                            GrupoMuscular = "Panturrilha",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Panturrilha em pé",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("55550000-0000-0000-0000-000000000012"),
+                            Ativo = true,
+                            GrupoMuscular = "Panturrilha",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Panturrilha sentado",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Abdômen",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Abdominal supra",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            GrupoMuscular = "Abdômen",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Elevação de pernas",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            GrupoMuscular = "Abdômen",
+                            IntensidadeMetricaPadraoId = (short)1,
+                            Modalidade = "FORCA",
+                            Nome = "Abdominal na polia",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            GrupoMuscular = "Abdômen",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Roda abdominal",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            GrupoMuscular = "Abdômen",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Prancha",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            GrupoMuscular = "Oblíquos",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Prancha lateral",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            GrupoMuscular = "Oblíquos",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Rotação russa",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            GrupoMuscular = "Oblíquos",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Abdominal bicicleta",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-000000000009"),
+                            Ativo = true,
+                            GrupoMuscular = "Lombar",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "FORCA",
+                            Nome = "Extensão lombar no banco romano",
+                            VolumeMetricaPadraoId = (short)10
+                        },
+                        new
+                        {
+                            Id = new Guid("66660000-0000-0000-0000-00000000000a"),
+                            Ativo = true,
+                            GrupoMuscular = "Lombar",
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Superman",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000001"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
                             Modalidade = "CARDIO",
@@ -169,11 +916,110 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         },
                         new
                         {
-                            Id = new Guid("33333333-0000-0000-0000-000000000002"),
+                            Id = new Guid("77770000-0000-0000-0000-000000000002"),
                             Ativo = true,
                             IntensidadeMetricaPadraoId = (short)3,
                             Modalidade = "CARDIO",
-                            Nome = "Bicicleta",
+                            Nome = "Esteira",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Bicicleta ergométrica",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Elíptico",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Simulador de escada",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000006"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Remo ergômetro",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000007"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Pular corda",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("77770000-0000-0000-0000-000000000008"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)3,
+                            Modalidade = "CARDIO",
+                            Nome = "Caminhada",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("88880000-0000-0000-0000-000000000001"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Alongamento de posteriores",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("88880000-0000-0000-0000-000000000002"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Alongamento de quadríceps",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("88880000-0000-0000-0000-000000000003"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Mobilidade de quadril",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("88880000-0000-0000-0000-000000000004"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Mobilidade de ombro",
+                            VolumeMetricaPadraoId = (short)11
+                        },
+                        new
+                        {
+                            Id = new Guid("88880000-0000-0000-0000-000000000005"),
+                            Ativo = true,
+                            IntensidadeMetricaPadraoId = (short)2,
+                            Modalidade = "ISOMETRIA",
+                            Nome = "Equilíbrio unipodal",
                             VolumeMetricaPadraoId = (short)11
                         });
                 });
