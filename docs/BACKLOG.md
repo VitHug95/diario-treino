@@ -95,6 +95,18 @@ Vale para toda PBI, além dos critérios de aceite dela:
 
 **Tabelas:** todas.
 **Depende de:** PBI-01.
+**Carga de catálogo (14/10):** o seed global passou de 10 para 89 exercícios
+(`CatalogoGlobalSeed` + migration `CatalogoExerciciosCompleto`), cobrindo peito,
+costas, ombros, braços, pernas, core, cardio e mobilidade, com o grupo muscular
+e a forma de medir de cada um: CR (carga×reps, força), PR (peso corporal×reps,
+força — ex.: flexão, barra fixa), PT (peso corporal×tempo, isometria), ZT
+(zona×tempo, cardio). Os 10 genéricos antigos foram preservados: 3 que os testes
+de integração usam por GUID (Supino reto→"Supino reto com barra", Agachamento
+livre, Prancha) continuam ativos; os outros 7 viraram **inativos**
+(`ativo=false`, soft-delete) em vez de apagados, porque as FKs de
+`treino_exercicio`/`serie_executada` são `Restrict` e já pode haver histórico
+ligado em produção (regra de dados: nada é apagado fisicamente). Nomes únicos
+por catálogo respeitados (`ux_exercicio_nome_catalogo`).
 
 #### PBI-04 · Publicação em produção
 **História:** Como PO, quero cada incremento publicado num endereço real, para usar o app no celular e dar feedback de verdade.

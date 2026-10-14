@@ -53,11 +53,11 @@ public sealed class ExercicioEndpointTests
         var itens = await resposta.Content.ReadFromJsonAsync<List<ExercicioResumoResposta>>();
 
         Assert.NotNull(itens);
-        // Pelo menos os 10 exercícios do seed global.
-        Assert.True(itens!.Count >= 10);
-        Assert.Contains(itens, e => e.Nome == "Supino reto" && !e.Proprio);
+        // Catálogo global carregado (dezenas de exercícios).
+        Assert.True(itens!.Count >= 80);
+        Assert.Contains(itens, e => e.Nome == "Supino reto com barra" && !e.Proprio);
         // A forma de medir vem preenchida.
-        var supino = itens.First(e => e.Nome == "Supino reto");
+        var supino = itens.First(e => e.Nome == "Supino reto com barra");
         Assert.Equal("CARGA_KG", supino.IntensidadeMetricaCodigo);
         Assert.Equal("REPETICOES", supino.VolumeMetricaCodigo);
     }
