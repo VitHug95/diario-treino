@@ -5,8 +5,9 @@ namespace DiarioTreino.Api.Endpoints;
 
 /// <summary>
 /// <c>GET /api/v1/me</c>: perfil e papéis do usuário logado. No primeiro acesso
-/// provisiona o usuário com o papel ATLETA (MAS 11.1 / PBI-06). Exige token
-/// válido; sem token ou token inválido, o pipeline responde 401.
+/// provisiona o usuário com o papel ATLETA (MAS 11.1 / PBI-06).
+/// <c>DELETE /api/v1/me</c>: exclui a conta e todos os dados do usuário
+/// (PBI-25). Ambos exigem token válido; sem token, o pipeline responde 401.
 /// </summary>
 public static class MeEndpoints
 {
@@ -33,6 +34,28 @@ public static class MeEndpoints
         .WithName("Me")
         .WithTags("Identidade")
         .WithSummary("Perfil e papéis do usuário logado");
+
+        // Excluir conta: apaga os dados do usuário no Postgres (hard delete
+        // transacional). O app remove o usuário no Firebase depois do 204.
+        grupo.MapDelete("/me", async (
+            HttpContext http,
+            ServicoPerfil servico,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, servico, ct);
+            if (perfil is null)
+            {
+                return Results.Problem(
+                    title: "Token sem identificador de usuário",
+                    statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            await servico.ExcluirContaAsync(perfil.Id, ct);
+            return Results.NoContent();
+        })
+        .WithName("ExcluirConta")
+        .WithTags("Identidade")
+        .WithSummary("Exclui a conta e todos os dados do usuário logado");
 
         return app;
     }

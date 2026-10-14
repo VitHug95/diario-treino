@@ -63,6 +63,12 @@ class InicioScreen extends ConsumerWidget {
                         .read(temaControllerProvider.notifier)
                         .definir(escuro ? ThemeMode.light : ThemeMode.dark),
                   ),
+                  const SizedBox(width: AppSpacing.x8),
+                  IconButton(
+                    onPressed: () => context.push(Rotas.perfil),
+                    icon: const Icon(LucideIcons.user),
+                    tooltip: 'Perfil',
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.x20),

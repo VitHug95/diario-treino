@@ -105,7 +105,7 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Consequência:** o Flutter web desenha em canvas; sem semântica, o Robot não encontra elementos no DOM. Com ela, os testes ficam estáveis e o app ganha acessibilidade de brinde.
 
 ### ADR-08: Tema claro e escuro no mesmo app
-- **Status:** parcialmente implementado. O design system (ADR por tokens) está no ar e a tela inicial já tem o botão sol/lua (`TemaController` + `shared_preferences`, padrão `ThemeMode.system`). Falta a opção tríplice (Sistema/Claro/Escuro) em **Perfil (PBI-25)** e a conferência final de contraste dos dois temas em todas as telas do MVP (**PBI-24**).
+- **Status:** implementado, com um item em aberto. Design system por tokens no ar; botão sol/lua na Início e **opção tríplice (Sistema/Claro/Escuro) na tela de Perfil** (`TemaController` + `shared_preferences`, padrão `ThemeMode.system`). Falta só a conferência final de contraste 4,5:1 em todas as telas do MVP nos dois temas (**PBI-24**).
 - **Contexto:** o cliente aprovou as opções A (clara) e B (escura) e quer as duas.
 - **Decisão:** dois temas com a mesma estrutura de telas. Padrão "seguir o sistema" do celular, com troca manual por um botão na tela inicial e uma opção em Perfil (Sistema, Claro, Escuro). A escolha fica salva no aparelho.
 - **Consequência:** nenhuma cor é escrita direto nas telas; tudo vem de tokens de tema (`ThemeData` claro e escuro + `ThemeExtension` para cores próprias, como a de observação). Cada componente precisa ser conferido nos dois temas, inclusive o contraste mínimo de texto.
@@ -298,7 +298,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 |---|---|---|---|
 | GET | `/health`, `/health/ready` | Liveness e readiness (readiness confere o banco) | ✅ |
 | GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | ✅ |
-| DELETE | `/me` (ou `/conta`) | Exclui a conta e os dados do usuário | ⏳ PBI-25 |
+| DELETE | `/me` | Exclui a conta e os dados do usuário (hard delete transacional) | ✅ |
 | GET | `/metricas` | Métricas disponíveis | ✅ |
 | GET | `/membros` | Membros e seus músculos, na ordem dos chips | ⏳ PBI-31 |
 | GET | `/exercicios?busca=&modalidade=` | Catálogo global + exercícios do usuário (hoje filtra por **modalidade**; vira `membro` no PBI-31) | ✅ |
@@ -371,7 +371,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 - Sem senha armazenada pela aplicação.
 - CORS restrito ao domínio do app.
 - Logs nunca registram token nem texto de observação.
-- Exclusão de conta remove os dados do usuário no banco e no Firebase. *(A implementar no PBI-25: as FKs de `plano_treino`/`sessao`/`vinculo` para `usuario` são `Restrict`, então a exclusão apaga os dependentes do usuário em ordem, numa transação, antes do `usuario`; a remoção no Firebase é feita pelo próprio cliente ou via Admin SDK — a decidir no PBI-25.)*
+- Exclusão de conta remove os dados do usuário no banco e no Firebase (PBI-25, implementado). `DELETE /api/v1/me` faz hard delete transacional dos dependentes do usuário (sessões → planos → vínculos → exercícios próprios → papéis → usuário, porque as FKs para `usuario` são `Restrict`); o app então remove o usuário no Firebase (`currentUser.delete()`), pedindo reautenticação se o Firebase exigir login recente.
 - Antes do modo educador: termo de consentimento cobrindo acesso do educador às observações e exportação em PDF.
 
 ## 17. Observabilidade

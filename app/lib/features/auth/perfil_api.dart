@@ -35,8 +35,19 @@ class PerfilApi {
     final resposta = await _dio.get<Map<String, dynamic>>('/me');
     return Perfil.doJson(resposta.data!);
   }
+
+  /// Exclui a conta e todos os dados do usuário no back-end (DELETE /me).
+  /// A remoção do usuário no Firebase é feita separadamente pelo app.
+  Future<void> excluirConta() async {
+    await _dio.delete<void>('/me');
+  }
 }
 
 final perfilApiProvider = Provider<PerfilApi>(
   (ref) => PerfilApi(ref.watch(dioProvider)),
+);
+
+/// Perfil do usuário logado (GET /me). autoDispose: recarrega ao reabrir.
+final perfilProvider = FutureProvider.autoDispose<Perfil>(
+  (ref) => ref.watch(perfilApiProvider).obterMe(),
 );
