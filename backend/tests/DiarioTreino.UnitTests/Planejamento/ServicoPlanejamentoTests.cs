@@ -102,7 +102,7 @@ public sealed class ServicoPlanejamentoTests
         public bool Disponivel = true;
 
         public Task<IReadOnlyList<ExercicioResumo>> BuscarAsync(
-            Guid u, string? b, string? m, CancellationToken ct)
+            Guid u, string? b, string? m, short? membroId, CancellationToken ct)
             => Task.FromResult<IReadOnlyList<ExercicioResumo>>([]);
 
         public Task<bool> ExisteNomeNoCatalogoAsync(Guid u, string n, CancellationToken ct)

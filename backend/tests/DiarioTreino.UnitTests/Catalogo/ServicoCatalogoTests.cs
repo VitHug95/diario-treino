@@ -12,14 +12,16 @@ public sealed class ServicoCatalogoTests
     {
         public string? BuscaRecebida { get; private set; }
         public string? ModalidadeRecebida { get; private set; }
+        public short? MembroRecebido { get; private set; }
         public bool NomeJaExiste { get; set; }
         public Exercicio? Adicionado { get; private set; }
 
         public Task<IReadOnlyList<ExercicioResumo>> BuscarAsync(
-            Guid usuarioId, string? busca, string? modalidade, CancellationToken ct)
+            Guid usuarioId, string? busca, string? modalidade, short? membroId, CancellationToken ct)
         {
             BuscaRecebida = busca;
             ModalidadeRecebida = modalidade;
+            MembroRecebido = membroId;
             return Task.FromResult<IReadOnlyList<ExercicioResumo>>([]);
         }
 
@@ -59,12 +61,30 @@ public sealed class ServicoCatalogoTests
         }
     }
 
+    // Membro válido = qualquer id 1..8; músculo pertence quando (musculo,membro)
+    // está no conjunto conhecido (ex.: 1/1 = Peitoral/Peito).
+    private sealed class RepositorioMembroFake : IRepositorioMembro
+    {
+        public Task<IReadOnlyList<MembroResumo>> ListarAsync(CancellationToken ct)
+            => Task.FromResult<IReadOnlyList<MembroResumo>>([]);
+
+        public Task<bool> ExisteMembroAsync(short membroId, CancellationToken ct)
+            => Task.FromResult(membroId is >= 1 and <= 8);
+
+        public Task<bool> MusculoPertenceAoMembroAsync(short musculoId, short membroId, CancellationToken ct)
+            => Task.FromResult(musculoId == 1 && membroId == 1);
+    }
+
     private static ServicoCatalogo Montar(RepositorioExercicioFake? repo = null)
-        => new(repo ?? new RepositorioExercicioFake(), new RepositorioMetricaFake());
+        => new(
+            repo ?? new RepositorioExercicioFake(),
+            new RepositorioMetricaFake(),
+            new RepositorioMembroFake());
 
     private static CriarExercicioRequest RequisicaoValida() => new(
         Nome: "Rosca direta",
-        GrupoMuscular: "braço",
+        MembroId: MembroCodigos.Bracos,
+        MusculoId: null,
         Modalidade: Modalidade.Forca,
         IntensidadeMetricaId: MetricaCodigos.CargaKg,
         VolumeMetricaId: MetricaCodigos.Repeticoes);
@@ -73,7 +93,7 @@ public sealed class ServicoCatalogoTests
     public async Task Modalidade_vazia_vira_sem_filtro()
     {
         var repo = new RepositorioExercicioFake();
-        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "", CancellationToken.None);
+        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "", null, CancellationToken.None);
         Assert.Null(repo.ModalidadeRecebida);
     }
 
@@ -81,7 +101,7 @@ public sealed class ServicoCatalogoTests
     public async Task Modalidade_todos_vira_sem_filtro()
     {
         var repo = new RepositorioExercicioFake();
-        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "Todos", CancellationToken.None);
+        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "Todos", null, CancellationToken.None);
         Assert.Null(repo.ModalidadeRecebida);
     }
 
@@ -89,7 +109,7 @@ public sealed class ServicoCatalogoTests
     public async Task Modalidade_valida_e_normalizada_para_maiusculas()
     {
         var repo = new RepositorioExercicioFake();
-        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "cardio", CancellationToken.None);
+        await Montar(repo).ListarAsync(Guid.NewGuid(), null, "cardio", null, CancellationToken.None);
         Assert.Equal(Modalidade.Cardio, repo.ModalidadeRecebida);
     }
 
@@ -97,14 +117,14 @@ public sealed class ServicoCatalogoTests
     public async Task Modalidade_invalida_lanca_argumento()
     {
         await Assert.ThrowsAsync<ArgumentException>(
-            () => Montar().ListarAsync(Guid.NewGuid(), null, "xpto", CancellationToken.None));
+            () => Montar().ListarAsync(Guid.NewGuid(), null, "xpto", null, CancellationToken.None));
     }
 
     [Fact]
     public async Task Busca_em_branco_vira_nula()
     {
         var repo = new RepositorioExercicioFake();
-        await Montar(repo).ListarAsync(Guid.NewGuid(), "   ", null, CancellationToken.None);
+        await Montar(repo).ListarAsync(Guid.NewGuid(), "   ", null, null, CancellationToken.None);
         Assert.Null(repo.BuscaRecebida);
     }
 

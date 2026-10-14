@@ -557,9 +557,15 @@ Cardio/Mobilidade). **Resíduo** (próprio que não casa) é **excluído** junto
 dependências (séries, sessões que ficarem vazias, itens de ficha) — decisão do PO
 (tudo é teste). Teste de integração confere seed + classificação + consistência
 da FK composta.
-**Falta:** etapa 2 (API: `GET /membros`, filtro por membro, `POST /exercicios`
-exige `membroId`), etapa 3 (front: chips + cadastro), etapa 4 (migration remove
-`grupo_muscular`).
+**Status etapa 2 (API):** FEITO — `GET /membros` (8 membros + músculos, na ordem
+dos chips); `GET /exercicios?membro=` filtra por membro (modalidade continua
+disponível); `POST /exercicios` passa a exigir `membroId` e aceita `musculoId`
+opcional, validado como pertencente ao membro (a FK composta do banco também
+protege). `ExercicioResumo` agora traz membro/músculo (id + nome) para o front.
+Testes de integração: `GET /membros`, filtro por membro, criar sem membro (400),
+músculo de outro membro (400), criar válido classifica (201).
+**Falta:** etapa 3 (front: chips de membro + cadastro com membro/músculo),
+etapa 4 (migration remove `grupo_muscular`).
 
 #### PBI-32 · Ajustes de UX do seletor e da largura no web
 **História:** Como atleta, quero criar um exercício sem sair do registro quando ele não está no catálogo, e usar o app no computador sem a tela esticada.

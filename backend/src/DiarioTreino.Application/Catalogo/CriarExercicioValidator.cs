@@ -11,6 +11,9 @@ public sealed class CriarExercicioValidator : AbstractValidator<CriarExercicioRe
             .NotEmpty().WithMessage("O nome é obrigatório.")
             .MaximumLength(80);
 
+        RuleFor(x => x.MembroId)
+            .GreaterThan((short)0).WithMessage("Escolha o membro.");
+
         RuleFor(x => x.GrupoMuscular)
             .MaximumLength(40);
 

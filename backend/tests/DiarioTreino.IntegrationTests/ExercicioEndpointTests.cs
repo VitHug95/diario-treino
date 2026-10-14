@@ -22,6 +22,10 @@ public sealed class ExercicioEndpointTests
         Guid Id,
         string Nome,
         string? GrupoMuscular,
+        short? MembroId,
+        string? MembroNome,
+        short? MusculoId,
+        string? MusculoNome,
         string Modalidade,
         string IntensidadeMetricaCodigo,
         string IntensidadeMetricaNome,
@@ -181,7 +185,8 @@ public sealed class ExercicioEndpointTests
         var criar = await client.PostAsJsonAsync("/api/v1/exercicios", new
         {
             nome,
-            grupoMuscular = "braço",
+            membroId = (short)4,              // Braços
+            musculoId = (short)5,             // Bíceps
             modalidade = "FORCA",
             intensidadeMetricaId = (short)1,  // CARGA_KG
             volumeMetricaId = (short)10,      // REPETICOES
@@ -205,7 +210,7 @@ public sealed class ExercicioEndpointTests
         object corpo = new
         {
             nome,
-            grupoMuscular = "braço",
+            membroId = (short)4,
             modalidade = "FORCA",
             intensidadeMetricaId = (short)1,
             volumeMetricaId = (short)10,
@@ -228,6 +233,7 @@ public sealed class ExercicioEndpointTests
         var resposta = await client.PostAsJsonAsync("/api/v1/exercicios", new
         {
             nome = $"Invalido {Guid.NewGuid():n}",
+            membroId = (short)4,
             modalidade = "FORCA",
             intensidadeMetricaId = (short)10,
             volumeMetricaId = (short)10,
@@ -252,6 +258,112 @@ public sealed class ExercicioEndpointTests
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
     }
+
+    [Fact]
+    public async Task Membros_lista_os_oito_com_musculos()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var resposta = await client.GetAsync("/api/v1/membros");
+        resposta.EnsureSuccessStatusCode();
+        var membros = await resposta.Content.ReadFromJsonAsync<List<MembroResposta>>();
+
+        Assert.NotNull(membros);
+        Assert.Equal(8, membros!.Count);
+        // Vêm na ordem dos chips.
+        Assert.Equal("PEITO", membros[0].Codigo);
+        Assert.Equal("MOBILIDADE", membros[7].Codigo);
+        // Peito tem o músculo Peitoral; Cardio não tem músculo.
+        Assert.Contains(membros.Single(m => m.Codigo == "PEITO").Musculos, mu => mu.Nome == "Peitoral");
+        Assert.Empty(membros.Single(m => m.Codigo == "CARDIO").Musculos);
+    }
+
+    [Fact]
+    public async Task Filtra_exercicios_por_membro()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        // Membro 1 = Peito. Só devem vir exercícios de peito.
+        var resposta = await client.GetAsync("/api/v1/exercicios?membro=1");
+        resposta.EnsureSuccessStatusCode();
+        var itens = await resposta.Content.ReadFromJsonAsync<List<ExercicioResumoResposta>>();
+
+        Assert.NotNull(itens);
+        Assert.NotEmpty(itens!);
+        Assert.All(itens!, e => Assert.Equal((short)1, e.MembroId));
+        Assert.Contains(itens!, e => e.Nome == "Supino reto com barra" && e.MembroNome == "Peito");
+    }
+
+    [Fact]
+    public async Task Criar_sem_membro_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var resposta = await client.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome = $"Sem membro {Guid.NewGuid():n}",
+            modalidade = "FORCA",
+            intensidadeMetricaId = (short)1,
+            volumeMetricaId = (short)10,
+            // membroId ausente → 0 → inválido.
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_com_musculo_de_outro_membro_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        // Membro Peito (1) com músculo Bíceps (5, que é de Braços) → inválido.
+        var resposta = await client.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome = $"Incoerente {Guid.NewGuid():n}",
+            membroId = (short)1,
+            musculoId = (short)5,
+            modalidade = "FORCA",
+            intensidadeMetricaId = (short)1,
+            volumeMetricaId = (short)10,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_com_membro_e_musculo_validos_responde_201_e_classifica()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var nome = $"Rosca minha {Guid.NewGuid():n}";
+        var criar = await client.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome,
+            membroId = (short)4,   // Braços
+            musculoId = (short)5,  // Bíceps
+            modalidade = "FORCA",
+            intensidadeMetricaId = (short)1,
+            volumeMetricaId = (short)10,
+        });
+        Assert.Equal(HttpStatusCode.Created, criar.StatusCode);
+
+        var busca = await client.GetAsync($"/api/v1/exercicios?busca={nome}");
+        var itens = await busca.Content.ReadFromJsonAsync<List<ExercicioResumoResposta>>();
+        var criado = itens!.Single(e => e.Nome == nome);
+        Assert.Equal((short)4, criado.MembroId);
+        Assert.Equal("Braços", criado.MembroNome);
+        Assert.Equal((short)5, criado.MusculoId);
+        Assert.Equal("Bíceps", criado.MusculoNome);
+    }
+
+    private sealed record MembroResposta(
+        short Id, string Codigo, string Nome, short Ordem, List<MusculoResposta> Musculos);
+    private sealed record MusculoResposta(short Id, string Codigo, string Nome);
 
     private sealed record MetricaResposta(short Id, string Codigo, string Nome, string Unidade, string Eixo);
 

@@ -300,9 +300,9 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | ✅ |
 | DELETE | `/me` | Exclui a conta e os dados do usuário (hard delete transacional) | ✅ |
 | GET | `/metricas` | Métricas disponíveis | ✅ |
-| GET | `/membros` | Membros e seus músculos, na ordem dos chips | ⏳ PBI-31 |
-| GET | `/exercicios?busca=&modalidade=` | Catálogo global + exercícios do usuário (hoje filtra por **modalidade**; vira `membro` no PBI-31) | ✅ |
-| POST | `/exercicios` | Cria exercício próprio | ✅ |
+| GET | `/membros` | Membros e seus músculos, na ordem dos chips | ✅ (PBI-31 etapa 2) |
+| GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |
+| POST | `/exercicios` | Cria exercício próprio (exige `membroId`; `musculoId` opcional) | ✅ |
 | GET | `/planos/ativo` | Plano ativo com fichas e exercícios | ✅ |
 | POST | `/planos` | Cria plano (idempotente) | ✅ |
 | POST | `/planos/{id}/treinos` | Adiciona ficha | ✅ |
