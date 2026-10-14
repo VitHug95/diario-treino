@@ -119,6 +119,10 @@ class CatalogoFiltroController extends Notifier<CatalogoFiltro> {
 
   void definirModalidade(ModalidadeFiltro modalidade) =>
       state = state.copyWith(modalidade: modalidade);
+
+  /// Volta ao filtro inicial (busca vazia, modalidade Todos). Chamado ao abrir
+  /// o catálogo ou o seletor, para a tela nunca reabrir com a busca anterior.
+  void limpar() => state = const CatalogoFiltro();
 }
 
 /// Resultado da busca segundo o filtro atual. Recarrega quando o filtro muda.

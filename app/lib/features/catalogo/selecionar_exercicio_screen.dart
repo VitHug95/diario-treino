@@ -33,6 +33,17 @@ class _SelecionarExercicioScreenState
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    // O filtro é um provider global (compartilhado com o catálogo), então pode
+    // ter sobrado a busca de uma seleção anterior. Zera ao abrir, para o
+    // seletor sempre começar mostrando todos — como o campo vazio sugere.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(catalogoFiltroProvider.notifier).limpar();
+    });
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _buscaController.dispose();

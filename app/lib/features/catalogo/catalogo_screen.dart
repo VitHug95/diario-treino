@@ -25,6 +25,16 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    // Começa sempre do zero: o filtro é um provider global e o campo de busca
+    // abre vazio, então o estado antigo não pode "fantasmar" a lista.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(catalogoFiltroProvider.notifier).limpar();
+    });
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _buscaController.dispose();

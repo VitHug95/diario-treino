@@ -53,4 +53,39 @@ void main() {
 
     expect(find.text('Criar "Agachamento búlgaro"'), findsOneWidget);
   });
+
+  testWidgets('Abre com a busca limpa mesmo se havia filtro anterior',
+      (tester) async {
+    // Simula o provider global tendo sobrado uma busca de uma seleção anterior.
+    final container = ProviderContainer(
+      overrides: [
+        catalogoProvider.overrideWith((ref) async => [_ex('Supino reto')]),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(catalogoFiltroProvider.notifier).definirBusca('supino');
+    container
+        .read(catalogoFiltroProvider.notifier)
+        .definirModalidade(ModalidadeFiltro.forca);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.claro,
+          // A lista reflete o filtro atual: se não limpar, viria vazia/filtrada.
+          home: const SelecionarExercicioScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Depois de montar, o seletor zerou o filtro global.
+    final filtro = container.read(catalogoFiltroProvider);
+    expect(filtro.busca, '');
+    expect(filtro.modalidade, ModalidadeFiltro.todos);
+    // E o campo de busca aparece vazio.
+    final campo = tester.widget<TextField>(find.byType(TextField));
+    expect(campo.controller?.text ?? '', '');
+  });
 }
