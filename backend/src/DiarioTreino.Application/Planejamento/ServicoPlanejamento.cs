@@ -154,7 +154,11 @@ public sealed class ServicoPlanejamento
             return false;
         }
 
-        _repositorio.RemoverTreino(treino);
+        // Apaga de verdade. Carrega os itens e etapas para o EF remover o grafo
+        // inteiro de forma determinística, sem depender do cascade do banco.
+        var completo = await _repositorio.ObterTreinoComExerciciosAsync(treinoId, ct)
+            ?? treino;
+        _repositorio.RemoverTreino(completo);
         await _repositorio.SalvarAsync(ct);
         return true;
     }
