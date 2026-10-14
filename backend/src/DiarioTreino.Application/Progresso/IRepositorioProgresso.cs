@@ -35,4 +35,9 @@ public sealed record PontoBruto(
     DateOnly Data,
     decimal Valor,
     decimal? Repeticoes,
-    bool TemObservacao);
+    Guid SessaoId,
+    string? Observacao)
+{
+    /// <summary>Houve observação registrada na sessão deste ponto.</summary>
+    public bool TemObservacao => Observacao != null;
+}
