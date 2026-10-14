@@ -16,7 +16,6 @@ public sealed record RascunhoExercicio(
     Guid TreinoExercicioId,
     Guid ExercicioId,
     string Nome,
-    string? GrupoMuscular,
     string Modalidade,
     short Ordem,
     /// <summary>Aviso de onde veio o preenchimento, ex.: "Preenchido com o
@@ -92,7 +91,6 @@ public sealed record ExercicioSessaoDetalhe(
     Guid ExercicioId,
     Guid? TreinoExercicioId,
     string Nome,
-    string? GrupoMuscular,
     string Modalidade,
     short Ordem,
     /// <summary>True = exercício da ficha sem séries feitas nesta sessão.</summary>

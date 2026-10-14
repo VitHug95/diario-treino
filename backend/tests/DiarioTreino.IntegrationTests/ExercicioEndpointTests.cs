@@ -21,7 +21,6 @@ public sealed class ExercicioEndpointTests
     private sealed record ExercicioResumoResposta(
         Guid Id,
         string Nome,
-        string? GrupoMuscular,
         short? MembroId,
         string? MembroNome,
         short? MusculoId,
@@ -371,7 +370,6 @@ public sealed class ExercicioEndpointTests
     {
         Id = Guid.NewGuid(),
         Nome = nome,
-        GrupoMuscular = "braço",
         Modalidade = Modalidade.Forca,
         IntensidadeMetricaPadraoId = MetricaCodigos.CargaKg,
         VolumeMetricaPadraoId = MetricaCodigos.Repeticoes,

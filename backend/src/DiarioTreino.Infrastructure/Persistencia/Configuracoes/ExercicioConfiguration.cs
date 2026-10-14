@@ -16,7 +16,6 @@ public sealed class ExercicioConfiguration : IEntityTypeConfiguration<Exercicio>
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.Nome).HasColumnName("nome").HasMaxLength(80).IsRequired();
-        builder.Property(e => e.GrupoMuscular).HasColumnName("grupo_muscular").HasMaxLength(40);
         builder.Property(e => e.MembroId).HasColumnName("membro_id");
         builder.Property(e => e.MusculoId).HasColumnName("musculo_id");
         builder.Property(e => e.Modalidade).HasColumnName("modalidade").HasMaxLength(20).IsRequired();

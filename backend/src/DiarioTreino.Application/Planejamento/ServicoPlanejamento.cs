@@ -210,7 +210,6 @@ public sealed class ServicoPlanejamento
                 te.Id,
                 te.ExercicioId,
                 te.Exercicio?.Nome ?? string.Empty,
-                te.Exercicio?.GrupoMuscular,
                 te.Exercicio?.Modalidade ?? string.Empty,
                 te.Ordem,
                 te.Rodadas,

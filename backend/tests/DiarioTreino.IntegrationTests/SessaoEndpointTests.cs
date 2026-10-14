@@ -21,7 +21,7 @@ public sealed class SessaoEndpointTests
     private sealed record RascunhoResp(
         Guid TreinoId, string TreinoNome, DateOnly Data, List<RascunhoExResp> Exercicios);
     private sealed record RascunhoExResp(
-        Guid TreinoExercicioId, Guid ExercicioId, string Nome, string? GrupoMuscular,
+        Guid TreinoExercicioId, Guid ExercicioId, string Nome,
         string Modalidade, short Ordem, string? OrigemPreenchimento, List<SerieRascunhoResp> Series);
     private sealed record SerieRascunhoResp(
         short Rodada, short Ordem, string Tipo,

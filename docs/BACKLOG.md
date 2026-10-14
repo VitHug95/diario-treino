@@ -573,7 +573,13 @@ nunca o texto antigo. Busca e filtro por membro funcionam juntos. No cadastro
 validação) e músculo opcional, filtrado pelo membro e desabilitado quando o
 membro não tem músculos (ex.: Cardio, Mobilidade). Testes de widget cobrem a
 lista com legenda, os chips, o cadastro e o estado de carregamento.
-**Falta:** etapa 4 (migration remove `grupo_muscular`).
+**Status etapa 4 (remove grupo):** FEITO — migration `MembroMusculoEtapa4RemoveGrupo`
+dá `DROP COLUMN grupo_muscular` na tabela `exercicio` (os dados já tinham migrado
+para `membro_id`/`musculo_id` na etapa 1). A coluna sai do domínio (`Exercicio`),
+da configuração EF, do seed e de todos os DTOs/serviços; `CriarExercicioRequest`
+não aceita mais `grupoMuscular`. Build Release limpo (0 avisos com warnings-as-errors),
+28 testes unitários verdes; integração roda no CI aplicando as migrations do zero.
+**PBI-31 concluído.**
 
 #### PBI-32 · Ajustes de UX do seletor e da largura no web
 **História:** Como atleta, quero criar um exercício sem sair do registro quando ele não está no catálogo, e usar o app no computador sem a tela esticada.

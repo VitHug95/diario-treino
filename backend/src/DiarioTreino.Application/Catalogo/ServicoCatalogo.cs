@@ -120,9 +120,6 @@ public sealed class ServicoCatalogo
             Nome = nome,
             MembroId = request.MembroId,
             MusculoId = request.MusculoId,
-            GrupoMuscular = string.IsNullOrWhiteSpace(request.GrupoMuscular)
-                ? null
-                : request.GrupoMuscular.Trim(),
             Modalidade = modalidade,
             IntensidadeMetricaPadraoId = request.IntensidadeMetricaId,
             VolumeMetricaPadraoId = request.VolumeMetricaId,

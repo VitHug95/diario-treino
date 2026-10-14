@@ -14,9 +14,6 @@ public sealed class CriarExercicioValidator : AbstractValidator<CriarExercicioRe
         RuleFor(x => x.MembroId)
             .GreaterThan((short)0).WithMessage("Escolha o membro.");
 
-        RuleFor(x => x.GrupoMuscular)
-            .MaximumLength(40);
-
         RuleFor(x => x.Modalidade)
             .NotEmpty()
             .Must(m => Modalidade.Todos.Contains(m.ToUpperInvariant()))

@@ -223,11 +223,10 @@ outro usuário responde **404** (regra do `IControleAcesso`).
     (7 genéricos antigos ficam inativos, não apagados).
 - **Aplicação:** automática no startup da API em produção
   (`Banco:AplicarMigracoesNoStartup`, liga sozinho em Production).
-- **Grupo muscular:** hoje é **texto livre e opcional** no exercício
-  (`grupo_muscular`, `varchar(40)`) — ainda **não** é a tabela `membro`/`musculo`
-  do MER (isso é o PBI-31 / ADR-10, pendente). A carga de catálogo preencheu o
-  texto com valores padronizados (Peitoral, Dorsal, Quadríceps...), o que
-  facilita a futura conversão.
+- **Membro/músculo:** o exercício é classificado por `membro_id` (obrigatório ao
+  criar) e `musculo_id` opcional, com as tabelas `membro` (8) e `musculo` (15)
+  do MER (PBI-31 / ADR-10, **concluído**). O antigo texto livre `grupo_muscular`
+  foi removido na etapa 4 (`MembroMusculoEtapa4RemoveGrupo`).
 
 ---
 

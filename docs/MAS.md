@@ -117,7 +117,7 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Deploy automático (implementado):** o CI (`.github/workflows/ci.yml`) publica a API no Fly a cada merge na `main` depois do build + testes (job `deploy-api`, secret `FLY_API_TOKEN`); o front tem deploy automático pelo Netlify. Migrations aplicam no startup da API em produção. Ver `docs/DEPLOY-AUTOMATICO.md`.
 
 ### ADR-10: Exercícios classificados por membro, em lista fechada
-- **Status:** aceito, a implementar na PBI-31. Até lá, o banco em produção ainda usa o texto livre `grupo_muscular`.
+- **Status:** aceito e **implementado** na PBI-31 (4 etapas). O banco usa `membro_id`/`musculo_id`; o antigo texto livre `grupo_muscular` foi removido na etapa 4.
 - **Contexto:** o grupo muscular era texto livre e opcional. Em uso real já apareceram variações ("pernas", "Pernas", "peito" em minúsculo) e exercícios sem grupo. Além disso, o seletor filtrava por modalidade, que não é como a pessoa procura um exercício na hora de registrar: ela pensa "treinei perna", não "fiz força".
 - **Decisão:** o exercício passa a ter um **membro** obrigatório, escolhido de uma lista fixa (Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade), e um **músculo** opcional ligado ao membro. Os chips do seletor e do catálogo filtram por membro. A **modalidade continua igual**: segue definindo como o exercício é medido (ADR-06) e aparece na legenda de cada item, só deixa de ser filtro.
 - **Consequência:** filtro confiável e base pronta para contar séries por músculo no futuro. Exige migration que converte o texto existente e uma tela de cadastro com seleção em vez de campo livre. A lista final será validada pelo Vinicius; mudanças nela são migrations de seed, sem mudança de código.

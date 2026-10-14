@@ -7,7 +7,6 @@ namespace DiarioTreino.Application.Catalogo;
 public sealed record ExercicioResumo(
     Guid Id,
     string Nome,
-    string? GrupoMuscular,
     short? MembroId,
     string? MembroNome,
     short? MusculoId,

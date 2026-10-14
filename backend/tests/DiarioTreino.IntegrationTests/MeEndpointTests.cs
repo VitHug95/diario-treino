@@ -127,14 +127,16 @@ public sealed class MeEndpointTests
             .Content.ReadFromJsonAsync<IdResp>();
 
         // Exercício próprio (criado_por = usuário).
-        var exProprio = await (await client.PostAsJsonAsync("/api/v1/exercicios", new
+        var respostaExProprio = await client.PostAsJsonAsync("/api/v1/exercicios", new
         {
             nome = $"Meu exercício {uid}",
-            grupoMuscular = "Peito",
+            membroId = (short)1,
             modalidade = "FORCA",
             intensidadeMetricaId = 1,
             volumeMetricaId = 10,
-        })).Content.ReadFromJsonAsync<IdResp>();
+        });
+        respostaExProprio.EnsureSuccessStatusCode();
+        var exProprio = await respostaExProprio.Content.ReadFromJsonAsync<IdResp>();
 
         var te = await (await client.PostAsJsonAsync(
                 $"/api/v1/treinos/{treino!.Id}/exercicios",
