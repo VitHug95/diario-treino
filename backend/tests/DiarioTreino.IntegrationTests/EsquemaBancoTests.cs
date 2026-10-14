@@ -32,12 +32,23 @@ public sealed class EsquemaBancoTests
     {
         await using var db = _postgres.CriarContexto();
 
-        var exercicios = await db.Exercicios.Where(e => e.CriadoPorId == null).ToListAsync();
+        var globais = await db.Exercicios.Where(e => e.CriadoPorId == null).ToListAsync();
+        var ativos = globais.Where(e => e.Ativo).ToList();
 
-        Assert.Equal(10, exercicios.Count);
-        Assert.Contains(exercicios, e => e.Nome == "Supino reto" && e.Modalidade == Modalidade.Forca);
-        Assert.Contains(exercicios, e => e.Nome == "Prancha" && e.Modalidade == Modalidade.Isometria);
-        Assert.Contains(exercicios, e => e.Nome == "Corrida" && e.Modalidade == Modalidade.Cardio);
+        // Carga de catálogo (14/10): 89 exercícios ativos no catálogo + 7
+        // genéricos antigos aposentados (ativo=false) que ficam no banco por
+        // causa das FKs Restrict, mas somem do catálogo.
+        Assert.Equal(89, ativos.Count);
+        Assert.Equal(7, globais.Count(e => !e.Ativo));
+
+        // Representantes de cada modalidade/forma de medir.
+        Assert.Contains(ativos, e => e.Nome == "Supino reto com barra" && e.Modalidade == Modalidade.Forca);
+        Assert.Contains(ativos, e => e.Nome == "Flexão de braço" && e.Modalidade == Modalidade.Forca && e.IntensidadeMetricaPadraoId == MetricaCodigos.PesoCorporal);
+        Assert.Contains(ativos, e => e.Nome == "Prancha" && e.Modalidade == Modalidade.Isometria);
+        Assert.Contains(ativos, e => e.Nome == "Corrida" && e.Modalidade == Modalidade.Cardio);
+
+        // Os aposentados não aparecem no catálogo (ficam inativos).
+        Assert.DoesNotContain(ativos, e => e.Nome == "Supino inclinado");
     }
 
     [Fact]
@@ -45,11 +56,11 @@ public sealed class EsquemaBancoTests
     {
         await using var db = _postgres.CriarContexto();
 
-        // "Supino reto" já existe no catálogo global (criado_por_id nulo).
+        // "Supino reto com barra" já existe no catálogo global (criado_por_id nulo).
         db.Exercicios.Add(new Exercicio
         {
             Id = Guid.NewGuid(),
-            Nome = "supino reto", // case-insensitive pelo índice lower(nome)
+            Nome = "supino reto com barra", // case-insensitive pelo índice lower(nome)
             GrupoMuscular = "peito",
             Modalidade = Modalidade.Forca,
             IntensidadeMetricaPadraoId = MetricaCodigos.CargaKg,

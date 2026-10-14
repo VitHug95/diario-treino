@@ -70,7 +70,7 @@ public sealed class FichaExerciciosEndpointTests
         var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
         Assert.Equal(2, ficha!.Exercicios.Count);
         Assert.Equal(new short[] { 1, 2 }, ficha.Exercicios.Select(e => e.Ordem).ToArray());
-        Assert.Contains(ficha.Exercicios, e => e.Nome == "Supino reto");
+        Assert.Contains(ficha.Exercicios, e => e.Nome == "Supino reto com barra");
     }
 
     [Fact]
