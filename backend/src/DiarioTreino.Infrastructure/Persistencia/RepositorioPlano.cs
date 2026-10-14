@@ -39,6 +39,11 @@ public sealed class RepositorioPlano : IRepositorioPlano
     public Task<Treino?> ObterTreinoAsync(Guid treinoId, CancellationToken ct) =>
         _db.Treinos.FirstOrDefaultAsync(t => t.Id == treinoId, ct);
 
+    public Task<bool> TreinoTemSessoesAsync(Guid treinoId, CancellationToken ct) =>
+        _db.Sessoes.AnyAsync(s => s.TreinoId == treinoId, ct);
+
+    public void RemoverTreino(Treino treino) => _db.Treinos.Remove(treino);
+
     public async Task<Guid?> ObterAtletaDoTreinoAsync(Guid treinoId, CancellationToken ct)
     {
         var dados = await _db.Treinos

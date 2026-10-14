@@ -87,7 +87,8 @@ public static class PlanoEndpoints
         })
         .WithName("EditarFicha").WithTags("Fichas").WithSummary("Renomeia/edita a ficha");
 
-        // Arquiva a ficha (não apaga: histórico preservado).
+        // Exclui a ficha: apaga de verdade se não tem sessões; arquiva se tem
+        // (histórico e gráfico preservados). PBI-36.
         grupo.MapDelete("/treinos/{id:guid}", async (
             Guid id,
             HttpContext http,
@@ -98,10 +99,10 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            await planejamento.ArquivarFichaAsync(perfil.Id, id, ct);
+            await planejamento.ExcluirFichaAsync(perfil.Id, id, ct);
             return Results.NoContent();
         })
-        .WithName("ArquivarFicha").WithTags("Fichas").WithSummary("Arquiva a ficha");
+        .WithName("ExcluirFicha").WithTags("Fichas").WithSummary("Exclui a ficha (apaga ou arquiva)");
 
         // ---- Exercícios da ficha (PBI-13) ----
 

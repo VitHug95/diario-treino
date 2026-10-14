@@ -612,6 +612,23 @@ Itens que surgiram com o app em uso real.
 **Depende de:** PBI-23 (parte A), PBI-15.
 **Prioridade:** baixa (evolução; a faixa semanal do PBI-23A já entrega valor sem isto).
 
+#### PBI-36 · Excluir ficha
+
+**História:** Como atleta, quero excluir uma ficha que não uso mais, para a lista de fichas ficar limpa, sem perder os treinos que já registrei com ela.
+
+**Contexto:** a ação de remover ficha existe no app, mas aparece como "Arquivar" (ícone de arquivo) e sempre arquiva (`ativo=false`), mesmo quando a ficha nunca foi usada. O usuário procura "Excluir" e não encontra; e uma ficha criada por engano, sem nenhum treino, fica arquivada para sempre em vez de sumir.
+
+**Critérios de aceite**
+- Na aba Fichas, cada ficha tem a ação "Excluir ficha" (menu de três pontos ou deslizar), com confirmação.
+- Ficha **sem nenhuma sessão registrada** é apagada de verdade, com os itens (`treino_exercicio`) e etapas (`etapa_prescrita`) em cascata.
+- Ficha **com sessões registradas** é arquivada (`ativo = false`): some da aba Fichas, da tela inicial e da rotação A→B→C, e as sessões continuam no histórico e no gráfico com o nome da ficha.
+- O texto da confirmação diz o que vai acontecer: "Os treinos já registrados com esta ficha continuam no seu histórico."
+- Teste de integração cobrindo os dois casos (sem sessões = apaga; com sessões = arquiva) e o 404 para ficha de outro usuário.
+
+**API:** `DELETE /treinos/{id}` passa a ser condicional (apaga se não houver sessões; arquiva se houver). **Tela:** 5.
+**Depende de:** PBI-12, PBI-15, PBI-18.
+**Prioridade:** alta (lacuna de UX numa funcionalidade central).
+
 ---
 
 ## 9. Épicos futuros (ainda não refinados)
