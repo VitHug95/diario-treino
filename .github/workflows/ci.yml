@@ -161,7 +161,10 @@ jobs:
           CORS__ORIGENSPERMITIDAS__0: "http://127.0.0.1:8000"
           CORS__ORIGENSPERMITIDAS__1: "http://localhost:8000"
         run: |
-          dotnet run --project src/DiarioTreino.Api --configuration Release --no-build > "$RUNNER_TEMP/api.log" 2>&1 &
+          # --no-launch-profile: ignora o launchSettings.json (que fixa a porta
+          # 5289 e o ambiente Development) e respeita as variáveis acima
+          # (ASPNETCORE_URLS=8080, ambiente Production).
+          dotnet run --project src/DiarioTreino.Api --configuration Release --no-build --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
           echo "Aguardando a API em /health..."
           for i in $(seq 1 90); do
             if curl -sf "http://127.0.0.1:${API_PORT}/health" > /dev/null; then
