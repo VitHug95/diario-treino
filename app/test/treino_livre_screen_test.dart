@@ -23,7 +23,7 @@ void main() {
     expect(find.text('Adicionar exercício'), findsOneWidget);
     // Opção de também salvar como ficha.
     expect(find.text('Salvar também como ficha'), findsOneWidget);
-    // Botão de salvar o treino.
-    expect(find.text('SALVAR TREINO'), findsOneWidget);
+    // Botão de finalizar o treino.
+    expect(find.text('FINALIZAR TREINO'), findsOneWidget);
   });
 }

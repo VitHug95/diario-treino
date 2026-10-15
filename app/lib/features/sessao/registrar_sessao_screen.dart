@@ -13,6 +13,7 @@ import '../catalogo/selecionar_exercicio_screen.dart';
 import '../fichas/fichas_repository.dart';
 import 'sessao_edicao.dart';
 import 'sessao_repository.dart';
+import 'treino_em_andamento.dart';
 
 /// Tela 3 do protótipo: registrar o treino de uma ficha, com as séries já
 /// preenchidas pelo histórico ou pelos alvos (PBI-15) e edição das séries
@@ -27,6 +28,7 @@ class RegistrarSessaoScreen extends ConsumerWidget {
     required this.treinoNome,
     this.sessaoId,
     this.dataInicial,
+    this.registroPosterior = false,
   });
 
   final String treinoId;
@@ -38,13 +40,19 @@ class RegistrarSessaoScreen extends ConsumerWidget {
   /// Dia pré-selecionado ao registrar novo (faixa semanal). Nulo = hoje.
   final DateTime? dataInicial;
 
+  /// "Registrar treino já feito" (PBI-37): não é um treino em andamento — a data
+  /// é editável, a duração é digitada e não há rascunho local nem cronômetro.
+  final bool registroPosterior;
+
   bool get _editando => sessaoId != null;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final titulo = _editando ? 'Editar treino' : 'Registrar $treinoNome';
+    final titulo = _editando
+        ? 'Editar treino'
+        : (registroPosterior ? 'Registrar $treinoNome' : treinoNome);
 
-    // Edição: carrega a sessão existente. Novo: carrega o rascunho da ficha.
+    // Edição (PBI-18): carrega a sessão existente, sem rascunho em andamento.
     if (_editando) {
       final detalhe = ref.watch(sessaoDetalheProvider(sessaoId!));
       return Scaffold(
@@ -56,6 +64,7 @@ class RegistrarSessaoScreen extends ConsumerWidget {
           ),
           data: (dados) => _Formulario(
             treinoId: dados.treinoId,
+            treinoNome: treinoNome,
             sessaoId: sessaoId,
             data: dados.data,
             duracaoMin: dados.duracaoMin,
@@ -64,6 +73,33 @@ class RegistrarSessaoScreen extends ConsumerWidget {
           ),
         ),
       );
+    }
+
+    // Treino em andamento (PBI-37): se já existe um rascunho desta ficha no
+    // aparelho, reabre de onde parou. Caso contrário, monta do zero a partir do
+    // rascunho da ficha e marca a hora de início. "Registrar já feito" pula isto.
+    if (!registroPosterior) {
+      // Lê o rascunho uma vez (read, não watch): o autosave invalida este
+      // provider a cada tecla, e observá-lo aqui remontaria o formulário e
+      // perderia o que o atleta está digitando.
+      final emAndamento = ref.read(treinoEmAndamentoProvider);
+      if (emAndamento != null && emAndamento.treinoId == treinoId) {
+        return Scaffold(
+          appBar: AppBar(title: Text(titulo)),
+          body: _Formulario(
+            treinoId: treinoId,
+            treinoNome: treinoNome,
+            sessaoId: null,
+            data: emAndamento.data,
+            duracaoMin: null,
+            observacao: null,
+            exercicios:
+                emAndamento.exercicios.map((e) => e.paraEdicao()).toList(),
+            emAndamento: true,
+            inicio: emAndamento.inicio,
+          ),
+        );
+      }
     }
 
     final rascunho = ref.watch(rascunhoSessaoProvider(treinoId));
@@ -76,12 +112,15 @@ class RegistrarSessaoScreen extends ConsumerWidget {
         ),
         data: (dados) => _Formulario(
           treinoId: treinoId,
+          treinoNome: treinoNome,
           sessaoId: null,
           // Dia escolhido na faixa semanal, se houver; senão o padrão (hoje).
           data: dataInicial ?? dados.data,
           duracaoMin: null,
           observacao: null,
           exercicios: dados.exercicios.map(ExercicioEdicao.doRascunho).toList(),
+          emAndamento: !registroPosterior,
+          inicio: registroPosterior ? null : DateTime.now(),
         ),
       ),
     );
@@ -100,6 +139,7 @@ class TreinoLivreScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Treino livre')),
       body: _Formulario(
         treinoId: null,
+        treinoNome: 'Treino livre',
         sessaoId: null,
         data: DateTime.now(),
         duracaoMin: null,
@@ -114,15 +154,19 @@ class TreinoLivreScreen extends StatelessWidget {
 class _Formulario extends ConsumerStatefulWidget {
   const _Formulario({
     required this.treinoId,
+    required this.treinoNome,
     required this.sessaoId,
     required this.data,
     required this.duracaoMin,
     required this.observacao,
     required this.exercicios,
     this.treinoLivre = false,
+    this.emAndamento = false,
+    this.inicio,
   });
 
   final String? treinoId;
+  final String treinoNome;
   final String? sessaoId;
   final DateTime data;
   final int? duracaoMin;
@@ -132,6 +176,14 @@ class _Formulario extends ConsumerStatefulWidget {
   /// Treino livre (PBI-19): começa vazio, cada exercício adicionado traz a
   /// última execução como referência e há a opção "Salvar também como ficha".
   final bool treinoLivre;
+
+  /// Treino em andamento (PBI-37): autosalva o rascunho no aparelho a cada
+  /// alteração, calcula a duração a partir de [inicio] e finaliza com aviso se
+  /// houver exercício sem marcar. Falso = editar sessão ou "registrar já feito".
+  final bool emAndamento;
+
+  /// Instante de início do treino (para a duração automática em andamento).
+  final DateTime? inicio;
 
   @override
   ConsumerState<_Formulario> createState() => _FormularioState();
@@ -147,8 +199,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
   /// Treino livre (PBI-19): marcar para também salvar o treino como ficha nova.
   bool _salvarComoFicha = false;
 
+  /// Finalizado/descartado: libera a saída sem o diálogo de treino em andamento.
+  bool _encerrado = false;
+
   bool get _editando => widget.sessaoId != null;
   bool get _treinoLivre => widget.treinoLivre;
+  bool get _emAndamento => widget.emAndamento;
 
   @override
   void initState() {
@@ -157,6 +213,24 @@ class _FormularioState extends ConsumerState<_Formulario> {
     _exercicios = widget.exercicios;
     if (widget.duracaoMin != null) _duracao.text = widget.duracaoMin.toString();
     if (widget.observacao != null) _observacao.text = widget.observacao!;
+
+    if (_emAndamento) {
+      // Autosalva o rascunho quando o atleta digita em qualquer série (os
+      // toggles de "realizado" já chamam _aoMudar). Observa cada controller.
+      for (final ex in _exercicios) {
+        for (final s in ex.series) {
+          _ouvirSerie(s);
+        }
+      }
+      // Grava o estado inicial para "Continuar treino" já valer de cara.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _salvarRascunho());
+    }
+  }
+
+  void _ouvirSerie(SerieEdicao s) {
+    s.intensidade.addListener(_salvarRascunho);
+    s.volume.addListener(_salvarRascunho);
+    s.descanso.addListener(_salvarRascunho);
   }
 
   @override
@@ -169,6 +243,109 @@ class _FormularioState extends ConsumerState<_Formulario> {
       }
     }
     super.dispose();
+  }
+
+  /// Chamado a cada mudança estrutural (marcar realizado, add/remover série).
+  /// Redesenha e, em andamento, persiste o rascunho.
+  void _aoMudar() {
+    setState(() {});
+    if (_emAndamento) _salvarRascunho();
+  }
+
+  /// Persiste o rascunho atual no aparelho (PBI-37). Só em andamento.
+  void _salvarRascunho() {
+    if (!_emAndamento || _encerrado) return;
+    final treino = TreinoEmAndamento(
+      treinoId: widget.treinoId,
+      treinoNome: widget.treinoNome,
+      treinoLivre: _treinoLivre,
+      dataIso: _soDataIso(_data),
+      inicioMillis:
+          (widget.inicio ?? DateTime.now()).millisecondsSinceEpoch,
+      exercicios: _exercicios.map(exercicioParaRascunho).toList(),
+    );
+    ref.read(rascunhoTreinoServiceProvider).salvar(treino);
+    ref.invalidate(treinoEmAndamentoProvider);
+  }
+
+  static String _soDataIso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  /// Marca o treino como encerrado e apaga o rascunho local (finalizar/descartar).
+  void _encerrarRascunho() {
+    _encerrado = true;
+    if (_emAndamento) {
+      ref.read(rascunhoTreinoServiceProvider).limpar();
+      ref.invalidate(treinoEmAndamentoProvider);
+    }
+  }
+
+  /// Diálogo ao tentar sair com um treino em andamento (PBI-37): finalizar,
+  /// continuar depois (mantém o rascunho) ou descartar. Devolve true quando a
+  /// saída pode prosseguir.
+  Future<bool> _aoTentarSair() async {
+    if (!_emAndamento || _encerrado) return true;
+
+    final acao = await showDialog<_AcaoSaida>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Treino em andamento'),
+        content: const Text(
+            'Você está no meio de um treino. O que quer fazer?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoSaida.descartar),
+            child: const Text('Descartar treino'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoSaida.continuarDepois),
+            child: const Text('Continuar depois'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoSaida.finalizar),
+            child: const Text('Finalizar agora'),
+          ),
+        ],
+      ),
+    );
+
+    switch (acao) {
+      case _AcaoSaida.finalizar:
+        await _finalizar();
+        return false; // _finalizar navega/mostra diálogo; não deixa o pop seguir.
+      case _AcaoSaida.continuarDepois:
+        // Mantém o rascunho (já salvo) e sai.
+        return true;
+      case _AcaoSaida.descartar:
+        if (!mounted) return false;
+        final confirmar = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Descartar treino?'),
+            content: const Text(
+                'O que você preencheu neste treino será perdido.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Voltar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Descartar'),
+              ),
+            ],
+          ),
+        );
+        if (confirmar == true) {
+          _encerrarRascunho();
+          return true;
+        }
+        return false;
+      case null:
+        return false;
+    }
   }
 
   Future<void> _escolherData() async {
@@ -200,9 +377,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
             .read(sessaoRepositoryProvider)
             .obterUltimaExecucao(escolhido.id);
         if (!mounted) return;
-        setState(() {
-          _exercicios.add(ExercicioEdicao.doRascunhoAvulso(rascunho));
-        });
+        _adicionarExercicio(ExercicioEdicao.doRascunhoAvulso(rascunho));
         return;
       } on SessaoException {
         // Segue para o fallback abaixo.
@@ -214,11 +389,59 @@ class _FormularioState extends ConsumerState<_Formulario> {
     final porCodigo = await ref.read(metricasPorCodigoProvider.future);
     if (!mounted) return;
 
-    setState(() {
-      _exercicios.add(
-        ExercicioEdicao.foraDaFichaDoCatalogo(escolhido, porCodigo),
-      );
-    });
+    _adicionarExercicio(ExercicioEdicao.foraDaFichaDoCatalogo(escolhido, porCodigo));
+  }
+
+  /// Adiciona um exercício à lista, liga o autosave das séries (em andamento) e
+  /// persiste o rascunho.
+  void _adicionarExercicio(ExercicioEdicao ex) {
+    if (_emAndamento) {
+      for (final s in ex.series) {
+        _ouvirSerie(s);
+      }
+    }
+    _exercicios.add(ex);
+    _aoMudar();
+  }
+
+  /// Ação do botão principal. Em treino novo (andamento ou já feito), avisa se
+  /// há exercício sem marcar antes de finalizar (PBI-37); edição salva direto.
+  Future<void> _finalizar() async {
+    if (!_editando) {
+      final naoMarcados = _exercicios.where((e) => !e.realizado).length;
+      if (naoMarcados > 0) {
+        final plural = naoMarcados == 1 ? 'exercício' : 'exercícios';
+        final confirmar = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Finalizar treino?'),
+            content: Text(
+                'Ainda tem $naoMarcados $plural sem marcar. Finalizar mesmo '
+                'assim? Eles ficam como não realizados.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Finalizar'),
+              ),
+            ],
+          ),
+        );
+        if (confirmar != true) return;
+      }
+
+      // Duração automática a partir do início (editável antes de confirmar):
+      // só preenche se o atleta não digitou nada.
+      if (_emAndamento && _duracao.text.trim().isEmpty && widget.inicio != null) {
+        final min = DateTime.now().difference(widget.inicio!).inMinutes;
+        if (min > 0) _duracao.text = min.toString();
+      }
+    }
+
+    await _salvar();
   }
 
   Future<void> _salvar() async {
@@ -257,6 +480,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
           observacao: obs,
           exercicios: _exercicios,
         );
+
+        // Treino em andamento finalizado: apaga o rascunho local (PBI-37).
+        _encerrarRascunho();
 
         // Treino livre com "Salvar também como ficha": cria a ficha com os
         // exercícios realizados. Falha aqui não derruba o registro da sessão,
@@ -385,7 +611,20 @@ class _FormularioState extends ConsumerState<_Formulario> {
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
 
-    return Column(
+    return PopScope(
+      // Em andamento, intercepta a saída para oferecer finalizar/continuar/
+      // descartar (PBI-37). Fora de andamento, deixa sair direto.
+      canPop: !_emAndamento || _encerrado,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        final podeSair = await _aoTentarSair();
+        if (podeSair && mounted) {
+          _encerrado = true; // evita re-perguntar no pop programático
+          navigator.maybePop();
+        }
+      },
+      child: Column(
       children: [
         Expanded(
           child: ListView(
@@ -411,7 +650,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
                     key: ValueKey(
                         _exercicios[i].treinoExercicioId ?? 'avulso-$i-${_exercicios[i].exercicioId}'),
                     exercicio: _exercicios[i],
-                    aoMudar: () => setState(() {}),
+                    aoMudar: _aoMudar,
                   ),
               const SizedBox(height: AppSpacing.x4),
               SizedBox(
@@ -452,15 +691,18 @@ class _FormularioState extends ConsumerState<_Formulario> {
         ),
         _BarraSalvar(
           salvando: _salvando,
-          aoSalvar: _salvar,
-          rotulo: _editando ? 'SALVAR ALTERAÇÕES' : 'SALVAR TREINO',
+          aoSalvar: _finalizar,
+          rotulo: _editando ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR TREINO',
         ),
       ],
+      ),
     );
   }
 }
 
 enum _AcaoPosRegistro { inicio, progresso, verTreino }
+
+enum _AcaoSaida { finalizar, continuarDepois, descartar }
 
 class _CampoData extends StatelessWidget {
   const _CampoData({required this.data, required this.aoTocar});
@@ -592,7 +834,7 @@ class _CardExercicio extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    exercicio.realizado ? 'Realizado' : 'Não realizado',
+                    exercicio.realizado ? 'Realizado' : 'Marcar como feito',
                     style: AppText.label.copyWith(
                       color: exercicio.realizado ? cores.textStrong : cores.textSecondary,
                     ),
@@ -612,7 +854,19 @@ class _CardExercicio extends StatelessWidget {
                 ),
               ],
             ),
-            if (exercicio.realizado) _CorpoSeries(exercicio: exercicio, aoMudar: aoMudar),
+            if (exercicio.realizado)
+              _CorpoSeries(exercicio: exercicio, aoMudar: aoMudar)
+            else
+              // PBI-37: séries da última execução/alvos como sugestão em tom
+              // secundário. Tocar aqui marca o exercício como realizado e abre
+              // os campos para editar.
+              _SugestaoSeries(
+                exercicio: exercicio,
+                aoTocar: () {
+                  exercicio.realizado = true;
+                  aoMudar();
+                },
+              ),
           ],
         ],
       ),
@@ -665,6 +919,63 @@ class _CorpoSeries extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Séries sugeridas (última execução ou alvos) em tom secundário, antes de o
+/// exercício ser marcado como feito (PBI-37). Tocar marca como realizado.
+class _SugestaoSeries extends StatelessWidget {
+  const _SugestaoSeries({required this.exercicio, required this.aoTocar});
+
+  final ExercicioEdicao exercicio;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+
+    final linhas = <String>[];
+    for (final s in exercicio.series) {
+      final vol = s.volume.text.trim();
+      final intens = s.intensidade.text.trim();
+      if (s.intensidadePorPesoCorporal) {
+        linhas.add(vol.isEmpty ? '—' : vol);
+      } else if (intens.isEmpty && vol.isEmpty) {
+        linhas.add('—');
+      } else {
+        linhas.add('${intens.isEmpty ? '—' : intens} × ${vol.isEmpty ? '—' : vol}');
+      }
+    }
+    final resumo = linhas.isEmpty ? 'Toque para registrar' : linhas.join(',  ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x8),
+      child: InkWell(
+        onTap: aoTocar,
+        borderRadius: BorderRadius.circular(AppRadius.campoForm),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: cores.bgInput,
+            borderRadius: BorderRadius.circular(AppRadius.campoForm),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  linhas.isEmpty ? resumo : 'Sugestão: $resumo',
+                  style: AppText.bodyS.copyWith(color: cores.textSecondary),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Text('Marcar',
+                  style: AppText.label.copyWith(color: cores.primaryText)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -39,12 +39,17 @@ class RegistrarSessaoArgs {
     required this.treinoId,
     required this.treinoNome,
     this.data,
+    this.registroPosterior = false,
   });
   final String treinoId;
   final String treinoNome;
 
   /// Dia pré-selecionado (faixa semanal da tela inicial). Nulo = hoje.
   final DateTime? data;
+
+  /// "Registrar treino já feito" (PBI-37): data editável, duração digitada, sem
+  /// treino em andamento. Falso = iniciar treino agora (em andamento).
+  final bool registroPosterior;
 }
 
 /// Dados passados ao abrir o detalhe de uma sessão (via `extra`).
@@ -153,6 +158,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         treinoId: args?.treinoId ?? '',
                         treinoNome: args?.treinoNome ?? 'treino',
                         dataInicial: args?.data,
+                        registroPosterior: args?.registroPosterior ?? false,
                       );
                     },
                   ),

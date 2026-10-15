@@ -79,9 +79,11 @@ void main() {
   });
 
   group('ExercicioEdicao.doRascunho', () {
-    test('começa realizado quando há séries sugeridas', () {
+    test('começa não realizado, com as séries como sugestão (PBI-37)', () {
       final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
-      expect(ed.realizado, isTrue);
+      // PBI-37: o treino começa "em andamento"; nada vem marcado.
+      expect(ed.realizado, isFalse);
+      // As séries da última execução/alvos continuam como sugestão.
       expect(ed.series, hasLength(1));
       expect(ed.series.first.intensidadeTexto, '30');
       expect(ed.series.first.volumeTexto, '10');
@@ -163,6 +165,7 @@ void main() {
 
     test('resumo lista as séries preenchidas', () {
       final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      ed.realizado = true; // PBI-37: marca como feito para ver o resumo
       ed.adicionarSerie();
       ed.series[0].intensidade.text = '30';
       ed.series[0].volume.text = '10';
@@ -204,7 +207,7 @@ void main() {
           ),
         ],
       );
-      final ed = ExercicioEdicao.doRascunho(prancha);
+      final ed = ExercicioEdicao.doRascunho(prancha)..realizado = true;
       expect(ed.resumo, '1 série · 45');
     });
   });
@@ -356,23 +359,28 @@ void main() {
           ],
         );
 
-    test('exercício com série em branco abre realizado e editável', () {
+    test('abre desmarcado com a série em branco como sugestão (PBI-37)', () {
       final ed = ExercicioEdicao.doRascunho(comSerieEmBranco());
-      expect(ed.realizado, isTrue);
+      expect(ed.realizado, isFalse);
       expect(ed.series, hasLength(1));
       expect(ed.series.first.volumeTexto, '');
     });
 
-    test('série em branco não conta como feita até preencher o volume', () {
+    test('só conta como feita depois de marcar e preencher o volume', () {
       final ed = ExercicioEdicao.doRascunho(comSerieEmBranco());
-      expect(ed.temSerieFeita, isFalse);
-
+      // Desmarcado não conta, mesmo com valores.
       ed.series.first.volume.text = '10';
+      expect(ed.temSerieFeita, isFalse);
+      // Marca como feito: aí conta.
+      ed.realizado = true;
       expect(ed.temSerieFeita, isTrue);
     });
 
-    test('exercício preenchido com alvos já conta como feito', () {
+    test('exercício só conta como feito depois de marcado (PBI-37)', () {
       final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
+      // Vem com valores sugeridos, mas desmarcado: não conta ainda.
+      expect(ed.temSerieFeita, isFalse);
+      ed.realizado = true;
       expect(ed.temSerieFeita, isTrue);
     });
 

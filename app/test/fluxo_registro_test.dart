@@ -176,24 +176,29 @@ void main() {
       // Estado inicial: sem histórico, sugere o A.
       expect(find.text('A · Peito'), findsOneWidget);
 
-      // Abre o registro pelo cartão de sugestão.
+      // Abre o registro pelo cartão de sugestão da Início.
       await tester.tap(find.text('REGISTRAR TREINO'));
       await tester.pumpAndSettle();
-      expect(find.text('Registrar A'), findsOneWidget);
+      // Em andamento (PBI-37), o título é o nome da ficha.
+      expect(find.text('A'), findsWidgets);
 
-      // Preenche a série em branco (carga e reps) do exercício sugerido.
+      // PBI-37: o exercício começa desmarcado, com a série como sugestão. Tocar
+      // em "Marcar" liga o "realizado" e abre os campos editáveis.
+      await tester.tap(find.text('Marcar'));
+      await tester.pumpAndSettle();
+
+      // Preenche a série (carga e reps) do exercício agora marcado.
       final campos = find.byType(TextField);
       // Os dois primeiros campos editáveis da série são intensidade e volume.
       await tester.enterText(campos.at(2), '30'); // após data/duração
       await tester.enterText(campos.at(3), '10');
       await tester.pumpAndSettle();
 
-      // Salva o treino. Não usamos pumpAndSettle aqui: ao salvar, a Início
-      // (ainda viva no IndexedStack) é invalidada e exibe um
-      // CircularProgressIndicator momentâneo — uma animação contínua que faria
-      // o pumpAndSettle expirar. Bombeamos frames fixos para os futures
-      // (fakes) resolverem.
-      await tester.tap(find.text('SALVAR TREINO'));
+      // Finaliza o treino. Como o único exercício está marcado, não há aviso.
+      // Não usamos pumpAndSettle aqui: ao salvar, a Início (ainda viva no
+      // IndexedStack) é invalidada e exibe um CircularProgressIndicator
+      // momentâneo — animação contínua que faria o pumpAndSettle expirar.
+      await tester.tap(find.text('FINALIZAR TREINO'));
       await _assentar(tester);
 
       // Confirmação: volta ao Início.
