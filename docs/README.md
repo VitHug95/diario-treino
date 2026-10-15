@@ -35,9 +35,9 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 - Tem acesso ao treino e ao progresso de cada aluno vinculado
 - Pode exportar os dados do aluno em PDF
 
-## Estado atual (14/10/2026)
+## Estado atual (15/10/2026)
 
-O app está **publicado e em uso** (API no Fly, front no Netlify, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios, fichas, registro de sessão (editar/excluir), tela inicial com rotação de fichas e o progresso completo (gráfico de evolução, observação no ponto, lista de sessões).
+O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios, fichas, registro de sessão (editar/excluir), tela inicial com rotação de fichas e o progresso completo (gráfico de evolução, observação no ponto, lista de sessões). Também está no ar o épico **Treino ao vivo, série por série** (TV-1 a TV-6).
 
 **Pronto:** login/cadastro · catálogo (buscar/criar) · fichas A/B/C com alvos · registro de sessão com pré-preenchimento, edição e exercício fora da ficha · tela inicial · gráfico de evolução por exercício + observação no ponto + lista de sessões · temas claro/escuro (com botão na Início).
 
@@ -124,7 +124,7 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 - Banco: PostgreSQL no Neon (plano gratuito), com `pg_dump` semanal guardado fora
 - Login: Firebase Authentication (e-mail/senha e Google); papéis e vínculos ficam no Postgres
 - Hospedagem final: máquina própria com Docker e Caddy (HTTPS automático) e domínio próprio
-- Hospedagem na fase de testes (provisória): API no Fly.io e front no Netlify, sem dependência desses serviços no código (ADR-09)
+- Hospedagem na fase de testes (provisória): API no Fly.io e front no Cloudflare (Workers Static Assets), sem dependência desses serviços no código (ADR-09)
 - Desenvolvimento assistido pelo Kiro
 
 ## Custos levantados na conversa
