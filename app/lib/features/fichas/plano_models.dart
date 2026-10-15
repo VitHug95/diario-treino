@@ -138,6 +138,7 @@ class AlvoExercicio {
     required this.volumeMetricaCodigo,
     required this.volumeMetricaNome,
     required this.volumeAlvo,
+    this.volumeAlvoMax,
   });
 
   final int intensidadeMetricaId;
@@ -149,6 +150,9 @@ class AlvoExercicio {
   final String volumeMetricaNome;
   final double? volumeAlvo;
 
+  /// Máximo da faixa de volume (TV-2); nulo = sem faixa.
+  final double? volumeAlvoMax;
+
   factory AlvoExercicio.doJson(Map<String, dynamic> json) => AlvoExercicio(
         intensidadeMetricaId: (json['intensidadeMetricaId'] as num).toInt(),
         intensidadeMetricaCodigo: json['intensidadeMetricaCodigo'] as String,
@@ -158,7 +162,20 @@ class AlvoExercicio {
         volumeMetricaCodigo: json['volumeMetricaCodigo'] as String,
         volumeMetricaNome: json['volumeMetricaNome'] as String,
         volumeAlvo: (json['volumeAlvo'] as num?)?.toDouble(),
+        volumeAlvoMax: (json['volumeAlvoMax'] as num?)?.toDouble(),
       );
+}
+
+/// Formata o volume prescrito (TV-2): "8 a 12 reps" com faixa, "10 reps" sem.
+/// [unidade] é opcional (ex.: "reps", "s"); vazio quando não há métrica. Números
+/// inteiros saem sem casas; decimais com vírgula.
+String formatarVolumeAlvo(double? min, double? max, [String unidade = '']) {
+  String n(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString().replaceAll('.', ',');
+
+  if (min == null) return '';
+  final valor = (max != null && max != min) ? '${n(min)} a ${n(max)}' : n(min);
+  return unidade.isEmpty ? valor : '$valor $unidade';
 }
 
 /// Ficha dentro do plano.

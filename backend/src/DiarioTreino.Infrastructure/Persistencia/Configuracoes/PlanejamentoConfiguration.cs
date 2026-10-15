@@ -127,9 +127,17 @@ public sealed class EtapaPrescritaConfiguration : IEntityTypeConfiguration<Etapa
 {
     public void Configure(EntityTypeBuilder<EtapaPrescrita> builder)
     {
-        builder.ToTable("etapa_prescrita", t => t.HasCheckConstraint(
-            "ck_etapa_prescrita_tipo",
-            $"tipo IN ('{TipoEtapa.Esforco}','{TipoEtapa.Recuperacao}')"));
+        builder.ToTable("etapa_prescrita", t =>
+        {
+            t.HasCheckConstraint(
+                "ck_etapa_prescrita_tipo",
+                $"tipo IN ('{TipoEtapa.Esforco}','{TipoEtapa.Recuperacao}')");
+            // Faixa de volume (TV-2): o máximo, se houver, não pode ser menor
+            // que o mínimo (volume_alvo).
+            t.HasCheckConstraint(
+                "ck_etapa_prescrita_volume_max",
+                "volume_alvo_max IS NULL OR volume_alvo_max >= volume_alvo");
+        });
 
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
@@ -140,6 +148,7 @@ public sealed class EtapaPrescritaConfiguration : IEntityTypeConfiguration<Etapa
         builder.Property(e => e.IntensidadeAlvo).HasColumnName("intensidade_alvo").HasPrecision(9, 2);
         builder.Property(e => e.VolumeMetricaId).HasColumnName("volume_metrica_id").IsRequired();
         builder.Property(e => e.VolumeAlvo).HasColumnName("volume_alvo").HasPrecision(9, 2);
+        builder.Property(e => e.VolumeAlvoMax).HasColumnName("volume_alvo_max").HasPrecision(9, 2);
 
         builder.HasOne(e => e.IntensidadeMetrica)
             .WithMany()

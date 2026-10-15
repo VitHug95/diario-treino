@@ -419,7 +419,18 @@ public sealed class ServicoSessao
             .FirstOrDefault();
         if (etapa is null) return null;
 
-        var volume = etapa.VolumeAlvo is { } v ? Formatar(v) : "—";
+        // Faixa de volume (TV-2): "8 a 12" quando há máximo; senão o alvo único.
+        string volume;
+        if (etapa.VolumeAlvo is { } min)
+        {
+            volume = etapa.VolumeAlvoMax is { } max && max != min
+                ? $"{Formatar(min)} a {Formatar(max)}"
+                : Formatar(min);
+        }
+        else
+        {
+            volume = "—";
+        }
         var plano = $"{te.Rodadas} × {volume}";
         if (etapa.IntensidadeAlvo is { } i)
         {

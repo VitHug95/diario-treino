@@ -784,7 +784,7 @@ identificação**: não muda o gráfico (PBI-20) nem o volume.
 **Telas:** 10 (editar exercício da ficha), 3 (registrar), 11 (detalhe).
 **Depende de:** PBI-14, PBI-15, PBI-18. Spec: `.kiro/specs/tv-1-tag-de-serie/`.
 
-**Status:** FEITO (back + front), aguardando merge. Branch
+**Status:** FEITO (back + front) e mergeado (PR #55). Branch
 `feat/pbi-38-tag-de-serie`.
 - **Banco:** migration `TagDeSerie` — coluna `serie_executada.marcador`
   varchar(20) NOT NULL DEFAULT 'VALIDA' + `CHECK`; tabela nova `rodada_marcador`
@@ -805,6 +805,36 @@ identificação**: não muda o gráfico (PBI-20) nem o volume.
   sessão, 404 outro usuário, dados antigos VALIDA, gráfico intocado) + widget
   (chip leitura/edição/seletor, herança da tag). `flutter analyze` 0;
   85 testes de widget verdes; 30 unit verdes. Integração roda no CI.
+
+#### PBI-39 (TV-2) · Faixa de repetições na prescrição
+
+**História:** Como atleta (e, no futuro, educador), quero prescrever uma faixa
+de repetições (ex.: "8 a 12"), para a ficha refletir como a gente treina.
+
+**Escopo:** banco + API + front. Limite superior **opcional** do volume; sem ele,
+nada muda. Vale para qualquer métrica de volume (reps, tempo). Não muda o gráfico
+(PBI-20) nem o volume calculado.
+
+**API/Tabelas:** `etapa_prescrita.volume_alvo_max`. Item da ficha
+(`PUT .../alvos`, `GET /treinos/{id}`) aceita/devolve `volumeAlvoMax`.
+**Telas:** 10 (editar exercício da ficha), 13 (resumo). Spec:
+`.kiro/specs/tv-2-faixa-repeticoes/`. **Depende de:** PBI-14.
+
+**Status:** FEITO (back + front), aguardando merge. Branch
+`feat/pbi-39-faixa-repeticoes`.
+- **Banco:** migration `FaixaRepeticoes` — coluna `volume_alvo_max`
+  numeric(9,2) NULL + `CHECK (volume_alvo_max IS NULL OR >= volume_alvo)`. Sem
+  backfill (registros antigos ficam sem faixa).
+- **API:** `DefinirAlvos`/detalhe da ficha aceitam/devolvem `volumeAlvoMax`.
+  Validação: `>= 0`, `>= volumeAlvo`, e exige `volumeAlvo` quando o máximo vem →
+  400. Pré-preenchimento sem histórico continua usando o mínimo (`volume_alvo`).
+  Resumo do plano no detalhe mostra a faixa ("3 × 8 a 12 com 30 kg").
+- **Front:** campo "até (opcional)" ao lado do alvo de volume, com validação
+  local; resumo e exibição por `formatarVolumeAlvo` ("8 a 12 reps" / "10 reps" /
+  "30 a 45 s"). Gráfico intocado.
+- **Testes:** unit (grava faixa + validator) + integração (ida-volta, 400
+  max<min e max sem min, dados antigos nulo) + widget (resumo com/sem faixa,
+  helper). `flutter analyze` 0; 91 widget verdes; 31 unit verdes. Integração no CI.
 
 ---
 

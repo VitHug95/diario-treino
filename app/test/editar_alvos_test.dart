@@ -1,5 +1,6 @@
 import 'package:diario_treino/features/catalogo/metrica.dart';
 import 'package:diario_treino/features/fichas/editar_alvos_screen.dart';
+import 'package:diario_treino/features/fichas/plano_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _cargaKg = Metrica(
@@ -57,6 +58,62 @@ void main() {
         descansoSeg: null,
       );
       expect(frase, '2 séries de 8 com 12,5 kg.');
+    });
+
+    test('mostra a faixa de repetições quando há máximo (TV-2)', () {
+      final frase = montarResumo(
+        series: 4,
+        intensidade: _cargaKg,
+        intensidadeAlvo: 30,
+        volume: _reps,
+        volumeAlvo: 8,
+        volumeAlvoMax: 12,
+        descansoSeg: 90,
+      );
+      expect(frase, '4 séries de 8 a 12 com 30 kg, 90 s de descanso.');
+    });
+
+    test('faixa de tempo "30 a 45 s" (TV-2)', () {
+      final frase = montarResumo(
+        series: 3,
+        intensidade: null,
+        intensidadeAlvo: null,
+        volume: _tempo,
+        volumeAlvo: 30,
+        volumeAlvoMax: 45,
+        descansoSeg: null,
+      );
+      expect(frase, '3 séries de 30 a 45 s.');
+    });
+
+    test('máximo igual ao alvo não vira faixa', () {
+      final frase = montarResumo(
+        series: 3,
+        intensidade: _cargaKg,
+        intensidadeAlvo: 30,
+        volume: _reps,
+        volumeAlvo: 10,
+        volumeAlvoMax: 10,
+        descansoSeg: null,
+      );
+      expect(frase, '3 séries de 10 com 30 kg.');
+    });
+  });
+
+  group('formatarVolumeAlvo (TV-2)', () {
+    test('com faixa', () {
+      expect(formatarVolumeAlvo(8, 12, 'reps'), '8 a 12 reps');
+      expect(formatarVolumeAlvo(30, 45, 's'), '30 a 45 s');
+    });
+
+    test('sem faixa (só o alvo)', () {
+      expect(formatarVolumeAlvo(10, null, 'reps'), '10 reps');
+      expect(formatarVolumeAlvo(10, 10, 'reps'), '10 reps');
+    });
+
+    test('sem unidade e sem alvo', () {
+      expect(formatarVolumeAlvo(10, 12), '10 a 12');
+      expect(formatarVolumeAlvo(null, null), '');
     });
   });
 }

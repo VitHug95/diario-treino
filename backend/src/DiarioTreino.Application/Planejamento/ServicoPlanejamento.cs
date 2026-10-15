@@ -278,7 +278,8 @@ public sealed class ServicoPlanejamento
             etapa.VolumeMetricaId,
             volume.Value.Codigo,
             volume.Value.Nome,
-            etapa.VolumeAlvo);
+            etapa.VolumeAlvo,
+            etapa.VolumeAlvoMax);
     }
 
     /// <summary>
@@ -394,6 +395,7 @@ public sealed class ServicoPlanejamento
             IntensidadeAlvo = request.IntensidadeAlvo,
             VolumeMetricaId = request.VolumeMetricaId,
             VolumeAlvo = request.VolumeAlvo,
+            VolumeAlvoMax = request.VolumeAlvoMax,
         });
 
         SincronizarMarcadores(te, request);

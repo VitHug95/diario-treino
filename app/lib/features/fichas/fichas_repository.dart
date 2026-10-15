@@ -119,6 +119,8 @@ class FichasRepository {
     double? intensidadeAlvo,
     required int volumeMetricaId,
     double? volumeAlvo,
+    // Máximo da faixa de volume (TV-2); nulo = sem faixa.
+    double? volumeAlvoMax,
     int? descansoSeg,
     String? instrucao,
     // Tags de série (TV-1), por rodada. Só precisa enviar as ≠ VALIDA.
@@ -132,6 +134,7 @@ class FichasRepository {
               'intensidadeAlvo': intensidadeAlvo,
               'volumeMetricaId': volumeMetricaId,
               'volumeAlvo': volumeAlvo,
+              'volumeAlvoMax': volumeAlvoMax,
               'descansoSeg': descansoSeg,
               'instrucao': instrucao,
               'marcadores': [

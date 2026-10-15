@@ -25,6 +25,21 @@ public sealed class DefinirAlvosValidator : AbstractValidator<DefinirAlvosReques
             .GreaterThanOrEqualTo(0).When(x => x.VolumeAlvo.HasValue)
             .WithMessage("O alvo de volume não pode ser negativo.");
 
+        // Faixa de volume (TV-2): o máximo é opcional, mas quando vem precisa de
+        // um mínimo (volume_alvo) e não pode ser menor que ele.
+        RuleFor(x => x.VolumeAlvoMax)
+            .GreaterThanOrEqualTo(0).When(x => x.VolumeAlvoMax.HasValue)
+            .WithMessage("O máximo da faixa não pode ser negativo.");
+
+        RuleFor(x => x.VolumeAlvo)
+            .NotNull().When(x => x.VolumeAlvoMax.HasValue)
+            .WithMessage("Informe o alvo de volume antes do máximo da faixa.");
+
+        RuleFor(x => x.VolumeAlvoMax)
+            .GreaterThanOrEqualTo(x => x.VolumeAlvo!.Value)
+            .When(x => x.VolumeAlvoMax.HasValue && x.VolumeAlvo.HasValue)
+            .WithMessage("O máximo da faixa não pode ser menor que o alvo.");
+
         RuleFor(x => x.DescansoSeg)
             .GreaterThanOrEqualTo((short)0).When(x => x.DescansoSeg.HasValue);
 
