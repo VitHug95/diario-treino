@@ -12,8 +12,16 @@ Suite Teardown    Fechar o app
 *** Test Cases ***
 Atleta entra, registra um treino e vê no progresso
     [Documentation]    Fluxo feliz de ponta a ponta.
-    [Teardown]    Excluir a conta de teste
+    [Teardown]    Encerrar o teste
     ${email}=    Gerar email de teste
     Cadastrar e entrar    ${email}
     Registrar um treino livre
     Ver o progresso do exercício
+
+
+*** Keywords ***
+Encerrar o teste
+    [Documentation]    Em falha, diagnostica a tela (screenshot + nomes dos
+    ...                botões) antes de limpar a conta de teste.
+    Run Keyword If Test Failed    Diagnosticar a tela
+    Excluir a conta de teste
