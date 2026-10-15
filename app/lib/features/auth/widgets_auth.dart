@@ -22,6 +22,7 @@ class CampoHeader extends StatelessWidget {
     super.key,
     required this.controller,
     required this.hint,
+    this.rotulo,
     this.obscure = false,
     this.keyboardType,
     this.autofill,
@@ -31,6 +32,12 @@ class CampoHeader extends StatelessWidget {
 
   final TextEditingController controller;
   final String hint;
+
+  /// Rótulo acessível do campo (ex.: "E-mail"). O rótulo visual
+  /// ([RotuloCampoHeader]) é um Text separado, então sem isto o leitor de tela
+  /// (e o E2E) só enxergaria o placeholder. Padrão: usa o próprio hint.
+  final String? rotulo;
+
   final bool obscure;
   final TextInputType? keyboardType;
   final List<String>? autofill;
@@ -40,7 +47,7 @@ class CampoHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
-    return TextFormField(
+    final campo = TextFormField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
@@ -62,6 +69,14 @@ class CampoHeader extends StatelessWidget {
           borderSide: BorderSide(color: cores.linkOnHeader, width: 2),
         ),
       ),
+    );
+
+    // Rótulo acessível estável (acessibilidade + E2E): o campo passa a ter um
+    // nome programático igual ao rótulo visível, não só o placeholder.
+    return Semantics(
+      label: rotulo ?? hint,
+      textField: true,
+      child: campo,
     );
   }
 }

@@ -69,6 +69,185 @@ jobs:
       - name: Build web
         run: flutter build web --release
 
+  # E2E do fluxo principal (PBI-26): sobe uma stack efêmera e isolada —
+  # Postgres (service container) + API .NET + Flutter web + Firebase Auth
+  # Emulator — e roda a suíte Robot Framework (Browser library) no navegador.
+  # Nada toca produção: o emulador substitui o Firebase real e o usuário de
+  # teste é criado e excluído na própria execução.
+  #
+  # NÃO-BLOQUEANTE por enquanto (`continue-on-error: true`): a suíte roda e
+  # publica os artefatos (log/report/screenshots), mas não derruba o CI nem
+  # bloqueia os deploys enquanto estabilizamos os seletores. Quando estiver
+  # confiável, remover o continue-on-error e adicionar `e2e` ao `needs` dos
+  # jobs de deploy, promovendo o E2E a gate de qualidade.
+  e2e:
+    name: E2E (Robot + navegador)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    continue-on-error: true
+    timeout-minutes: 25
+    env:
+      PROJECT_ID: demo-diario-treino
+      API_PORT: "8080"
+      WEB_PORT: "8000"
+      AUTH_EMULATOR_PORT: "9099"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: diariotreino
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      - name: Configurar Java (para o Firebase Emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # --- Firebase Auth Emulator ---
+      - name: Instalar firebase-tools
+        run: npm install -g firebase-tools
+
+      - name: Subir o Auth Emulator (background)
+        working-directory: e2e
+        run: |
+          firebase emulators:start --only auth --project "$PROJECT_ID" > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          echo "Aguardando o Auth Emulator na porta $AUTH_EMULATOR_PORT..."
+          for i in $(seq 1 60); do
+            if curl -sf "http://127.0.0.1:${AUTH_EMULATOR_PORT}/" > /dev/null; then
+              echo "Emulator no ar."; ok=1; break
+            fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::Auth Emulator não subiu em 60s"; cat "$RUNNER_TEMP/emulator.log"; exit 1
+          fi
+
+      # --- API .NET apontada ao Postgres e ao emulador ---
+      - name: Build da API
+        working-directory: backend
+        run: dotnet build DiarioTreino.slnx --configuration Release
+
+      - name: Subir a API (background)
+        working-directory: backend
+        env:
+          ASPNETCORE_URLS: "http://127.0.0.1:8080"
+          ASPNETCORE_ENVIRONMENT: Production
+          CONNECTIONSTRINGS__DIARIOTREINO: "Host=127.0.0.1;Port=5432;Database=diariotreino;Username=postgres;Password=postgres"
+          BANCO__APLICARMIGRACOESNOSTARTUP: "true"
+          FIREBASE__PROJECTID: demo-diario-treino
+          FIREBASE__AUTHEMULATORHOST: "127.0.0.1:9099"
+          FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099"
+          CORS__ORIGENSPERMITIDAS__0: "http://127.0.0.1:8000"
+          CORS__ORIGENSPERMITIDAS__1: "http://localhost:8000"
+        run: |
+          # --no-launch-profile: ignora o launchSettings.json (que fixa a porta
+          # 5289 e o ambiente Development) e respeita as variáveis acima.
+          dotnet run --project src/DiarioTreino.Api --configuration Release --no-build --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
+          echo "Aguardando a API em /health..."
+          for i in $(seq 1 90); do
+            if curl -sf "http://127.0.0.1:${API_PORT}/health" > /dev/null; then
+              echo "API no ar."; ok=1; break
+            fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::A API não respondeu em /health em 90s"; cat "$RUNNER_TEMP/api.log"; exit 1
+          fi
+
+      # --- Flutter web apontado à API local e ao emulador ---
+      - name: Build web (dart-defines do E2E)
+        working-directory: app
+        run: |
+          cp lib/firebase_options.e2e.dart lib/firebase_options.dart
+          flutter pub get
+          flutter build web --release \
+            --dart-define=API_BASE_URL=http://127.0.0.1:8080/api/v1 \
+            --dart-define=USE_AUTH_EMULATOR=true \
+            --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
+            --dart-define=AUTH_EMULATOR_PORT=9099
+
+      - name: Servir o web (background)
+        working-directory: app/build/web
+        run: |
+          python -m http.server "$WEB_PORT" --bind 127.0.0.1 > "$RUNNER_TEMP/web.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf "http://127.0.0.1:${WEB_PORT}/" > /dev/null; then
+              echo "Web no ar."; ok=1; break
+            fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::O servidor web não respondeu em 30s"; cat "$RUNNER_TEMP/web.log"; exit 1
+          fi
+
+      # --- Robot Framework ---
+      - name: Instalar Robot + Browser
+        working-directory: e2e
+        run: |
+          pip install -r requirements.txt
+          # Dependências de SO do navegador do Playwright no runner Ubuntu.
+          sudo npx --yes playwright install-deps chromium
+          # Baixa só o Chromium (o init da Browser library instala o navegador).
+          rfbrowser init chromium
+
+      - name: Rodar a suíte E2E
+        working-directory: e2e
+        timeout-minutes: 8
+        run: |
+          robot --variable BASE_URL:http://127.0.0.1:8000 \
+            --outputdir resultados suites/
+
+      - name: Logs dos serviços (diagnóstico em falha)
+        if: failure()
+        run: |
+          echo "===== API ====="; tail -n 200 "$RUNNER_TEMP/api.log" 2>/dev/null || true
+          echo "===== EMULATOR ====="; tail -n 100 "$RUNNER_TEMP/emulator.log" 2>/dev/null || true
+          echo "===== WEB ====="; tail -n 50 "$RUNNER_TEMP/web.log" 2>/dev/null || true
+
+      - name: Publicar artefatos do Robot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-resultados
+          path: |
+            e2e/resultados/
+            ${{ runner.temp }}/api.log
+            ${{ runner.temp }}/web.log
+            ${{ runner.temp }}/emulator.log
+          if-no-files-found: ignore
+
   # Publica o front (Flutter web) no Cloudflare (Workers Static Assets) SOMENTE
   # depois do CI passar e apenas em merge na main. O build roda aqui (ambiente
   # que já tem Flutter) e o `wrangler deploy` sobe o build/web para o Worker
