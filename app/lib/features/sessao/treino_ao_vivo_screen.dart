@@ -369,6 +369,8 @@ class ExercicioAoVivoScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              // Descanso entre séries (TV-5): fixo no rodapé, nas três abas.
+              const BarraDescansoFixa(),
             ],
           ),
         ),
@@ -600,10 +602,6 @@ class _AbaSeriesState extends ConsumerState<_AbaSeries> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.margemTela),
       children: [
-        // Descanso entre séries (TV-5): só aparece quando há um ativo.
-        const BarraDescanso(),
-        if (ref.watch(descansoControllerProvider) != null)
-          const SizedBox(height: AppSpacing.entreCards),
         for (var i = 0; i < _ex.series.length; i++) ...[
           _CardSerie(
             indice: i,
