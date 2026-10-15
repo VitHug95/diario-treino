@@ -44,6 +44,7 @@ e2e/resultados-dryrun/
 e2e/browser/
 e2e/node_modules/
 e2e/.venv/
+e2e/playwright-log.txt
 
 # ---------- Sistema operacional ----------
 Thumbs.db
