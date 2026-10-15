@@ -176,8 +176,9 @@ void main() {
       // Estado inicial: sem histórico, sugere o A.
       expect(find.text('A · Peito'), findsOneWidget);
 
-      // Abre o registro pelo cartão de sugestão da Início.
-      await tester.tap(find.text('REGISTRAR TREINO'));
+      // Inicia o treino pelo botão explícito do cartão de sugestão (PBI-50:
+      // antes "REGISTRAR TREINO", agora "INICIAR TREINO").
+      await tester.tap(find.text('INICIAR TREINO'));
       await tester.pumpAndSettle();
       // Em andamento (PBI-37), o título é o nome da ficha.
       expect(find.text('A'), findsWidgets);

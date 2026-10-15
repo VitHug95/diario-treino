@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 TreinoResumo _ficha(String nome, int ordem, {String? descricao}) =>
@@ -107,9 +108,83 @@ void main() {
     expect(find.text('SUGESTÃO DE HOJE'), findsOneWidget);
     expect(find.text('A · Peito'), findsOneWidget);
     expect(find.text('SUAS FICHAS'), findsOneWidget);
-    expect(find.text('REGISTRAR TREINO'), findsOneWidget);
+    // PBI-50: o botão do cartão de sugestão agora diz o que faz.
+    expect(find.text('INICIAR TREINO'), findsOneWidget);
     // Fichas nunca registradas mostram o aviso.
     expect(find.text('Ainda não registrada'), findsNWidgets(2));
+  });
+
+  testWidgets(
+      'PBI-50: tocar no cartão de ficha abre Fichas sem iniciar treino',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final plano = PlanoAtivo(
+      id: 'p1',
+      nome: 'Plano',
+      treinos: [
+        _ficha('A', 1, descricao: 'Peito'),
+        _ficha('B', 2, descricao: 'Costas'),
+      ],
+    );
+    // Já há histórico (sessão do A) para a Início montar o estado completo com
+    // os cartões de ficha e sem cair no primeiro acesso.
+    final sessoes = [
+      SessaoResumo(
+        id: 's1',
+        data: DateTime.now().subtract(const Duration(days: 1)),
+        treinoId: 'A',
+        treinoNome: 'A',
+        quantidadeExercicios: 3,
+        duracaoMin: 45,
+        temObservacao: false,
+      ),
+    ];
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const InicioScreen()),
+        GoRoute(
+          path: '/fichas',
+          builder: (_, state) => Scaffold(
+            body: Text('FICHAS ficha=${state.uri.queryParameters['ficha']}'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
+          planoAtivoProvider.overrideWith((ref) async => plano),
+          sessoesRecentesProvider.overrideWith((ref) async => sessoes),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.claro,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Confirma o rótulo de acessibilidade PBI-50 do cartão da ficha B.
+    final semB = find.bySemanticsLabel(RegExp(r'^Abrir ficha B,'));
+    expect(semB, findsOneWidget);
+
+    // Toca no InkWell do cartão (alvo real do gesto). Garante que está visível
+    // — a lista pode rolar no tamanho de teste.
+    final inkB = find.descendant(of: semB, matching: find.byType(InkWell));
+    await tester.ensureVisible(inkB);
+    await tester.pumpAndSettle();
+    await tester.tap(inkB);
+    await tester.pumpAndSettle();
+
+    // Navegou para Fichas com o id da ficha; nenhum treino foi iniciado
+    // (não há como gravar rascunho sem passar pela ação explícita).
+    expect(find.text('FICHAS ficha=B'), findsOneWidget);
   });
 
   testWidgets('Com histórico, sugere a próxima da sequência', (tester) async {
@@ -169,7 +244,7 @@ void main() {
     // Fichas aparecem (dá para registrar), mas sem o cartão de sugestão.
     expect(find.text('SUAS FICHAS'), findsOneWidget);
     expect(find.text('SUGESTÃO DE HOJE'), findsNothing);
-    expect(find.text('REGISTRAR TREINO'), findsNothing);
+    expect(find.text('INICIAR TREINO'), findsNothing);
   });
 
 }
