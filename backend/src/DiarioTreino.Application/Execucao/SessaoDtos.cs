@@ -53,7 +53,9 @@ public sealed record SerieRascunho(
     string VolumeMetricaCodigo,
     string VolumeMetricaNome,
     decimal? Volume,
-    short? DescansoSeg);
+    short? DescansoSeg,
+    /// <summary>Tag da série (TV-1), já pré-preenchida. Padrão VALIDA.</summary>
+    string Marcador);
 
 /// <summary>Pedido para gravar uma sessão (PBI-15, POST /sessoes).</summary>
 public sealed record CriarSessaoRequest(
@@ -80,7 +82,9 @@ public sealed record SerieRequest(
     decimal? Intensidade,
     short VolumeMetricaId,
     decimal Volume,
-    short? DescansoSeg);
+    short? DescansoSeg,
+    /// <summary>Tag da série (TV-1). Ausente/nulo vale VALIDA.</summary>
+    string? Marcador = null);
 
 /// <summary>Resposta ao criar a sessão.</summary>
 public sealed record SessaoCriada(Guid Id);
@@ -146,4 +150,6 @@ public sealed record SerieDetalhe(
     string VolumeMetricaCodigo,
     string VolumeMetricaNome,
     decimal Volume,
-    short? DescansoSeg);
+    short? DescansoSeg,
+    /// <summary>Tag da série (TV-1). VALIDA quando não marcada.</summary>
+    string Marcador);

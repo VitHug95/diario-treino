@@ -61,6 +61,10 @@ public sealed class SerieExecutadaConfiguration : IEntityTypeConfiguration<Serie
             t.HasCheckConstraint(
                 "ck_serie_executada_tipo",
                 $"tipo IN ('{TipoEtapa.Esforco}','{TipoEtapa.Recuperacao}')");
+            // CHECK derivado da fonte única do enum (TV-1).
+            t.HasCheckConstraint(
+                "ck_serie_executada_marcador",
+                $"marcador IN ({string.Join(",", TagSerie.Todos.Select(m => $"'{m}'"))})");
         });
 
         builder.HasKey(se => se.Id);
@@ -76,6 +80,11 @@ public sealed class SerieExecutadaConfiguration : IEntityTypeConfiguration<Serie
         builder.Property(se => se.VolumeMetricaId).HasColumnName("volume_metrica_id").IsRequired();
         builder.Property(se => se.Volume).HasColumnName("volume").HasPrecision(9, 2).IsRequired();
         builder.Property(se => se.DescansoSeg).HasColumnName("descanso_seg");
+        builder.Property(se => se.Marcador)
+            .HasColumnName("marcador")
+            .HasMaxLength(20)
+            .HasDefaultValue(TagSerie.Valida)
+            .IsRequired();
 
         // Detalhe da sessão (MER 4).
         builder.HasIndex(se => se.SessaoId).HasDatabaseName("ix_serie_executada_sessao");

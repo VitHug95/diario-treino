@@ -22,6 +22,7 @@ class SerieEdicao {
     required this.volumeMetricaNome,
     required String volumeTexto,
     required String descansoTexto,
+    this.marcador = 'VALIDA',
   })  : id = UniqueKey(),
         intensidade = TextEditingController(text: intensidadeTexto),
         volume = TextEditingController(text: volumeTexto),
@@ -33,6 +34,9 @@ class SerieEdicao {
   int rodada;
   int ordem;
   final String tipo;
+
+  /// Tag da série (TV-1). Mutável: o atleta troca no registro. Padrão 'VALIDA'.
+  String marcador;
   final int intensidadeMetricaId;
   final String intensidadeMetricaCodigo;
   final String intensidadeMetricaNome;
@@ -69,6 +73,7 @@ class SerieEdicao {
         volumeMetricaNome: s.volumeMetricaNome,
         volumeTexto: fmt(s.volume),
         descansoTexto: s.descansoSeg?.toString() ?? '',
+        marcador: s.marcador,
       );
 
   factory SerieEdicao.doDetalhe(SerieDetalhe s) => SerieEdicao(
@@ -84,6 +89,7 @@ class SerieEdicao {
         volumeMetricaNome: s.volumeMetricaNome,
         volumeTexto: fmt(s.volume),
         descansoTexto: s.descansoSeg?.toString() ?? '',
+        marcador: s.marcador,
       );
 
   /// Cria uma cópia desta série (mesmos valores e métricas) para a próxima
@@ -101,6 +107,7 @@ class SerieEdicao {
         volumeMetricaNome: volumeMetricaNome,
         volumeTexto: volume.text,
         descansoTexto: descanso.text,
+        marcador: marcador,
       );
 
   /// Formata um número para exibição (inteiro sem casas, decimal com vírgula).

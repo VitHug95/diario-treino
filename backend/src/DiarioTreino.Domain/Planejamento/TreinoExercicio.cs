@@ -18,4 +18,9 @@ public class TreinoExercicio
     public Treino? Treino { get; set; }
     public Exercicio? Exercicio { get; set; }
     public ICollection<EtapaPrescrita> Etapas { get; set; } = [];
+
+    /// <summary>
+    /// Tags prescritas por rodada (TV-1). Só rodadas com tag ≠ VALIDA têm linha.
+    /// </summary>
+    public ICollection<RodadaMarcador> Marcadores { get; set; } = [];
 }

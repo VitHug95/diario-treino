@@ -69,6 +69,10 @@ public sealed class ServicoPlanejamentoTests
         public void AdicionarEtapa(EtapaPrescrita etapa) => Etapas.Add(etapa);
         public void RemoverEtapa(EtapaPrescrita etapa) => Etapas.Remove(etapa);
 
+        public readonly List<RodadaMarcador> Marcadores = [];
+        public void AdicionarMarcador(RodadaMarcador marcador) => Marcadores.Add(marcador);
+        public void RemoverMarcador(RodadaMarcador marcador) => Marcadores.Remove(marcador);
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
     }
 
@@ -330,6 +334,94 @@ public sealed class ServicoPlanejamentoTests
         var etapa = Assert.Single(repo.Etapas);
         Assert.Equal(30m, etapa.IntensidadeAlvo);
         Assert.Equal(10m, etapa.VolumeAlvo);
+    }
+
+    [Fact]
+    public async Task Definir_alvos_grava_marcadores_diferentes_de_valida()
+    {
+        var dono = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        var te = new TreinoExercicio { Id = teId, TreinoId = Guid.NewGuid(), Rodadas = 1 };
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { te },
+        };
+
+        await Montar(repo).DefinirAlvosAsync(
+            dono, teId,
+            new DefinirAlvosRequest(
+                Series: 4,
+                IntensidadeMetricaId: 1,
+                IntensidadeAlvo: 30,
+                VolumeMetricaId: 10,
+                VolumeAlvo: 10,
+                DescansoSeg: 90,
+                Instrucao: null,
+                Marcadores:
+                [
+                    new MarcadorRodada(1, DiarioTreino.Domain.Comum.TagSerie.Aquecimento),
+                    new MarcadorRodada(4, DiarioTreino.Domain.Comum.TagSerie.Falha),
+                    // VALIDA não deve virar linha.
+                    new MarcadorRodada(2, DiarioTreino.Domain.Comum.TagSerie.Valida),
+                ]),
+            CancellationToken.None);
+
+        Assert.Equal(2, repo.Marcadores.Count);
+        Assert.Contains(repo.Marcadores, m =>
+            m.Rodada == 1 && m.Marcador == DiarioTreino.Domain.Comum.TagSerie.Aquecimento);
+        Assert.Contains(repo.Marcadores, m =>
+            m.Rodada == 4 && m.Marcador == DiarioTreino.Domain.Comum.TagSerie.Falha);
+        Assert.DoesNotContain(repo.Marcadores, m => m.Rodada == 2);
+    }
+
+    [Fact]
+    public async Task Reduzir_series_corta_marcadores_de_rodada_maior()
+    {
+        var dono = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        // Já havia uma tag na rodada 4 (ex.: ficha anterior com 4 séries).
+        var te = new TreinoExercicio
+        {
+            Id = teId,
+            TreinoId = Guid.NewGuid(),
+            Rodadas = 4,
+            Marcadores =
+            {
+                new RodadaMarcador
+                {
+                    TreinoExercicioId = teId,
+                    Rodada = 4,
+                    Marcador = DiarioTreino.Domain.Comum.TagSerie.Falha,
+                },
+            },
+        };
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { te },
+        };
+
+        // Reduz para 3 séries, reenviando a mesma tag da rodada 4 (que não cabe mais).
+        await Montar(repo).DefinirAlvosAsync(
+            dono, teId,
+            new DefinirAlvosRequest(
+                Series: 3,
+                IntensidadeMetricaId: 1,
+                IntensidadeAlvo: 30,
+                VolumeMetricaId: 10,
+                VolumeAlvo: 10,
+                DescansoSeg: 90,
+                Instrucao: null,
+                Marcadores:
+                [
+                    new MarcadorRodada(4, DiarioTreino.Domain.Comum.TagSerie.Falha),
+                ]),
+            CancellationToken.None);
+
+        // A tag da rodada 4 deixou de existir (fora de [1, 3]).
+        Assert.DoesNotContain(repo.Marcadores, m => m.Rodada == 4);
+        Assert.Empty(repo.Marcadores);
     }
 
     [Fact]

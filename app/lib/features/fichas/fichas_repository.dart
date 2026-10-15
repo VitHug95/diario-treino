@@ -121,6 +121,8 @@ class FichasRepository {
     double? volumeAlvo,
     int? descansoSeg,
     String? instrucao,
+    // Tags de série (TV-1), por rodada. Só precisa enviar as ≠ VALIDA.
+    List<MarcadorRodada> marcadores = const [],
   }) =>
       _executar(() => _dio.put<void>(
             '/treinos/$treinoId/exercicios/$treinoExercicioId/alvos',
@@ -132,6 +134,11 @@ class FichasRepository {
               'volumeAlvo': volumeAlvo,
               'descansoSeg': descansoSeg,
               'instrucao': instrucao,
+              'marcadores': [
+                for (final m in marcadores)
+                  if (m.marcador != 'VALIDA')
+                    {'rodada': m.rodada, 'marcador': m.marcador},
+              ],
             },
           ));
 

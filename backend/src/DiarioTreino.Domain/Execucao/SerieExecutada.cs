@@ -1,4 +1,5 @@
 using DiarioTreino.Domain.Catalogo;
+using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Planejamento;
 
 namespace DiarioTreino.Domain.Execucao;
@@ -22,6 +23,12 @@ public class SerieExecutada
     public short VolumeMetricaId { get; set; }
     public decimal Volume { get; set; }
     public short? DescansoSeg { get; set; }
+
+    /// <summary>
+    /// Tag da série (TV-1): "como" a série foi feita. Só identificação, não
+    /// entra em cálculo. Padrão <see cref="TagSerie.Valida"/>.
+    /// </summary>
+    public string Marcador { get; set; } = TagSerie.Valida;
 
     public Sessao? Sessao { get; set; }
     public Exercicio? Exercicio { get; set; }

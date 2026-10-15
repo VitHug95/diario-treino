@@ -234,6 +234,12 @@ public sealed class ServicoPlanejamento
                 .OrderBy(e => e.Ordem)
                 .FirstOrDefault();
 
+            var marcadores = te.Marcadores
+                .Where(m => m.Marcador != TagSerie.Valida)
+                .OrderBy(m => m.Rodada)
+                .Select(m => new MarcadorRodada(m.Rodada, m.Marcador))
+                .ToList();
+
             exercicios.Add(new TreinoExercicioResumo(
                 te.Id,
                 te.ExercicioId,
@@ -243,7 +249,8 @@ public sealed class ServicoPlanejamento
                 te.Rodadas,
                 te.DescansoAlvoSeg,
                 te.Observacao,
-                await MapearAlvoAsync(etapa, ct)));
+                await MapearAlvoAsync(etapa, ct),
+                marcadores));
         }
 
         return new TreinoDetalhe(treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios);
@@ -389,7 +396,52 @@ public sealed class ServicoPlanejamento
             VolumeAlvo = request.VolumeAlvo,
         });
 
+        SincronizarMarcadores(te, request);
+
         await _repositorio.SalvarAsync(ct);
+    }
+
+    /// <summary>
+    /// Reaplica as tags de série (TV-1): apaga os marcadores atuais e regrava só
+    /// os informados que sejam ≠ VALIDA e com rodada em [1, Series]. Assim,
+    /// reduzir o número de séries descarta naturalmente as tags das rodadas que
+    /// deixaram de existir, e rodada VALIDA não ocupa linha.
+    /// </summary>
+    private void SincronizarMarcadores(TreinoExercicio te, DefinirAlvosRequest request)
+    {
+        foreach (var antigo in te.Marcadores.ToList())
+        {
+            _repositorio.RemoverMarcador(antigo);
+        }
+
+        if (request.Marcadores is null)
+        {
+            return;
+        }
+
+        // Uma tag por rodada (a última informada vence, caso venham repetidas).
+        var porRodada = new Dictionary<short, string>();
+        foreach (var m in request.Marcadores)
+        {
+            var valido = TagSerie.EhValido(m.Marcador)
+                && m.Marcador != TagSerie.Valida
+                && m.Rodada >= 1
+                && m.Rodada <= request.Series;
+            if (valido)
+            {
+                porRodada[m.Rodada] = m.Marcador;
+            }
+        }
+
+        foreach (var (rodada, marcador) in porRodada)
+        {
+            _repositorio.AdicionarMarcador(new RodadaMarcador
+            {
+                TreinoExercicioId = te.Id,
+                Rodada = rodada,
+                Marcador = marcador,
+            });
+        }
     }
 
     private async Task ValidarEixoAsync(short metricaId, string eixoEsperado, CancellationToken ct)

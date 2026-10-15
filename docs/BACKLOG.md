@@ -761,6 +761,53 @@ provider).
 
 ---
 
+## 8b. Épico "Treino ao vivo, série por série" (pós-MVP)
+
+Registrar o treino enquanto ele acontece, série por série. Release 1 (TV-1, TV-2)
+mexe no banco e já entrega valor nas telas atuais; Release 2 (TV-3 a TV-6) é o
+treino ao vivo em si (front). Spec do épico no PDF; cada PBI vira uma spec do
+Kiro (`.kiro/specs/`).
+
+#### PBI-38 (TV-1) · Tag de série
+
+**História:** Como atleta, quero marcar cada série com o tipo de série que fiz
+(aquecimento, top set, até a falha e as outras), para o histórico mostrar como o
+treino foi feito, e não só a carga e as repetições.
+
+**Escopo:** banco + API + front. Lista fixa de 10 marcadores (aprovada pelo PO,
+15/10); `VALIDA` é o padrão e não mostra chip no modo leitura. A tag é **só
+identificação**: não muda o gráfico (PBI-20) nem o volume.
+
+**API/Tabelas:** nova `rodada_marcador (treino_exercicio_id, rodada, marcador)`;
+`serie_executada.marcador`. Item da ficha (`PUT .../alvos`) aceita/devolve
+`marcadores`; séries da sessão aceitam/devolvem `marcador`.
+**Telas:** 10 (editar exercício da ficha), 3 (registrar), 11 (detalhe).
+**Depende de:** PBI-14, PBI-15, PBI-18. Spec: `.kiro/specs/tv-1-tag-de-serie/`.
+
+**Status:** FEITO (back + front), aguardando merge. Branch
+`feat/pbi-38-tag-de-serie`.
+- **Banco:** migration `TagDeSerie` — coluna `serie_executada.marcador`
+  varchar(20) NOT NULL DEFAULT 'VALIDA' + `CHECK`; tabela nova `rodada_marcador`
+  (PK composta, FK `ON DELETE CASCADE`, `CHECK` dos 10 códigos e `rodada >= 1`).
+  Enum `TagSerie` numa fonte só no domínio; o `CHECK` sai dele. Sem backfill:
+  registros antigos ficam `VALIDA` pelo default.
+- **API:** `DefinirAlvos` aceita `marcadores` (só ≠ VALIDA; reduzir séries corta
+  as rodadas maiores); detalhe da ficha devolve as tags. Séries da sessão
+  (criar/editar/detalhe) recebem e devolvem `marcador`; ausente = VALIDA.
+  FluentValidation: código fora da lista ou rodada fora de [1, séries] → 400.
+  Pré-preenchimento da tag acompanha a origem das séries (ficha → última sessão
+  → VALIDA). Gráfico PBI-20 **inalterado**.
+- **Front:** componente único `ChipTagSerie` + seletor de baixo pra cima
+  (`shared/tags/`), reusado no registro (edição), no detalhe (leitura, VALIDA
+  não mostra chip) e na edição da ficha (um chip por série prescrita). Cores,
+  tamanhos e rótulos por token; `Semantics` "Tag da série N: Rótulo".
+- **Testes:** unit (sincroniza/corta marcadores) + integração (ida-volta ficha e
+  sessão, 404 outro usuário, dados antigos VALIDA, gráfico intocado) + widget
+  (chip leitura/edição/seletor, herança da tag). `flutter analyze` 0;
+  85 testes de widget verdes; 30 unit verdes. Integração roda no CI.
+
+---
+
 ## 9. Épicos futuros (ainda não refinados)
 
 Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready ainda.

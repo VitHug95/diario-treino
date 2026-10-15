@@ -31,7 +31,7 @@ public sealed class SessaoCrudEndpointTests
         short IntensidadeMetricaId, string IntensidadeMetricaCodigo, string IntensidadeMetricaNome,
         decimal? Intensidade,
         short VolumeMetricaId, string VolumeMetricaCodigo, string VolumeMetricaNome, decimal Volume,
-        short? DescansoSeg);
+        short? DescansoSeg, string Marcador);
 
     // Exercícios globais do seed.
     private static readonly Guid SupinoReto = Guid.Parse("11111111-0000-0000-0000-000000000001");
@@ -80,6 +80,8 @@ public sealed class SessaoCrudEndpointTests
                 instrucao = (string?)null,
             });
 
+    // Série sem marcador no corpo: o back deve assumir VALIDA (compat. com o
+    // cliente antigo que não envia a tag).
     private static object SerieCorpo(short rodada, decimal carga, decimal reps) => new
     {
         rodada,
@@ -90,6 +92,19 @@ public sealed class SessaoCrudEndpointTests
         volumeMetricaId = Repeticoes,
         volume = reps,
         descansoSeg = (short?)90,
+    };
+
+    private static object SerieCorpoComTag(short rodada, decimal carga, decimal reps, string marcador) => new
+    {
+        rodada,
+        ordem = (short)1,
+        tipo = "ESFORCO",
+        intensidadeMetricaId = CargaKg,
+        intensidade = carga,
+        volumeMetricaId = Repeticoes,
+        volume = reps,
+        descansoSeg = (short?)90,
+        marcador,
     };
 
     private static async Task<Guid> CriarSessao(
@@ -257,5 +272,112 @@ public sealed class SessaoCrudEndpointTests
         var resposta = await client.GetAsync($"/api/v1/sessoes/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
+    // ---- TV-1: tag de série na sessão ----
+
+    [Fact]
+    public async Task Marcador_vai_e_volta_no_detalhe_da_sessao()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teSupino = await AddExercicio(client, treinoId, SupinoReto);
+
+        var sessaoId = await CriarSessao(client, treinoId, teSupino, new[]
+        {
+            SerieCorpoComTag(1, 20, 15, "AQUECIMENTO"),
+            SerieCorpoComTag(2, 35, 10, "TOP_SET"),
+        });
+
+        var detalhe = await client.GetFromJsonAsync<SessaoDetalheResp>($"/api/v1/sessoes/{sessaoId}");
+        var supino = detalhe!.Exercicios.Single(e => e.ExercicioId == SupinoReto);
+        var s1 = supino.Series.Single(s => s.Rodada == 1);
+        var s2 = supino.Series.Single(s => s.Rodada == 2);
+        Assert.Equal("AQUECIMENTO", s1.Marcador);
+        Assert.Equal("TOP_SET", s2.Marcador);
+    }
+
+    [Fact]
+    public async Task Serie_sem_marcador_no_corpo_fica_valida()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teSupino = await AddExercicio(client, treinoId, SupinoReto);
+
+        // SerieCorpo não envia "marcador" (cliente antigo / dado padrão).
+        var sessaoId = await CriarSessao(client, treinoId, teSupino, new[] { SerieCorpo(1, 30, 10) });
+
+        var detalhe = await client.GetFromJsonAsync<SessaoDetalheResp>($"/api/v1/sessoes/{sessaoId}");
+        var serie = detalhe!.Exercicios.Single().Series.Single();
+        Assert.Equal("VALIDA", serie.Marcador);
+    }
+
+    [Fact]
+    public async Task Marcador_invalido_na_sessao_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teSupino = await AddExercicio(client, treinoId, SupinoReto);
+
+        var criar = await client.PostAsJsonAsync("/api/v1/sessoes", new
+        {
+            treinoId,
+            data = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+            duracaoMin = 45,
+            observacao = (string?)null,
+            exercicios = new[]
+            {
+                new
+                {
+                    exercicioId = SupinoReto,
+                    treinoExercicioId = teSupino,
+                    series = new[] { SerieCorpoComTag(1, 30, 10, "INVENTADO") },
+                },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, criar.StatusCode);
+    }
+
+    [Fact]
+    public async Task Trocar_tag_na_sessao_nao_altera_a_ficha()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teSupino = await AddExercicio(client, treinoId, SupinoReto);
+
+        // Ficha prescreve a série 1 como Aquecimento.
+        await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teSupino}/alvos",
+            new
+            {
+                series = 2,
+                intensidadeMetricaId = CargaKg,
+                volumeMetricaId = Repeticoes,
+                marcadores = new[] { new { rodada = (short)1, marcador = "AQUECIMENTO" } },
+            });
+
+        // No registro, troca a série 1 para TOP_SET.
+        var sessaoId = await CriarSessao(client, treinoId, teSupino, new[]
+        {
+            SerieCorpoComTag(1, 35, 8, "TOP_SET"),
+        });
+
+        // O detalhe mostra a tag nova...
+        var detalhe = await client.GetFromJsonAsync<SessaoDetalheResp>($"/api/v1/sessoes/{sessaoId}");
+        var serie = detalhe!.Exercicios.Single(e => e.ExercicioId == SupinoReto).Series.Single();
+        Assert.Equal("TOP_SET", serie.Marcador);
+
+        // ...e a ficha continua com a tag original.
+        await using var db = _postgres.CriarContexto();
+        var marcadorFicha = await db.RodadaMarcadores
+            .Where(m => m.TreinoExercicioId == teSupino && m.Rodada == 1)
+            .Select(m => m.Marcador)
+            .SingleAsync();
+        Assert.Equal("AQUECIMENTO", marcadorFicha);
     }
 }

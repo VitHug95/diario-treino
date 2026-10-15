@@ -23,7 +23,9 @@ public sealed class FichaExerciciosEndpointTests
     private sealed record FichaResp(Guid Id, string Nome, string? Descricao, short Ordem, List<TeResp> Exercicios);
     private sealed record TeResp(
         Guid Id, Guid ExercicioId, string Nome, string Modalidade,
-        short Ordem, short Rodadas, short? DescansoSeg, string? Instrucao, AlvoResp? Alvo);
+        short Ordem, short Rodadas, short? DescansoSeg, string? Instrucao, AlvoResp? Alvo,
+        List<MarcadorResp> Marcadores);
+    private sealed record MarcadorResp(short Rodada, string Marcador);
     private sealed record AlvoResp(
         short IntensidadeMetricaId, string IntensidadeMetricaCodigo, string IntensidadeMetricaNome,
         decimal? IntensidadeAlvo, short VolumeMetricaId, string VolumeMetricaCodigo,
@@ -290,5 +292,120 @@ public sealed class FichaExerciciosEndpointTests
             new { series = 3, intensidadeMetricaId = 1, volumeMetricaId = 10 });
 
         Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);
+    }
+
+    // ---- TV-1: tags de série na ficha ----
+
+    [Fact]
+    public async Task Definir_marcadores_reflete_no_detalhe_e_valida_fica_sem_linha()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        // 4 séries: série 1 Aquecimento, série 4 Até a falha, 2 e 3 ficam Válida.
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 4,
+                intensidadeMetricaId = 1,
+                intensidadeAlvo = 30,
+                volumeMetricaId = 10,
+                volumeAlvo = 10,
+                descansoSeg = 90,
+                instrucao = (string?)null,
+                marcadores = new[]
+                {
+                    new { rodada = (short)1, marcador = "AQUECIMENTO" },
+                    new { rodada = (short)4, marcador = "FALHA" },
+                },
+            });
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        var ex = ficha!.Exercicios.Single();
+        // Só rodadas ≠ VALIDA têm linha.
+        Assert.Equal(2, ex.Marcadores.Count);
+        Assert.Contains(ex.Marcadores, m => m.Rodada == 1 && m.Marcador == "AQUECIMENTO");
+        Assert.Contains(ex.Marcadores, m => m.Rodada == 4 && m.Marcador == "FALHA");
+        Assert.DoesNotContain(ex.Marcadores, m => m.Rodada == 2 || m.Rodada == 3);
+    }
+
+    [Fact]
+    public async Task Reduzir_series_apaga_marcador_de_rodada_maior()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        // 4 séries com tag na 4.
+        await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 4,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                marcadores = new[] { new { rodada = (short)4, marcador = "FALHA" } },
+            });
+
+        // Reduz para 3 séries (sem reenviar marcadores).
+        await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new { series = 3, intensidadeMetricaId = 1, volumeMetricaId = 10 });
+
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        var ex = ficha!.Exercicios.Single();
+        Assert.Equal((short)3, ex.Rodadas);
+        Assert.Empty(ex.Marcadores);
+    }
+
+    [Fact]
+    public async Task Definir_marcador_com_codigo_invalido_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                marcadores = new[] { new { rodada = (short)1, marcador = "INVENTADO" } },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
+    }
+
+    [Fact]
+    public async Task Definir_marcador_em_rodada_fora_do_intervalo_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                marcadores = new[] { new { rodada = (short)5, marcador = "FALHA" } },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
     }
 }

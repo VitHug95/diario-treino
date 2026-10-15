@@ -94,6 +94,32 @@ public sealed class TreinoExercicioConfiguration : IEntityTypeConfiguration<Trei
             .WithOne(e => e.TreinoExercicio!)
             .HasForeignKey(e => e.TreinoExercicioId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(te => te.Marcadores)
+            .WithOne(m => m.TreinoExercicio!)
+            .HasForeignKey(m => m.TreinoExercicioId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class RodadaMarcadorConfiguration : IEntityTypeConfiguration<RodadaMarcador>
+{
+    public void Configure(EntityTypeBuilder<RodadaMarcador> builder)
+    {
+        builder.ToTable("rodada_marcador", t =>
+        {
+            t.HasCheckConstraint("ck_rodada_marcador_rodada", "rodada >= 1");
+            // CHECK derivado da fonte única do enum (TV-1).
+            t.HasCheckConstraint(
+                "ck_rodada_marcador_marcador",
+                $"marcador IN ({string.Join(",", TagSerie.Todos.Select(m => $"'{m}'"))})");
+        });
+
+        // PK composta (treino_exercicio_id, rodada): uma tag por rodada.
+        builder.HasKey(m => new { m.TreinoExercicioId, m.Rodada });
+        builder.Property(m => m.TreinoExercicioId).HasColumnName("treino_exercicio_id").IsRequired();
+        builder.Property(m => m.Rodada).HasColumnName("rodada").IsRequired();
+        builder.Property(m => m.Marcador).HasColumnName("marcador").HasMaxLength(20).IsRequired();
     }
 }
 

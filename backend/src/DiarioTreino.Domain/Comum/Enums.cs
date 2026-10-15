@@ -47,6 +47,36 @@ public static class TipoEtapa
     public static readonly IReadOnlyList<string> Todos = [Esforco, Recuperacao];
 }
 
+/// <summary>
+/// Marcador (tag) de uma série — "como" a série foi feita (TV-1). É só
+/// identificação: NÃO entra em cálculo (gráfico PBI-20 segue por <c>Tipo</c>).
+/// Lista fixa aprovada pelo PO (15/10); tag nova só por migration. <c>Valida</c>
+/// é o padrão: rodada sem linha / série sem marcador valem <c>VALIDA</c>.
+/// Fonte única do enum: o CHECK da migration e a validação derivam de <see cref="Todos"/>.
+/// </summary>
+public static class TagSerie
+{
+    public const string Valida = "VALIDA";
+    public const string Aquecimento = "AQUECIMENTO";
+    public const string Preparatoria = "PREPARATORIA";
+    public const string TopSet = "TOP_SET";
+    public const string BackOff = "BACK_OFF";
+    public const string Falha = "FALHA";
+    public const string DropSet = "DROP_SET";
+    public const string RestPause = "REST_PAUSE";
+    public const string Negativa = "NEGATIVA";
+    public const string Parciais = "PARCIAIS";
+
+    public static readonly IReadOnlyList<string> Todos =
+    [
+        Valida, Aquecimento, Preparatoria, TopSet, BackOff,
+        Falha, DropSet, RestPause, Negativa, Parciais,
+    ];
+
+    /// <summary>True quando o código pertence à lista fixa.</summary>
+    public static bool EhValido(string? codigo) => codigo is not null && Todos.Contains(codigo);
+}
+
 /// <summary>Códigos e ids das métricas de referência (MER 3.4).</summary>
 public static class MetricaCodigos
 {

@@ -68,6 +68,19 @@ public sealed class ProgressoEndpointTests
         descansoSeg = (short?)90,
     };
 
+    private static object SerieForcaComTag(short rodada, decimal carga, decimal reps, string marcador) => new
+    {
+        rodada,
+        ordem = (short)1,
+        tipo = "ESFORCO",
+        intensidadeMetricaId = CargaKg,
+        intensidade = carga,
+        volumeMetricaId = Repeticoes,
+        volume = reps,
+        descansoSeg = (short?)90,
+        marcador,
+    };
+
     private static object SerieIsometria(short rodada, decimal tempo) => new
     {
         rodada,
@@ -129,6 +142,31 @@ public sealed class ProgressoEndpointTests
         // Resumo: 2 sessões, variação 35 - 30 = 5.
         Assert.Equal(2, prog.Resumo.Sessoes);
         Assert.Equal(5m, prog.Resumo.Variacao);
+    }
+
+    [Fact]
+    public async Task Tag_de_serie_nao_muda_o_grafico()
+    {
+        // TV-1 CA6: a tag é só identificação. Uma série AQUECIMENTO de carga
+        // MAIOR que as demais ainda é o ponto do dia (PBI-20 inalterado).
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var teSupino = await CriarFichaComExercicio(client, SupinoReto);
+
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        // A de maior carga (40) está marcada como AQUECIMENTO; as "válidas" têm menos carga.
+        await CriarSessao(client, SupinoReto, teSupino, hoje, new[]
+        {
+            SerieForcaComTag(1, 40, 12, "AQUECIMENTO"),
+            SerieForcaComTag(2, 30, 10, "VALIDA"),
+        });
+
+        var prog = await client.GetFromJsonAsync<ProgressoResp>(
+            $"/api/v1/progresso/exercicios/{SupinoReto}");
+
+        var ponto = Assert.Single(prog!.Pontos);
+        Assert.Equal(40m, ponto.Valor);     // maior carga do dia, com tag ou sem
+        Assert.Equal(12m, ponto.Repeticoes);
     }
 
     [Fact]

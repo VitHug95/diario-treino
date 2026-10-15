@@ -17,7 +17,8 @@ pronto.
 **Aplicado (migrations na `main` e no Neon):**
 - Tabelas: `usuario`, `usuario_papel`, `vinculo` (estrutura pronta, sem uso),
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
-  `treino_exercicio`, `etapa_prescrita`, `sessao`, `serie_executada`.
+  `treino_exercicio`, `etapa_prescrita`, `rodada_marcador`, `sessao`,
+  `serie_executada`.
 - `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
   criar) e **`musculo_id`** opcional (FK composta `(musculo_id, membro_id)` →
   `musculo`) — ver 3.4.1, 3.4.2 e 3.5. O catálogo global tem **89 exercícios
@@ -443,6 +444,24 @@ O que de fato aconteceu, série por série.
 | volume_metrica_id | smallint | não | FK `metrica`, eixo `VOLUME` |
 | volume | numeric(9,2) | não | `CHECK (volume >= 0)` |
 | descanso_seg | smallint | sim | |
+| marcador | varchar(20) | não | Tag da série (TV-1). `DEFAULT 'VALIDA'`, `CHECK` com os 10 códigos. Só identificação — não entra em cálculo |
+
+### 3.12 `rodada_marcador`
+
+Tag (marcador) prescrita por rodada de um exercício da ficha (TV-1). A tag é de
+uma série específica, por isso não cabe em `etapa_prescrita` (que é o molde de
+todas as séries). Só existe linha para rodada com tag ≠ `VALIDA`; rodada sem
+linha vale `VALIDA`.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| treino_exercicio_id | uuid | não | PK composta + FK `treino_exercicio`, `ON DELETE CASCADE` |
+| rodada | smallint | não | PK composta. `CHECK (rodada >= 1)` |
+| marcador | varchar(20) | não | `CHECK` com os 10 códigos |
+
+Lista fixa dos 10 marcadores (aprovada pelo PO, 15/10): `VALIDA`, `AQUECIMENTO`,
+`PREPARATORIA`, `TOP_SET`, `BACK_OFF`, `FALHA`, `DROP_SET`, `REST_PAUSE`,
+`NEGATIVA`, `PARCIAIS`. Enum numa fonte só no domínio; o `CHECK` deriva dele.
 
 ## 4. Índices de consulta
 
@@ -466,6 +485,7 @@ O que de fato aconteceu, série por série.
 5. **Observação no gráfico (implementado, PBI-21):** cada `PontoProgresso` carrega `sessao.observacao` e o `sessaoId`; pontos com observação são destacados e abrem a nota do dia + link para o detalhe da sessão.
 6. **Acesso:** toda consulta filtra por `atleta_id` após passar pela regra de controle de acesso do MAS (seção 11.3).
 7. **Integridade de métrica:** a métrica gravada na série precisa pertencer ao eixo correto (validado na aplicação, porque `CHECK` não consulta outra tabela).
+8. **Tag de série (TV-1):** `serie_executada.marcador` e `rodada_marcador` só identificam "como" a série foi feita. **Não** entram em nenhum cálculo — o gráfico de progresso (regras 2 e 3) continua por `tipo = ESFORCO` e maior carga/tempo, independente da tag. Pré-preenchimento da tag no registro: tag da ficha para a rodada; sem ficha, tag da última sessão daquele exercício; sem nenhuma, `VALIDA`.
 
 ## 6. Exemplo de dados
 
