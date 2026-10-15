@@ -175,6 +175,8 @@ void main() {
 
       // Estado inicial: sem histórico, sugere o A.
       expect(find.text('A · Peito'), findsOneWidget);
+      // Na Início, a barra de navegação inferior está visível.
+      expect(find.byType(NavigationBar), findsOneWidget);
 
       // Inicia o treino pelo botão explícito do cartão de sugestão (PBI-50:
       // antes "REGISTRAR TREINO", agora "INICIAR TREINO").
@@ -182,6 +184,8 @@ void main() {
       await tester.pumpAndSettle();
       // Em andamento (PBI-37), o título é o nome da ficha.
       expect(find.text('A'), findsWidgets);
+      // PBI-55: o registro abre em tela cheia, sem a barra de abas.
+      expect(find.byType(NavigationBar), findsNothing);
 
       // PBI-37: o exercício começa desmarcado, com a série como sugestão. Tocar
       // em "Marcar" liga o "realizado" e abre os campos editáveis.

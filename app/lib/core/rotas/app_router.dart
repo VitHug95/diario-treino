@@ -170,8 +170,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                   fichaInicialId: state.uri.queryParameters['ficha'],
                 ),
                 routes: [
-                  // Registro de sessão empilhado sobre a aba Fichas.
+                  // Registro de sessão em TELA CHEIA (PBI-55): empilha no
+                  // navigator raiz, sem a barra de abas, para o "FINALIZAR
+                  // TREINO" não competir com a navegação inferior. Igual às
+                  // rotas do treino ao vivo.
                   GoRoute(
+                    parentNavigatorKey: _rootNavigatorKey,
                     path: 'registrar',
                     name: 'registrarSessao',
                     builder: (context, state) {
@@ -184,8 +188,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                       );
                     },
                   ),
-                  // Treino livre (PBI-19), empilhado sobre a aba Fichas.
+                  // Treino livre (PBI-19) em tela cheia (PBI-55), no navigator
+                  // raiz, sem a barra de abas.
                   GoRoute(
+                    parentNavigatorKey: _rootNavigatorKey,
                     path: 'treino-livre',
                     name: 'treinoLivre',
                     builder: (context, state) => const TreinoLivreScreen(),
