@@ -81,7 +81,8 @@ void main() {
     expect(find.text('Criar exercício'), findsOneWidget);
   });
 
-  testWidgets('Chips de membro: "Todos" + membros do GET /membros, e tocar um filtra',
+  testWidgets(
+      'Filtro de músculo (PBI-54): campo abre folha com "Todos" + membros e aplica',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -94,10 +95,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // "Todos" + os membros viram chips.
-    expect(find.widgetWithText(ChoiceChip, 'Todos'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Peito'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Pernas'), findsOneWidget);
+    // Não há mais chips de rolagem lateral; o filtro é um campo "Músculo".
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.text('Músculo'), findsOneWidget);
 
     // Começa em "Todos" (membro nulo).
     final container = ProviderScope.containerOf(
@@ -105,9 +105,22 @@ void main() {
     );
     expect(container.read(catalogoFiltroProvider).membroId, isNull);
 
-    // Tocar "Peito" define o filtro por membro.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Peito'));
+    // Toca o campo: abre a folha com "Todos" + os membros, sem rolagem lateral.
+    await tester.tap(find.text('Músculo'));
+    await tester.pumpAndSettle();
+    expect(find.text('FILTRAR POR MÚSCULO'), findsOneWidget);
+    // "Todos" aparece no campo (valor atual) e na folha (opção) enquanto aberta.
+    expect(find.text('Todos'), findsNWidgets(2));
+    expect(find.text('Peito'), findsOneWidget);
+    expect(find.text('Pernas'), findsOneWidget);
+
+    // Escolher "Peito" aplica o filtro e fecha a folha.
+    await tester.tap(find.text('Peito'));
     await tester.pumpAndSettle();
     expect(container.read(catalogoFiltroProvider).membroId, 1);
+    expect(find.text('FILTRAR POR MÚSCULO'), findsNothing);
+
+    // O campo passa a mostrar o músculo escolhido.
+    expect(find.text('Peito'), findsOneWidget);
   });
 }
