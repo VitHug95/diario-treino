@@ -362,10 +362,22 @@ flowchart LR
 |---|---|---|
 | Unitário | xUnit | Regras de domínio, controle de acesso, cálculo de pré-preenchimento |
 | Integração | xUnit + Testcontainers + WebApplicationFactory | Endpoints com Postgres real e token falso assinado localmente |
-| E2E | Robot Framework + Browser library | Fluxo principal no app web: entrar, registrar treino, ver no gráfico |
-| Front | flutter_test | Widgets críticos (formulário de série, filtro de período) |
+| E2E | Robot Framework + Browser library | Fluxo principal no app web (entrar, registrar treino, ver no progresso), contra uma stack efêmera no CI com o **Firebase Auth Emulator** (PBI-26) |
+| Front | flutter_test | Widgets críticos (formulário de série, filtro de período) e um fluxo de UI headless (`fluxo_registro_test.dart`) |
 
 Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do nível adequado passando no CI, migration criada quando houver mudança de banco, este documento atualizado se alguma decisão mudou.
+
+### Autenticação em teste (E2E)
+
+A API valida o ID token do Firebase (seção 11.2). Para o E2E de navegador, a
+validação é apontada ao **Firebase Auth Emulator** quando a configuração
+`Firebase:AuthEmulatorHost` está presente: nesse modo o emissor e a audiência
+continuam sendo checados, mas a assinatura não (os tokens do emulador são de
+teste). A variável só é definida no job `e2e` do CI; em produção fica vazia e a
+validação exige os tokens reais assinados pelo Google. Não há, portanto,
+qualquer caminho de autenticação alternativo no ambiente publicado. O front liga
+o emulador por `--dart-define=USE_AUTH_EMULATOR=true` (ver `main.dart`), também
+só no build de E2E.
 
 ## 16. Segurança e LGPD
 

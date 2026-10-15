@@ -497,6 +497,31 @@ Firebase real — ou um modo de teste na API validando um JWT de teste (como o
 WebApplicationFactory), ou o Firebase Auth Emulator. Ambos adicionam um caminho
 de autenticação alternativo; decidir a abordagem com o PO antes.
 
+**Status E2E completo:** FEITO — escolhido o **Firebase Auth Emulator** (padrão
+de mercado, sem backdoor de autenticação em produção e sem usar o Firebase
+real). A suíte Robot Framework + Browser (`e2e/`) sobe uma **stack efêmera e
+isolada** no CI (job `e2e`): Postgres (service container) + API .NET + Flutter
+web + o Auth Emulator. A API aceita os tokens do emulador apenas quando
+`Firebase:AuthEmulatorHost` está definido (ver `AutenticacaoFirebase`); em
+produção essa variável fica vazia e a validação continua exigindo os tokens
+reais do Google — nada muda no ambiente publicado. O cenário cobre o caminho
+principal: cadastrar/entrar → registrar um treino → ver o exercício no
+progresso; o usuário de teste é criado na hora (email único por execução) e
+**excluído no teardown** (hard delete via `DELETE /me`, PBI-25), então nada de
+teste sobra. O `deploy-api` passou a depender do job `e2e` (E2E vermelho barra o
+deploy). Artefatos do Robot (`log.html`/`report.html` + logs da API/web/emulador)
+são publicados em caso de falha. O teste de fluxo de UI headless
+(`fluxo_registro_test.dart`) continua no job de front como primeira linha de
+defesa, rápida. **PBI-26 concluído — fecha o MVP.**
+
+> **Observação sobre o cenário:** o critério original citava "treino da ficha A
+> **com observação** e o ponto com a observação no gráfico". A primeira versão do
+> E2E usa o **treino livre** (menos passos, mais estável para o primeiro E2E de
+> navegador) e confirma o exercício no seletor do progresso. Enriquecer o
+> cenário para ficha + observação + leitura do ponto no gráfico fica como
+> melhoria incremental da suíte, agora que o encanamento (emulador + stack
+> efêmera) está pronto.
+
 ---
 
 ## 7. Incremento 2: Cardio
