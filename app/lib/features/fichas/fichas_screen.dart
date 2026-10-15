@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
+import '../sessao/iniciar_treino_ao_vivo.dart';
 import 'editar_alvos_screen.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
@@ -223,11 +225,24 @@ class _ConteudoFichas extends ConsumerWidget {
                 width: double.infinity,
                 height: AppSizes.botaoPrincipal,
                 child: FilledButton.icon(
-                  onPressed: () => context.push(
-                    Rotas.registrarSessao,
-                    extra: RegistrarSessaoArgs(
-                        treinoId: ficha.id, treinoNome: ficha.nome),
-                  ),
+                  onPressed: () {
+                    // Flag TV-3: inicia o treino ao vivo (tela 14) série por
+                    // série; desligada, mantém o registro de uma vez (PBI-15).
+                    if (treinoAoVivoHabilitado) {
+                      iniciarTreinoAoVivoDaFicha(
+                        context,
+                        ref,
+                        treinoId: ficha.id,
+                        treinoNome: ficha.nome,
+                      );
+                    } else {
+                      context.push(
+                        Rotas.registrarSessao,
+                        extra: RegistrarSessaoArgs(
+                            treinoId: ficha.id, treinoNome: ficha.nome),
+                      );
+                    }
+                  },
                   icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
                   label: const Text('INICIAR TREINO AGORA'),
                 ),
