@@ -112,7 +112,8 @@ public sealed class ServicoSessao
             VolumeMetricaCodigo: v.Codigo,
             VolumeMetricaNome: v.Nome,
             Volume: null,
-            DescansoSeg: null);
+            DescansoSeg: null,
+            Marcador: TagSerie.Valida);
         return new RascunhoExercicioAvulso(
             exercicio.Id, exercicio.Nome, exercicio.Modalidade, null, [serieBranco]);
     }
@@ -185,16 +186,20 @@ public sealed class ServicoSessao
             VolumeMetricaCodigo: v.Codigo,
             VolumeMetricaNome: v.Nome,
             Volume: null,
-            DescansoSeg: te.DescansoAlvoSeg);
+            DescansoSeg: te.DescansoAlvoSeg,
+            Marcador: TagSerie.Valida);
     }
 
     private async Task<List<SerieRascunho>> MontarSeriesDosAlvosAsync(
         TreinoExercicio te, CancellationToken ct)
     {
         var etapas = te.Etapas.OrderBy(e => e.Ordem).ToList();
+        // Tags prescritas por rodada (TV-1): rodada sem linha vale VALIDA.
+        var tagPorRodada = te.Marcadores.ToDictionary(m => m.Rodada, m => m.Marcador);
         var series = new List<SerieRascunho>();
         for (short rodada = 1; rodada <= te.Rodadas; rodada++)
         {
+            var marcador = tagPorRodada.GetValueOrDefault(rodada, TagSerie.Valida);
             short ordem = 1;
             foreach (var etapa in etapas)
             {
@@ -206,7 +211,8 @@ public sealed class ServicoSessao
                     etapa.Tipo,
                     etapa.IntensidadeMetricaId, i.Codigo, i.Nome, etapa.IntensidadeAlvo,
                     etapa.VolumeMetricaId, v.Codigo, v.Nome, etapa.VolumeAlvo,
-                    te.DescansoAlvoSeg));
+                    te.DescansoAlvoSeg,
+                    marcador));
                 ordem++;
             }
         }
@@ -224,7 +230,9 @@ public sealed class ServicoSessao
             se.Tipo,
             se.IntensidadeMetricaId, i.Codigo, i.Nome, se.Intensidade,
             se.VolumeMetricaId, v.Codigo, v.Nome, se.Volume,
-            se.DescansoSeg);
+            se.DescansoSeg,
+            // A tag herda da última sessão daquele exercício (TV-1, treino livre).
+            se.Marcador);
     }
 
     private async Task<(string Codigo, string Nome)> ObterMetricaAsync(short id, CancellationToken ct)
@@ -297,6 +305,7 @@ public sealed class ServicoSessao
                     VolumeMetricaId = s.VolumeMetricaId,
                     Volume = s.Volume,
                     DescansoSeg = s.DescansoSeg,
+                    Marcador = s.Marcador ?? TagSerie.Valida,
                 });
             }
         }
@@ -433,7 +442,7 @@ public sealed class ServicoSessao
                 se.Rodada, se.Ordem, se.Tipo,
                 se.IntensidadeMetricaId, i.Codigo, i.Nome, se.Intensidade,
                 se.VolumeMetricaId, v.Codigo, v.Nome, se.Volume,
-                se.DescansoSeg));
+                se.DescansoSeg, se.Marcador));
         }
         return lista;
     }
@@ -497,6 +506,7 @@ public sealed class ServicoSessao
                     VolumeMetricaId = s.VolumeMetricaId,
                     Volume = s.Volume,
                     DescansoSeg = s.DescansoSeg,
+                    Marcador = s.Marcador ?? TagSerie.Valida,
                 });
             }
         }

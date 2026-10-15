@@ -58,5 +58,10 @@ public sealed class SerieValidator : AbstractValidator<SerieRequest>
 
         RuleFor(x => x.DescansoSeg)
             .GreaterThanOrEqualTo((short)0).When(x => x.DescansoSeg.HasValue);
+
+        // Tag da série (TV-1): nula vale VALIDA; se vier, tem de estar na lista.
+        RuleFor(x => x.Marcador)
+            .Must(TagSerie.EhValido).When(x => x.Marcador is not null)
+            .WithMessage("Tag de série inválida.");
     }
 }
