@@ -1456,6 +1456,14 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("intensidade_metrica_id");
 
+                    b.Property<string>("Marcador")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("VALIDA")
+                        .HasColumnName("marcador");
+
                     b.Property<short>("Ordem")
                         .HasColumnType("smallint")
                         .HasColumnName("ordem");
@@ -1503,6 +1511,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
                     b.ToTable("serie_executada", null, t =>
                         {
+                            t.HasCheckConstraint("ck_serie_executada_marcador", "marcador IN ('VALIDA','AQUECIMENTO','PREPARATORIA','TOP_SET','BACK_OFF','FALHA','DROP_SET','REST_PAUSE','NEGATIVA','PARCIAIS')");
+
                             t.HasCheckConstraint("ck_serie_executada_tipo", "tipo IN ('ESFORCO','RECUPERACAO')");
 
                             t.HasCheckConstraint("ck_serie_executada_volume", "volume >= 0");
@@ -1733,6 +1743,32 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.HasIndex("AutorId");
 
                     b.ToTable("plano_treino", (string)null);
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.RodadaMarcador", b =>
+                {
+                    b.Property<Guid>("TreinoExercicioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treino_exercicio_id");
+
+                    b.Property<short>("Rodada")
+                        .HasColumnType("smallint")
+                        .HasColumnName("rodada");
+
+                    b.Property<string>("Marcador")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("marcador");
+
+                    b.HasKey("TreinoExercicioId", "Rodada");
+
+                    b.ToTable("rodada_marcador", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_rodada_marcador_marcador", "marcador IN ('VALIDA','AQUECIMENTO','PREPARATORIA','TOP_SET','BACK_OFF','FALHA','DROP_SET','REST_PAUSE','NEGATIVA','PARCIAIS')");
+
+                            t.HasCheckConstraint("ck_rodada_marcador_rodada", "rodada >= 1");
+                        });
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.Treino", b =>
@@ -2027,6 +2063,17 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.RodadaMarcador", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Planejamento.TreinoExercicio", "TreinoExercicio")
+                        .WithMany("Marcadores")
+                        .HasForeignKey("TreinoExercicioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TreinoExercicio");
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.Treino", b =>
                 {
                     b.HasOne("DiarioTreino.Domain.Planejamento.PlanoTreino", "Plano")
@@ -2095,6 +2142,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.TreinoExercicio", b =>
                 {
                     b.Navigation("Etapas");
+
+                    b.Navigation("Marcadores");
                 });
 #pragma warning restore 612, 618
         }
