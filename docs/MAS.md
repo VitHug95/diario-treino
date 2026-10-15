@@ -200,7 +200,7 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 | Identidade | Usuario, UsuarioPapel | Provisionar usuário no primeiro acesso, consultar perfil |
 | Vínculos (futuro) | Vinculo | Convidar aluno, aceitar, encerrar |
 | Catálogo | Exercicio, Metrica, Membro, Musculo | Listar catálogo global + exercícios próprios com filtro por membro, criar exercício |
-| Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita | Montar e editar fichas |
+| Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita | Montar e editar fichas; criar, renomear, duplicar, definir em uso e excluir plano (PBI-44) |
 | Execução | Sessao, SerieExecutada | Abrir sessão pré-preenchida, salvar sessão, editar sessão |
 | Progresso | (consultas) | Evolução por exercício, resumo do período, sessões do período |
 
@@ -288,6 +288,7 @@ PodeAcessarAtleta(usuarioLogado, atletaId) =
 - Coberto por testes unitários e de integração com os cenários: dono, educador com vínculo ativo, educador com vínculo encerrado, terceiro sem vínculo.
 - Escrita de ficha por educador (futuro) exige vínculo ativo e grava o educador como `autor_id` do plano.
 - Recurso de outro usuário responde 404, não 403, para não revelar que o recurso existe.
+- Plano com autor diferente do atleta é somente leitura para o atleta (PBI-44): escrita responde 403 em Problem Details (`plano-somente-leitura`), sempre **depois** do `IControleAcesso`. Recurso de outro usuário segue 404.
 
 ## 12. Contrato da API (v1)
 
@@ -304,13 +305,19 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/membros` | Membros e seus músculos, na ordem dos chips | ✅ (PBI-31 etapa 2) |
 | GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |
 | POST | `/exercicios` | Cria exercício próprio (exige `membroId`; `musculoId` opcional) | ✅ |
-| GET | `/planos/ativo` | Plano ativo com fichas e exercícios | ✅ |
-| POST | `/planos` | Cria plano (idempotente) | ✅ |
-| POST | `/planos/{id}/treinos` | Adiciona ficha | ✅ |
-| POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre | ✅ (PBI-19) |
+| GET | `/planos` | Planos do atleta (id, nome, início, emUso, autor, somenteLeitura, nº de fichas e de exercícios) | ⏳ PBI-44 |
+| GET | `/planos/{id}` | Detalhe do plano com as fichas | ⏳ PBI-44 |
+| POST | `/planos` | Com `{ nome }` cria o plano. Sem corpo, mantém o comportamento atual (idempotente) até o E2E fechar | ⏳ PBI-44 |
+| PUT | `/planos/{id}` | Renomeia | ⏳ PBI-44 |
+| POST | `/planos/{id}/em-uso` | Define como em uso, em transação | ⏳ PBI-44 |
+| POST | `/planos/{id}/duplicar` | Cria "Nome (cópia)" fora de uso, sem sessões | ⏳ PBI-44 |
+| DELETE | `/planos/{id}` | Exclui (apaga ou esconde, regra 10 do MER) | ⏳ PBI-44 |
+| GET | `/planos/ativo` | Alias do plano em uso até o front migrar | ✅ |
+| POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
+| POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
 | GET | `/treinos/{id}` | Detalhe da ficha com exercícios | ✅ |
 | PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
-| DELETE | `/treinos/{id}` | Arquiva ficha | ✅ |
+| DELETE | `/treinos/{id}` | **Apaga** a ficha sem sessões, **arquiva** a com sessões | ✅ |
 | POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha | ✅ |
 | PUT | `/treinos/{id}/exercicios/ordem` | Reordena exercícios | ✅ |
 | DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha | ✅ |
