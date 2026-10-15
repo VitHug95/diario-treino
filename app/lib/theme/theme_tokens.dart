@@ -35,6 +35,7 @@ abstract final class CoresClaro {
   static const obsBody = Color(0xFF3B1A0C);
   static const danger = Color(0xFFB42318);
   static const dangerFill = Color(0xFFB42318);
+  static const dangerOn = Color(0xFFFFFFFF);
   static const iconMuted = Color(0xFF9A9DA4);
 }
 
@@ -70,6 +71,7 @@ abstract final class CoresEscuro {
   static const obsBody = Color(0xFFFFD9C4);
   static const danger = Color(0xFFFF7A6E);
   static const dangerFill = Color(0xFFC8372B);
+  static const dangerOn = Color(0xFFFFFFFF);
   static const iconMuted = Color(0xFF6E727B);
 }
 

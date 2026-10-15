@@ -303,7 +303,10 @@ class _DialogoExcluirState extends State<_DialogoExcluir> {
         ),
         FilledButton(
           onPressed: _liberado ? () => Navigator.of(context).pop(true) : null,
-          style: FilledButton.styleFrom(backgroundColor: cores.danger),
+          style: FilledButton.styleFrom(
+            backgroundColor: cores.dangerFill,
+            foregroundColor: cores.dangerOn,
+          ),
           child: const Text('Excluir conta'),
         ),
       ],

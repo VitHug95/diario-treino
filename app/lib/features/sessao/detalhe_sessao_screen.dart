@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogos_perigo.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -41,21 +42,14 @@ class DetalheSessaoScreen extends ConsumerWidget {
   }
 
   Future<void> _excluir(BuildContext context, WidgetRef ref) async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Excluir treino?'),
-        content: const Text(
-            'Esta sessão sai do histórico e dos gráficos. Esta ação não pode ser desfeita.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true), child: const Text('Excluir')),
-        ],
-      ),
+    final confirmar = await confirmarPerigo(
+      context,
+      titulo: 'Excluir treino?',
+      texto:
+          'Esta sessão sai do histórico e dos gráficos. Esta ação não pode ser desfeita.',
+      rotuloConfirmar: 'Excluir',
     );
-    if (confirmar != true) return;
+    if (!confirmar) return;
 
     try {
       await ref.read(sessaoRepositoryProvider).excluirSessao(sessaoId);

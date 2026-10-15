@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogos_perigo.dart';
 import '../../shared/progresso/grafico_exercicio.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
@@ -19,8 +20,6 @@ import 'sessao_repository.dart';
 import 'stepper_metrica.dart';
 import 'treino_ao_vivo_controller.dart';
 import 'widgets_ao_vivo.dart';
-
-enum _AcaoSaidaVivo { finalizar, continuarDepois, descartar }
 
 /// Tela 14 do protótipo: treino ao vivo (TV-3). Cabeçalho com cronômetro vivo e
 /// contador de séries, um card por exercício (barra de progresso + status) e os
@@ -135,55 +134,24 @@ class TreinoAoVivoScreen extends ConsumerWidget {
   /// Diálogo de sair (reusa a lógica do PBI-37): finalizar / continuar depois /
   /// descartar. Devolve true quando a saída pode prosseguir.
   Future<bool> _aoTentarSair(BuildContext context, WidgetRef ref) async {
-    final acao = await showDialog<_AcaoSaidaVivo>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sair do treino?'),
-        content: const Text(
-            'O treino continua salvo no aparelho. Você escolhe o que fazer.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaidaVivo.descartar),
-            child: const Text('Descartar treino'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaidaVivo.continuarDepois),
-            child: const Text('Continuar depois'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaidaVivo.finalizar),
-            child: const Text('Finalizar agora'),
-          ),
-        ],
-      ),
-    );
+    final acao = await dialogoSairDoTreino(context);
 
     switch (acao) {
-      case _AcaoSaidaVivo.finalizar:
+      case SaidaTreino.finalizar:
         if (context.mounted) await _finalizar(context, ref);
         return false; // o resumo assume daqui.
-      case _AcaoSaidaVivo.continuarDepois:
+      case SaidaTreino.continuarDepois:
         return true; // rascunho já salvo pelo autosave.
-      case _AcaoSaidaVivo.descartar:
+      case SaidaTreino.descartar:
         if (!context.mounted) return false;
-        final confirmar = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Descartar treino?'),
-            content: const Text('O que você fez neste treino será perdido.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Voltar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Descartar'),
-              ),
-            ],
-          ),
+        final confirmar = await confirmarPerigo(
+          context,
+          titulo: 'Descartar treino?',
+          texto: 'O que você fez neste treino será perdido.',
+          rotuloConfirmar: 'Descartar',
+          rotuloCancelar: 'Voltar',
         );
-        if (confirmar == true) {
+        if (confirmar) {
           ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
           ref.read(descansoControllerProvider.notifier).encerrar();
           return true;

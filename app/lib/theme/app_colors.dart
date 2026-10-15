@@ -34,6 +34,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.obsBody,
     required this.danger,
     required this.dangerFill,
+    required this.dangerOn,
     required this.iconMuted,
   });
 
@@ -63,6 +64,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color obsBody;
   final Color danger;
   final Color dangerFill;
+
+  /// Texto/ícone sobre o fundo [dangerFill] (botão de perigo cheio). Branco nos
+  /// dois temas, porque [dangerFill] é escuro em ambos (contraste ≥ 4,5:1).
+  final Color dangerOn;
   final Color iconMuted;
 
   static const AppColors claro = AppColors(
@@ -92,6 +97,7 @@ class AppColors extends ThemeExtension<AppColors> {
     obsBody: CoresClaro.obsBody,
     danger: CoresClaro.danger,
     dangerFill: CoresClaro.dangerFill,
+    dangerOn: CoresClaro.dangerOn,
     iconMuted: CoresClaro.iconMuted,
   );
 
@@ -122,6 +128,7 @@ class AppColors extends ThemeExtension<AppColors> {
     obsBody: CoresEscuro.obsBody,
     danger: CoresEscuro.danger,
     dangerFill: CoresEscuro.dangerFill,
+    dangerOn: CoresEscuro.dangerOn,
     iconMuted: CoresEscuro.iconMuted,
   );
 
@@ -162,6 +169,7 @@ class AppColors extends ThemeExtension<AppColors> {
       obsBody: Color.lerp(obsBody, other.obsBody, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       dangerFill: Color.lerp(dangerFill, other.dangerFill, t)!,
+      dangerOn: Color.lerp(dangerOn, other.dangerOn, t)!,
       iconMuted: Color.lerp(iconMuted, other.iconMuted, t)!,
     );
   }

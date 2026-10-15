@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogos_perigo.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -289,57 +290,26 @@ class _FormularioState extends ConsumerState<_Formulario> {
   Future<bool> _aoTentarSair() async {
     if (!_emAndamento || _encerrado) return true;
 
-    final acao = await showDialog<_AcaoSaida>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Treino em andamento'),
-        content: const Text(
-            'Você está no meio de um treino. O que quer fazer?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaida.descartar),
-            child: const Text('Descartar treino'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaida.continuarDepois),
-            child: const Text('Continuar depois'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoSaida.finalizar),
-            child: const Text('Finalizar agora'),
-          ),
-        ],
-      ),
-    );
+    final acao = await dialogoSairDoTreino(context);
 
     switch (acao) {
-      case _AcaoSaida.finalizar:
+      case SaidaTreino.finalizar:
+        if (!mounted) return false;
         await _finalizar();
         return false; // _finalizar navega/mostra diálogo; não deixa o pop seguir.
-      case _AcaoSaida.continuarDepois:
+      case SaidaTreino.continuarDepois:
         // Mantém o rascunho (já salvo) e sai.
         return true;
-      case _AcaoSaida.descartar:
+      case SaidaTreino.descartar:
         if (!mounted) return false;
-        final confirmar = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Descartar treino?'),
-            content: const Text(
-                'O que você preencheu neste treino será perdido.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Voltar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Descartar'),
-              ),
-            ],
-          ),
+        final confirmar = await confirmarPerigo(
+          context,
+          titulo: 'Descartar treino?',
+          texto: 'O que você preencheu neste treino será perdido.',
+          rotuloConfirmar: 'Descartar',
+          rotuloCancelar: 'Voltar',
         );
-        if (confirmar == true) {
+        if (confirmar) {
           _encerrarRascunho();
           return true;
         }
@@ -701,8 +671,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
 }
 
 enum _AcaoPosRegistro { inicio, progresso, verTreino }
-
-enum _AcaoSaida { finalizar, continuarDepois, descartar }
 
 class _CampoData extends StatelessWidget {
   const _CampoData({required this.data, required this.aoTocar});
