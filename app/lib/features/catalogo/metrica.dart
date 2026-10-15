@@ -34,4 +34,5 @@ abstract final class MetricaCodigos {
   static const zona = 'ZONA';
   static const repeticoes = 'REPETICOES';
   static const tempoSeg = 'TEMPO_SEG';
+  static const distanciaM = 'DISTANCIA_M';
 }

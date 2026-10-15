@@ -838,6 +838,51 @@ nada muda. Vale para qualquer métrica de volume (reps, tempo). Não muda o grá
 
 ---
 
+#### PBI-40..43 (TV-3 a TV-6) · Treino ao vivo, série por série (Release 2)
+
+**História:** Como atleta, quero conduzir o treino ao vivo — marcar série por
+série, ajustar carga/reps na hora, descansar com cronômetro e fechar com um
+resumo — para registrar enquanto treino, sem depender da memória depois.
+
+**Escopo:** só front (o único toque no back é o endpoint de leitura do
+histórico). Entregue atrás da flag `TREINO_AO_VIVO` (`core/flags.dart`), numa
+branch única `feat/treino-ao-vivo-r2`, porque TV-3/4/5/6 só fecham um treino
+quando estão todas prontas. Evolui o PBI-37 (rascunho local, autosave, duração
+automática, diálogos de sair/continuar), não reescreve.
+
+- **TV-3 (tela 14 + check por série):** `TreinoAoVivoController` (Notifier)
+  segura o estado vivo (exercícios em edição, início, check `feita` por série),
+  espelhado no rascunho a cada mudança (autosave). Tela 14 com cronômetro vivo
+  (tempo por `agora − início`, nunca tick a tick — sobrevive à aba em segundo
+  plano), contador N/M e card por exercício. Clock injetável (`core/relogio.dart`)
+  para o tempo ser testável.
+- **TV-4 (tela do exercício):** `ExercicioAoVivoScreen` série por série, com
+  navegação anterior/próximo e três abas — Séries (completar série, tag TV-1,
+  `StepperMetrica` com passo por métrica: CARGA ±2,5 / REPS ±1 / TEMPO ±5 / ZONA
+  ±1 (1–5) / DIST ±100), Histórico (3 últimas sessões, obs em laranja) e Evolução
+  (gráfico reutilizado da aba Progresso). Novo endpoint de leitura
+  `GET /exercicios/{id}/historico?limite=3`.
+- **TV-5 (descanso):** `DescansoController` + `BarraDescanso`. Dispara ao
+  completar série **só quando a ficha informa descanso**; descanso nulo não
+  dispara (decisão do PO). Tempo por `fim − agora`, botões −15s/+15s/Pular.
+- **TV-6 (resumo):** `ResumoTreinoScreen` com volume total (Σ carga × reps das
+  feitas), status por exercício (Completo / Incompleto N/M / Não realizado),
+  data e duração editáveis e observação. Salva só as séries feitas e encerra o
+  treino; falha de rede mantém o rascunho. "Voltar ao treino" não perde nada.
+- **Flag ligada:** "Iniciar treino agora" (Fichas) e "Continuar treino"
+  (Início) abrem a tela 14 quando `TREINO_AO_VIVO=true`; desligada, seguem no
+  registro atual (tela 3).
+
+**Telas:** 14 (treino ao vivo), tela do exercício, 16 (resumo). Spec:
+`.kiro/specs/treino-ao-vivo-r2/`. **Depende de:** PBI-15, PBI-18, PBI-37,
+PBI-38, PBI-20.
+
+**Status:** FEITO (front + endpoint de histórico), atrás da flag, aguardando
+merge. Branch `feat/treino-ao-vivo-r2`. `flutter analyze` 0; 115 widget verdes;
+31 unit backend verdes; integração do histórico no CI (Testcontainers).
+
+---
+
 ## 9. Épicos futuros (ainda não refinados)
 
 Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready ainda.

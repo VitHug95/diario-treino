@@ -13,6 +13,8 @@ import '../../features/inicio/inicio_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
 import '../../features/sessao/detalhe_sessao_screen.dart';
 import '../../features/sessao/registrar_sessao_screen.dart';
+import '../../features/sessao/resumo_treino_screen.dart';
+import '../../features/sessao/treino_ao_vivo_screen.dart';
 import 'shell_navegacao.dart';
 
 /// Nomes de rota centralizados, para navegação sem strings mágicas.
@@ -28,6 +30,15 @@ abstract final class Rotas {
   static const criarExercicio = '/exercicios/novo';
   static const registrarSessao = '/fichas/registrar';
   static const treinoLivre = '/fichas/treino-livre';
+
+  /// Treino ao vivo (TV-3, Release 2), empilhado sobre a aba Fichas.
+  static const treinoAoVivo = '/fichas/ao-vivo';
+
+  /// Tela de um exercício no treino ao vivo (TV-4), série por série.
+  static const exercicioAoVivo = '/fichas/ao-vivo/exercicio';
+
+  /// Resumo do treino ao vivo antes de salvar (TV-6).
+  static const resumoTreino = '/fichas/ao-vivo/resumo';
   static const detalheSessao = '/sessoes';
   static const perfil = '/perfil';
   static const primeiroAcesso = '/primeiro-acesso';
@@ -167,6 +178,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'treino-livre',
                     name: 'treinoLivre',
                     builder: (context, state) => const TreinoLivreScreen(),
+                  ),
+                  // Treino ao vivo (TV-3), empilhado sobre a aba Fichas.
+                  GoRoute(
+                    path: 'ao-vivo',
+                    name: 'treinoAoVivo',
+                    builder: (context, state) => const TreinoAoVivoScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'exercicio',
+                        name: 'exercicioAoVivo',
+                        builder: (context, state) => ExercicioAoVivoScreen(
+                          indice: (state.extra as int?) ?? 0,
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'resumo',
+                        name: 'resumoTreino',
+                        builder: (context, state) => const ResumoTreinoScreen(),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -39,6 +39,19 @@ class SessaoRepository {
     return RascunhoExercicioAvulso.doJson(resposta.data!);
   }
 
+  /// Histórico recente do exercício (TV-4): as [limite] últimas sessões do
+  /// atleta com esse exercício, mais recentes primeiro.
+  Future<HistoricoExercicio> obterHistorico(
+    String exercicioId, {
+    int limite = 3,
+  }) async {
+    final resposta = await _dio.get<Map<String, dynamic>>(
+      '/exercicios/$exercicioId/historico',
+      queryParameters: {'limite': limite},
+    );
+    return HistoricoExercicio.doJson(resposta.data!);
+  }
+
   /// Grava a sessão e devolve o id criado. Exercícios não realizados ou sem
   /// séries ficam de fora.
   Future<String> criarSessao({
@@ -233,6 +246,14 @@ final metricasPorCodigoProvider =
   final metricas = await ref.watch(catalogoRepositoryProvider).listarMetricas();
   return {for (final m in metricas) m.codigo: m};
 });
+
+/// Histórico recente de um exercício (TV-4), por exercicioId: as 3 últimas
+/// sessões para a aba "Histórico" da tela do exercício ao vivo.
+final historicoExercicioProvider =
+    FutureProvider.autoDispose.family<HistoricoExercicio, String>(
+  (ref, exercicioId) =>
+      ref.watch(sessaoRepositoryProvider).obterHistorico(exercicioId),
+);
 
 /// Detalhe de uma sessão registrada, por id (PBI-18).
 final sessaoDetalheProvider =

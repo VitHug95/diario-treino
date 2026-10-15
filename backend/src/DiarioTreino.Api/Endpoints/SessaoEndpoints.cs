@@ -51,6 +51,27 @@ public static class SessaoEndpoints
         .WithName("UltimaExecucaoExercicio").WithTags("Sessões")
         .WithSummary("Última execução do exercício para o treino livre");
 
+        // Histórico recente do exercício (TV-4): as N últimas sessões do atleta
+        // com aquele exercício, para a aba "Histórico" da tela do exercício.
+        grupo.MapGet("/exercicios/{id:guid}/historico", async (
+            Guid id,
+            int? limite,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoSessao sessoes,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            // Limite defensivo: padrão 3, teto 20.
+            var n = Math.Clamp(limite ?? 3, 1, 20);
+            var historico = await sessoes.ObterHistoricoExercicioAsync(perfil.Id, id, n, ct);
+            return Results.Ok(historico);
+        })
+        .WithName("HistoricoExercicio").WithTags("Sessões")
+        .WithSummary("Histórico recente do exercício (N últimas sessões)");
+
         // Grava a sessão com as séries feitas.
         grupo.MapPost("/sessoes", async (
             HttpContext http,

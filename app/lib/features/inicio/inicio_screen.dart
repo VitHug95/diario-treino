@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../core/tema/tema_controller.dart';
 import '../../theme/app_colors.dart';
@@ -11,6 +12,7 @@ import '../../theme/theme_tokens.dart';
 import '../auth/auth_service.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
+import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
 import '../sessao/treino_em_andamento.dart';
@@ -462,13 +464,13 @@ class _CartaoFicha extends StatelessWidget {
 
 /// Card "Continuar treino" (PBI-37): aparece quando há um treino em andamento
 /// salvo no aparelho. Toque reabre o registro de onde parou.
-class _ContinuarTreino extends StatelessWidget {
+class _ContinuarTreino extends ConsumerWidget {
   const _ContinuarTreino({required this.treino});
 
   final TreinoEmAndamento treino;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
     final feitos = treino.exercicios.where((e) => e.realizado).length;
     final total = treino.exercicios.length;
@@ -479,6 +481,13 @@ class _ContinuarTreino extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
         onTap: () {
+          // Flag TV-3: retoma na tela 14 ao vivo. O treino livre segue no
+          // fluxo antigo (ainda não tem versão ao vivo).
+          if (treinoAoVivoHabilitado &&
+              !treino.treinoLivre &&
+              treino.treinoId != null) {
+            if (retomarTreinoAoVivo(context, ref)) return;
+          }
           if (treino.treinoLivre || treino.treinoId == null) {
             context.push(Rotas.treinoLivre);
           } else {

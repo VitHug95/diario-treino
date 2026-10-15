@@ -118,6 +118,31 @@ public sealed class ServicoSessao
             exercicio.Id, exercicio.Nome, exercicio.Modalidade, null, [serieBranco]);
     }
 
+    /// <summary>
+    /// Histórico recente de um exercício (TV-4): as <paramref name="limite"/>
+    /// sessões mais recentes do atleta logado com esse exercício. O atleta é o
+    /// usuário logado; exercício indisponível para ele → 404.
+    /// </summary>
+    public async Task<HistoricoExercicio> ObterHistoricoExercicioAsync(
+        Guid usuarioLogadoId, Guid exercicioId, int limite, CancellationToken ct)
+    {
+        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, usuarioLogadoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+
+        var bruto = await _sessoes.ObterHistoricoExercicioAsync(
+            usuarioLogadoId, exercicioId, limite, ct);
+
+        var sessoes = new List<SessaoHistorico>();
+        foreach (var s in bruto)
+        {
+            var series = await MapearSeriesDetalheAsync(s.Series, ct);
+            sessoes.Add(new SessaoHistorico(s.SessaoId, s.Data, s.Observacao, series));
+        }
+
+        return new HistoricoExercicio(
+            exercicio.Id, exercicio.Nome, exercicio.Modalidade, sessoes);
+    }
+
     private async Task<RascunhoExercicio> MontarExercicioAsync(
         Guid atletaId, TreinoExercicio te, CancellationToken ct)
     {

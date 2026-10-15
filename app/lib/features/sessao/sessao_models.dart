@@ -321,3 +321,62 @@ class SessaoResumo {
         temObservacao: json['temObservacao'] as bool,
       );
 }
+
+/// Histórico recente de um exercício (GET /api/v1/exercicios/{id}/historico,
+/// TV-4): as N últimas sessões do atleta com esse exercício, para a aba
+/// "Histórico" da tela do exercício ao vivo. Espelha o HistoricoExercicio da API.
+class HistoricoExercicio {
+  const HistoricoExercicio({
+    required this.exercicioId,
+    required this.nome,
+    required this.modalidade,
+    required this.sessoes,
+  });
+
+  final String exercicioId;
+  final String nome;
+  final String modalidade;
+  final List<SessaoHistorico> sessoes;
+
+  bool get vazio => sessoes.isEmpty;
+
+  factory HistoricoExercicio.doJson(Map<String, dynamic> json) =>
+      HistoricoExercicio(
+        exercicioId: json['exercicioId'] as String,
+        nome: json['nome'] as String,
+        modalidade: json['modalidade'] as String,
+        sessoes: (json['sessoes'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map(SessaoHistorico.doJson)
+            .toList(),
+      );
+}
+
+/// Uma sessão no histórico do exercício: data, observação do dia e as séries
+/// feitas. As séries reusam o [SerieDetalhe] do detalhe da sessão.
+class SessaoHistorico {
+  const SessaoHistorico({
+    required this.sessaoId,
+    required this.data,
+    required this.observacao,
+    required this.series,
+  });
+
+  final String sessaoId;
+  final DateTime data;
+
+  /// Observação do dia; nula quando não houve.
+  final String? observacao;
+
+  final List<SerieDetalhe> series;
+
+  factory SessaoHistorico.doJson(Map<String, dynamic> json) => SessaoHistorico(
+        sessaoId: json['sessaoId'] as String,
+        data: DateTime.parse(json['data'] as String),
+        observacao: json['observacao'] as String?,
+        series: (json['series'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map(SerieDetalhe.doJson)
+            .toList(),
+      );
+}

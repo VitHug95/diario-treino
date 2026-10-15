@@ -1,16 +1,15 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/progresso/grafico_exercicio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
-import 'progresso_models.dart';
 import 'progresso_repository.dart';
 
 /// Tela 4 do protótipo (aba Progresso). Em cima, o gráfico de evolução por
@@ -180,7 +179,7 @@ class _GraficoEvolucao extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selecionado = ref.watch(exercicioSelecionadoProvider);
     if (selecionado == null) {
-      return const _CaixaGrafico(child: _MensagemGrafico(
+      return const CaixaGrafico(child: MensagemGrafico(
         icone: LucideIcons.lineChart,
         texto: 'Selecione um exercício para ver sua evolução.',
       ));
@@ -188,11 +187,11 @@ class _GraficoEvolucao extends ConsumerWidget {
 
     final progressoAsync = ref.watch(progressoDoExercicioProvider);
     return progressoAsync.when(
-      loading: () => const _CaixaGrafico(
+      loading: () => const CaixaGrafico(
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => _CaixaGrafico(
-        child: _MensagemGrafico(
+      error: (_, __) => CaixaGrafico(
+        child: MensagemGrafico(
           icone: LucideIcons.cloudOff,
           texto: 'Não foi possível carregar o gráfico.',
           aoTentar: () => ref.invalidate(progressoDoExercicioProvider),
@@ -200,19 +199,19 @@ class _GraficoEvolucao extends ConsumerWidget {
       ),
       data: (progresso) {
         if (progresso == null) {
-          return const _CaixaGrafico(child: _MensagemGrafico(
+          return const CaixaGrafico(child: MensagemGrafico(
             icone: LucideIcons.lineChart,
             texto: 'Selecione um exercício para ver sua evolução.',
           ));
         }
         if (!progresso.temGrafico || progresso.pontos.isEmpty) {
-          return const _CaixaGrafico(child: _MensagemGrafico(
+          return const CaixaGrafico(child: MensagemGrafico(
             icone: LucideIcons.calendarOff,
             texto: 'Sem dados no período para este exercício.',
           ));
         }
         // key por exercício+período: reinicia o ponto selecionado ao trocar.
-        return _GraficoComDados(
+        return GraficoExercicio(
           key: ValueKey('${progresso.exercicioId}-${progresso.pontos.length}'),
           progresso: progresso,
         );
@@ -222,445 +221,9 @@ class _GraficoEvolucao extends ConsumerWidget {
 }
 
 /// Caixa com borda que contém o gráfico ou as mensagens de estado, com altura
-/// fixa para a tela não "pular" entre estados.
-class _CaixaGrafico extends StatelessWidget {
-  const _CaixaGrafico({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Container(
-      height: 240,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: cores.lineDefault),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.paddingCard),
-      child: child,
-    );
-  }
-}
-
-class _MensagemGrafico extends StatelessWidget {
-  const _MensagemGrafico({
-    required this.icone,
-    required this.texto,
-    this.aoTentar,
-  });
-
-  final IconData icone;
-  final String texto;
-  final VoidCallback? aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, size: 40, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text(texto,
-              style: AppText.body.copyWith(color: cores.textSecondary),
-              textAlign: TextAlign.center),
-          if (aoTentar != null) ...[
-            const SizedBox(height: AppSpacing.x16),
-            FilledButton(
-                onPressed: aoTentar, child: const Text('Tentar de novo')),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Resumo + LineChart interativo (PBI-21). O título do eixo muda conforme a
-/// métrica (CARGA → "Carga (kg)", TEMPO → "Tempo (s)"). Pontos de sessões com
-/// observação têm cor própria; tocar num ponto seleciona-o e mostra a nota do
-/// dia abaixo, com link para o detalhe. Ao abrir, já vem selecionada a última
-/// sessão com observação (ou a mais recente, se nenhuma tiver).
-class _GraficoComDados extends StatefulWidget {
-  const _GraficoComDados({super.key, required this.progresso});
-  final ProgressoExercicio progresso;
-
-  @override
-  State<_GraficoComDados> createState() => _GraficoComDadosState();
-}
-
-class _GraficoComDadosState extends State<_GraficoComDados> {
-  late int _selecionado;
-
-  bool get _ehCarga => widget.progresso.metrica == 'CARGA';
-  String get _unidade => _ehCarga ? 'kg' : 's';
-  String get _tituloEixo => _ehCarga ? 'Carga (kg)' : 'Tempo (s)';
-  List<PontoProgresso> get _pontos => widget.progresso.pontos;
-
-  @override
-  void initState() {
-    super.initState();
-    _selecionado = _indiceInicial();
-  }
-
-  /// Última sessão com observação; se nenhuma tiver, o ponto mais recente.
-  int _indiceInicial() {
-    for (var i = _pontos.length - 1; i >= 0; i--) {
-      if (_pontos[i].temObservacao) return i;
-    }
-    return _pontos.length - 1;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    final temAlgumaObs = _pontos.any((p) => p.temObservacao);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _Resumo(
-            progresso: widget.progresso, unidade: _unidade, ehCarga: _ehCarga),
-        const SizedBox(height: AppSpacing.x12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(_tituloEixo,
-                style: AppText.caption.copyWith(color: cores.textSecondary)),
-            if (temAlgumaObs) _Legenda(cores: cores),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.x8),
-        SizedBox(
-          height: 220,
-          child: LineChart(_dadosGrafico(context)),
-        ),
-        const SizedBox(height: AppSpacing.x12),
-        _DetalhePonto(
-          ponto: _pontos[_selecionado],
-          unidade: _unidade,
-          ehCarga: _ehCarga,
-        ),
-      ],
-    );
-  }
-
-  LineChartData _dadosGrafico(BuildContext context) {
-    final cores = AppColors.of(context);
-    final pontos = _pontos;
-    final valores = pontos.map((p) => p.valor).toList();
-    final minY = valores.reduce((a, b) => a < b ? a : b);
-    final maxY = valores.reduce((a, b) => a > b ? a : b);
-    // Folga de 10% (mínimo 1) para a linha não encostar nas bordas.
-    final folga = ((maxY - minY) * 0.1).clamp(1.0, double.infinity);
-    final spots = <FlSpot>[
-      for (var i = 0; i < pontos.length; i++)
-        FlSpot(i.toDouble(), pontos[i].valor),
-    ];
-
-    return LineChartData(
-      minX: 0,
-      maxX: (pontos.length - 1).toDouble(),
-      minY: minY - folga,
-      maxY: maxY + folga,
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: false,
-        getDrawingHorizontalLine: (_) =>
-            FlLine(color: cores.lineDivider, strokeWidth: 1),
-      ),
-      borderData: FlBorderData(show: false),
-      titlesData: FlTitlesData(
-        topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 40,
-            getTitlesWidget: (valor, meta) {
-              if (valor == meta.min || valor == meta.max) {
-                return const SizedBox.shrink();
-              }
-              return SideTitleWidget(
-                meta: meta,
-                child: Text(_numeroCurto(valor),
-                    style: AppText.caption
-                        .copyWith(color: cores.textSecondary)),
-              );
-            },
-          ),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 28,
-            interval: _intervaloEixoX(pontos.length),
-            getTitlesWidget: (valor, meta) {
-              final i = valor.round();
-              if (i < 0 || i >= pontos.length) return const SizedBox.shrink();
-              return SideTitleWidget(
-                meta: meta,
-                child: Text(_dataCurta(pontos[i].data),
-                    style: AppText.caption
-                        .copyWith(color: cores.textSecondary)),
-              );
-            },
-          ),
-        ),
-      ),
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: false,
-          color: cores.chartLine,
-          barWidth: 3,
-          dotData: FlDotData(
-            show: true,
-            getDotPainter: (spot, _, __, indice) => _pintorPonto(
-              context,
-              indice: indice,
-              comObs: pontos[indice].temObservacao,
-              selecionado: indice == _selecionado,
-            ),
-          ),
-        ),
-      ],
-      // Pontos tocáveis: tocar seleciona o ponto (mostra o detalhe abaixo).
-      lineTouchData: LineTouchData(
-        touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (_) => cores.textStrong,
-          getTooltipItems: (touchedSpots) => [
-            for (final t in touchedSpots)
-              LineTooltipItem(
-                _textoTooltip(pontos[t.x.round()]),
-                AppText.caption.copyWith(
-                  color: Theme.of(context).colorScheme.surface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
-        touchCallback: (evento, resposta) {
-          if (!evento.isInterestedForInteractions) return;
-          final spot = resposta?.lineBarSpots?.firstOrNull;
-          if (spot == null) return;
-          final i = spot.x.round();
-          if (i >= 0 && i < pontos.length && i != _selecionado) {
-            setState(() => _selecionado = i);
-          }
-        },
-      ),
-    );
-  }
-
-  /// Ponto da linha: cor de observação (laranja) quando a sessão tem nota,
-  /// senão a cor da linha. O selecionado fica maior, para dar o alvo de toque.
-  FlDotCirclePainter _pintorPonto(
-    BuildContext context, {
-    required int indice,
-    required bool comObs,
-    required bool selecionado,
-  }) {
-    final cores = AppColors.of(context);
-    final cor = comObs ? cores.obs : cores.chartLine;
-    return FlDotCirclePainter(
-      radius: selecionado ? 7 : 4,
-      color: cor,
-      strokeWidth: selecionado ? 3 : 2,
-      strokeColor: Theme.of(context).colorScheme.surface,
-    );
-  }
-
-  /// Texto do balão: data + valor; na força, mostra também as reps daquela
-  /// carga (decisão do PO: "a maior carga, com quantas reps").
-  String _textoTooltip(PontoProgresso p) {
-    final valor = '${_numeroCurto(p.valor)} $_unidade';
-    final data = _dataCurta(p.data);
-    if (_ehCarga && p.repeticoes != null) {
-      final reps = p.repeticoes!.round();
-      return '$data\n$valor × $reps ${reps == 1 ? 'rep' : 'reps'}';
-    }
-    return '$data\n$valor';
-  }
-
-  static double? _intervaloEixoX(int n) {
-    if (n <= 1) return 1;
-    // No máximo ~5 rótulos no eixo para não embolar.
-    final passos = (n / 5).ceil();
-    return passos.toDouble();
-  }
-
-  /// "13/10".
-  static String _dataCurta(DateTime d) {
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    return '$dd/$mm';
-  }
-
-  /// Sem casa decimal quando é inteiro; senão, uma casa.
-  static String _numeroCurto(double v) =>
-      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
-}
-
-/// Legenda do ponto com observação (bolinha laranja + texto).
-class _Legenda extends StatelessWidget {
-  const _Legenda({required this.cores});
-  final AppColors cores;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Pontos em destaque têm observação',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: AppSpacing.x10,
-            height: AppSpacing.x10,
-            decoration: BoxDecoration(color: cores.obs, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: AppSpacing.x6),
-          Text('com observação',
-              style: AppText.caption.copyWith(color: cores.textSecondary)),
-        ],
-      ),
-    );
-  }
-}
-
-/// Cartão abaixo do gráfico com os dados do ponto selecionado: data, valor
-/// (e reps na força) e a observação do dia — ou "Sem observação neste dia". Tem
-/// link "Abrir sessão" que leva ao detalhe (PBI-18).
-class _DetalhePonto extends StatelessWidget {
-  const _DetalhePonto({
-    required this.ponto,
-    required this.unidade,
-    required this.ehCarga,
-  });
-
-  final PontoProgresso ponto;
-  final String unidade;
-  final bool ehCarga;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    final temObs = ponto.temObservacao;
-
-    final valorTxt = StringBuffer('${_numeroCurto(ponto.valor)} $unidade');
-    if (ehCarga && ponto.repeticoes != null) {
-      final reps = ponto.repeticoes!.round();
-      valorTxt.write(' × $reps ${reps == 1 ? 'rep' : 'reps'}');
-    }
-
-    return Semantics(
-      label: temObs
-          ? 'Sessão de ${_dataLonga(ponto.data)}, $valorTxt. '
-              'Observação: ${ponto.observacao}'
-          : 'Sessão de ${_dataLonga(ponto.data)}, $valorTxt. '
-              'Sem observação neste dia.',
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: temObs ? cores.obsTint : Theme.of(context).colorScheme.surface,
-          border: Border.all(color: temObs ? cores.obsLine : cores.lineDefault),
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        padding: const EdgeInsets.all(AppSpacing.paddingCard),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(_dataLonga(ponto.data),
-                      style: AppText.titleS.copyWith(
-                          color: temObs ? cores.obsTitle : cores.textStrong)),
-                ),
-                Text(valorTxt.toString(),
-                    style: AppText.label.copyWith(color: cores.textStrong)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x8),
-            Text(
-              temObs ? ponto.observacao! : 'Sem observação neste dia.',
-              style: AppText.body.copyWith(
-                  color: temObs ? cores.obsBody : cores.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.x8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => context.push(
-                  Rotas.detalheSessao,
-                  extra: DetalheSessaoArgs(sessaoId: ponto.sessaoId),
-                ),
-                icon: const Icon(LucideIcons.externalLink,
-                    size: AppSizes.iconeSm),
-                label: const Text('Abrir sessão'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// "ter, 13/10/2026".
-  static String _dataLonga(DateTime d) {
-    const dias = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
-    final dia = dias[d.weekday - 1];
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    return '$dia, $dd/$mm/${d.year}';
-  }
-
-  static String _numeroCurto(double v) =>
-      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
-}
-
-/// Resumo do período: nº de sessões, variação do valor e quantas tiveram
-/// observação.
-class _Resumo extends StatelessWidget {
-  const _Resumo({
-    required this.progresso,
-    required this.unidade,
-    required this.ehCarga,
-  });
-
-  final ProgressoExercicio progresso;
-  final String unidade;
-  final bool ehCarga;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    final r = progresso.resumo;
-    final itens = <String>[
-      '${r.sessoes} ${r.sessoes == 1 ? 'sessão' : 'sessões'}',
-      if (r.variacao != null) _textoVariacao(r.variacao!),
-      if (r.sessoesComObservacao > 0)
-        '${r.sessoesComObservacao} com obs.',
-    ];
-
-    return Semantics(
-      label: 'Resumo do período: ${itens.join(', ')}',
-      child: Text(itens.join(' · '),
-          style: AppText.caption.copyWith(color: cores.textStrong)),
-    );
-  }
-
-  String _textoVariacao(double v) {
-    final sinal = v > 0 ? '+' : '';
-    final n = v == v.roundToDouble()
-        ? v.round().toString()
-        : v.toStringAsFixed(1);
-    return '$sinal$n $unidade no período';
-  }
-}
+// O gráfico de evolução foi extraído para shared/progresso/grafico_exercicio.dart
+// (TV-4): CaixaGrafico, MensagemGrafico e GraficoExercicio, reusados aqui e na
+// aba Evolução da tela do exercício.
 
 class _SeletorPeriodo extends StatelessWidget {
   const _SeletorPeriodo({required this.selecionado, required this.aoSelecionar});
