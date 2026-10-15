@@ -163,7 +163,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Rotas.fichas,
                 name: 'fichas',
-                builder: (context, state) => const FichasScreen(),
+                // `?ficha=<id>` (PBI-50): abre a ficha selecionada vinda do
+                // cartão da Início, sem iniciar treino. Id inexistente cai na
+                // primeira ficha (tratado na FichasScreen).
+                builder: (context, state) => FichasScreen(
+                  fichaInicialId: state.uri.queryParameters['ficha'],
+                ),
                 routes: [
                   // Registro de sessão empilhado sobre a aba Fichas.
                   GoRoute(

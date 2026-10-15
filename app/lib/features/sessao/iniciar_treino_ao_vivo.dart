@@ -17,6 +17,11 @@ import 'treino_em_andamento.dart';
 /// andamento desta mesma ficha salvo no aparelho, retoma de onde parou; senão
 /// carrega o rascunho pré-preenchido (PBI-15) e começa do zero. Mostra um
 /// indicador enquanto carrega e navega para a tela 14.
+///
+/// IMPORTANTE (PBI-50): grava `inicio = agora` e persiste o rascunho local, ou
+/// seja, iniciar o treino de verdade. Só pode ser chamada a partir de uma ação
+/// EXPLÍCITA do atleta (botão "INICIAR TREINO"/"INICIAR TREINO AGORA"), nunca de
+/// um toque em cartão de ficha — tocar no cartão da Início apenas abre a ficha.
 Future<void> iniciarTreinoAoVivoDaFicha(
   BuildContext context,
   WidgetRef ref, {

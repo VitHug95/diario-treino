@@ -230,8 +230,19 @@ class _SemHistorico extends StatelessWidget {
   }
 }
 
-/// Abre o registro de uma ficha a partir da tela inicial. [data] opcional
-/// pré-seleciona o dia (faixa semanal).
+/// Abre a ficha na aba Fichas, selecionada, SEM iniciar treino (bug PBI-50).
+/// Vale com a flag ligada ou desligada: abrir uma ficha nunca grava rascunho
+/// nem liga o cronômetro. O início fica a cargo de botões explícitos.
+void _abrirFicha(BuildContext context, TreinoResumo ficha) {
+  // go (e não push) troca a aba da casca de navegação para Fichas; o query
+  // param `?ficha=<id>` seleciona a ficha certa (FichasScreen resolve o id).
+  context.go('${Rotas.fichas}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
+}
+
+/// Inicia o treino de uma ficha a partir da tela inicial, por AÇÃO EXPLÍCITA
+/// (botão "INICIAR TREINO" do cartão de sugestão, ou toque num dia da faixa
+/// semanal). Nunca é chamada por toque no cartão de ficha — isso é PBI-50.
+/// [data] opcional pré-seleciona o dia (faixa semanal).
 ///
 /// Com a flag TV-3 ligada e sem [data] (ou seja, "treinar agora"), abre o
 /// treino ao vivo (tela 14). Com um dia específico escolhido na faixa semanal
@@ -413,10 +424,16 @@ class _CartaoDestaque extends ConsumerWidget {
           Text('Próxima da sua sequência. Você pode registrar qualquer ficha.',
               style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x16),
-          FilledButton.icon(
-            onPressed: () => _registrar(context, ref, ficha),
-            icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
-            label: const Text('REGISTRAR TREINO'),
+          // Ação explícita de iniciar (PBI-50): rótulo que diz o que faz, com
+          // ícone de play. É o único ponto da Início que inicia o treino.
+          Semantics(
+            button: true,
+            label: 'Iniciar treino ${ficha.nome}',
+            child: FilledButton.icon(
+              onPressed: () => _registrar(context, ref, ficha),
+              icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
+              label: const Text('INICIAR TREINO'),
+            ),
           ),
         ],
       ),
@@ -424,7 +441,9 @@ class _CartaoDestaque extends ConsumerWidget {
   }
 }
 
-/// Ficha da lista: toque abre o registro direto. Mostra a data da última vez.
+/// Ficha da lista: toque ABRE a ficha na aba Fichas (não inicia treino — bug
+/// PBI-50). O treino só começa por ação explícita ("INICIAR TREINO" no cartão
+/// de sugestão, ou "INICIAR TREINO AGORA" na Fichas). Mostra a última vez.
 class _CartaoFicha extends ConsumerWidget {
   const _CartaoFicha({required this.ficha, required this.ultimaVez});
 
@@ -435,14 +454,20 @@ class _CartaoFicha extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
     final temDescricao = ficha.descricao != null && ficha.descricao!.isNotEmpty;
+    final rotuloUltima = ultimaVez == null
+        ? 'ainda não registrada'
+        : 'última vez em ${_dataCurta(ultimaVez!)}';
 
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
+    return Semantics(
+      button: true,
+      label: 'Abrir ficha ${ficha.nome}, $rotuloUltima',
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        onTap: () => _registrar(context, ref, ficha),
-        child: Container(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => _abrirFicha(context, ficha),
+          child: Container(
           decoration: BoxDecoration(
             border: Border.all(color: cores.lineDefault),
             borderRadius: BorderRadius.circular(AppRadius.card),
@@ -474,6 +499,7 @@ class _CartaoFicha extends ConsumerWidget {
               Icon(LucideIcons.chevronRight,
                   color: cores.iconMuted, size: AppSizes.iconeMd),
             ],
+          ),
           ),
         ),
       ),

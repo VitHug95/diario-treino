@@ -31,6 +31,7 @@ TreinoExercicioResumo _ex(String nome, int ordem) => TreinoExercicioResumo(
 Widget _tela({
   required Future<PlanoAtivo?> Function(Ref ref) plano,
   TreinoDetalhe Function(String treinoId)? detalhe,
+  String? fichaInicialId,
 }) =>
     ProviderScope(
       overrides: [
@@ -38,7 +39,10 @@ Widget _tela({
         if (detalhe != null)
           fichaDetalheProvider.overrideWith((ref, treinoId) async => detalhe(treinoId)),
       ],
-      child: MaterialApp(theme: AppTheme.claro, home: const FichasScreen()),
+      child: MaterialApp(
+        theme: AppTheme.claro,
+        home: FichasScreen(fichaInicialId: fichaInicialId),
+      ),
     );
 
 void main() {
@@ -79,6 +83,42 @@ void main() {
 
     expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'CRIAR FICHA'), findsOneWidget);
+  });
+
+  testWidgets('PBI-50: ?ficha=<id> abre com a ficha correspondente selecionada',
+      (tester) async {
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([
+        _ficha('A', 1, desc: 'Peito e tríceps'),
+        _ficha('B', 2, desc: 'Costas e bíceps'),
+        _ficha('C', 3, desc: 'Pernas'),
+      ]),
+      detalhe: (id) => _detalhe(id, [_ex('Exercício de $id', 1)]),
+      fichaInicialId: 'f2', // id da ficha B (ver _ficha: 'f$ordem')
+    ));
+    await tester.pumpAndSettle();
+
+    // O cabeçalho de detalhe mostra a ficha B (descrição distinta) e seus
+    // exercícios, não a primeira ficha.
+    expect(find.text('Costas e bíceps'), findsOneWidget);
+    expect(find.text('Exercício de f2'), findsOneWidget);
+  });
+
+  testWidgets('PBI-50: ?ficha com id inexistente cai na primeira ficha',
+      (tester) async {
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([
+        _ficha('A', 1, desc: 'Peito e tríceps'),
+        _ficha('B', 2, desc: 'Costas e bíceps'),
+      ]),
+      detalhe: (id) => _detalhe(id, [_ex('Exercício de $id', 1)]),
+      fichaInicialId: 'nao-existe',
+    ));
+    await tester.pumpAndSettle();
+
+    // Sem erro: fica na primeira ficha (A).
+    expect(find.text('Peito e tríceps'), findsOneWidget);
+    expect(find.text('Exercício de f1'), findsOneWidget);
   });
 
   testWidgets('Excluir ficha pede confirmação explicando o histórico (PBI-36)',

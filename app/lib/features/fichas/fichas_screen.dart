@@ -16,8 +16,14 @@ import 'plano_models.dart';
 
 /// Tela 5 do protótipo (FICHAS): abas por ficha, nome editável, nova ficha e
 /// arquivar. A lista de exercícios de cada ficha chega no PBI-13.
+///
+/// [fichaInicialId] (PBI-50): id da ficha a abrir selecionada. Vem do cartão da
+/// tela Início via `/fichas?ficha=<id>` — abrir a ficha nunca inicia o treino.
+/// Id inexistente ou nulo cai na primeira ficha.
 class FichasScreen extends ConsumerStatefulWidget {
-  const FichasScreen({super.key});
+  const FichasScreen({super.key, this.fichaInicialId});
+
+  final String? fichaInicialId;
 
   @override
   ConsumerState<FichasScreen> createState() => _FichasScreenState();
@@ -25,6 +31,21 @@ class FichasScreen extends ConsumerStatefulWidget {
 
 class _FichasScreenState extends ConsumerState<FichasScreen> {
   int _selecionada = 0;
+
+  /// Garante que a resolução do [fichaInicialId] para o índice aconteça uma vez
+  /// só, quando o plano terminar de carregar (e não a cada rebuild).
+  bool _fichaInicialResolvida = false;
+
+  /// Resolve o índice da ficha pedida pelo parâmetro de rota. Id inexistente
+  /// (ficha removida, link antigo) cai na primeira ficha, sem erro.
+  void _resolverFichaInicial(List<TreinoResumo> fichas) {
+    if (_fichaInicialResolvida) return;
+    _fichaInicialResolvida = true;
+    final id = widget.fichaInicialId;
+    if (id == null || fichas.isEmpty) return;
+    final i = fichas.indexWhere((f) => f.id == id);
+    if (i > 0) _selecionada = i;
+  }
 
   Future<void> _recarregar() async {
     ref.invalidate(planoAtivoProvider);
@@ -125,6 +146,7 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
           if (fichas.isEmpty) {
             return _EstadoVazio(aoCriar: () => _novaFicha(plano));
           }
+          _resolverFichaInicial(fichas);
           final indice = _selecionada.clamp(0, fichas.length - 1);
           return _ConteudoFichas(
             fichas: fichas,
