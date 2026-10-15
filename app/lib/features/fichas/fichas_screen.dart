@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogos_perigo.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -86,25 +87,14 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
   }
 
   Future<void> _excluir(TreinoResumo ficha) async {
-    final cores = AppColors.of(context);
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Excluir ficha?'),
-        content: Text(
-            'A ficha "${ficha.nome}" sai da lista. '
-            'Os treinos já registrados com esta ficha continuam no seu histórico.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: cores.danger),
-              child: const Text('Excluir ficha')),
-        ],
-      ),
+    final confirmar = await confirmarPerigo(
+      context,
+      titulo: 'Excluir ficha?',
+      texto: 'A ficha "${ficha.nome}" sai da lista. '
+          'Os treinos já registrados com esta ficha continuam no seu histórico.',
+      rotuloConfirmar: 'Excluir ficha',
     );
-    if (confirmar != true) return;
+    if (!confirmar) return;
 
     try {
       await ref.read(fichasRepositoryProvider).excluirFicha(ficha.id);
