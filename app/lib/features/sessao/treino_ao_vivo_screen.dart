@@ -12,6 +12,7 @@ import '../../theme/theme_tokens.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../progresso/progresso_repository.dart';
+import 'descanso_controller.dart';
 import 'sessao_edicao.dart';
 import 'sessao_models.dart';
 import 'sessao_repository.dart';
@@ -184,6 +185,7 @@ class TreinoAoVivoScreen extends ConsumerWidget {
         );
         if (confirmar == true) {
           ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
+          ref.read(descansoControllerProvider.notifier).encerrar();
           return true;
         }
         return false;
@@ -552,13 +554,19 @@ class _AbaSeriesState extends ConsumerState<_AbaSeries> {
   void _completar(int i) {
     final controller = ref.read(treinoAoVivoControllerProvider.notifier);
     controller.definirSerieFeita(_ex, _ex.series[i], true);
-    // Abre automaticamente a próxima não feita (TV-3). (TV-5: dispara descanso.)
+    // Dispara o descanso (TV-5) só quando a série tem tempo informado; ficha
+    // sem descanso deixa o campo vazio e nada começa (decisão do PO).
+    final segundos = int.tryParse(_ex.series[i].descansoTexto.trim());
+    ref.read(descansoControllerProvider.notifier).iniciar(segundos);
+    // Abre automaticamente a próxima não feita (TV-3).
     setState(() => _abertaManual = null);
   }
 
   void _reabrir(int i) {
     final controller = ref.read(treinoAoVivoControllerProvider.notifier);
     controller.definirSerieFeita(_ex, _ex.series[i], false);
+    // Desfez a conclusão: encerra o descanso que porventura estava rolando.
+    ref.read(descansoControllerProvider.notifier).encerrar();
     setState(() => _abertaManual = i);
   }
 
@@ -592,6 +600,10 @@ class _AbaSeriesState extends ConsumerState<_AbaSeries> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.margemTela),
       children: [
+        // Descanso entre séries (TV-5): só aparece quando há um ativo.
+        const BarraDescanso(),
+        if (ref.watch(descansoControllerProvider) != null)
+          const SizedBox(height: AppSpacing.entreCards),
         for (var i = 0; i < _ex.series.length; i++) ...[
           _CardSerie(
             indice: i,
