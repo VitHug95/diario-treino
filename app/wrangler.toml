@@ -1,0 +1,18 @@
+# Configuração do Cloudflare Workers (Static Assets) para o front web.
+#
+# O app é um Flutter web estático: o `flutter build web` gera `build/web`, e o
+# Cloudflare serve esses arquivos direto da edge (sem código de Worker). O deploy
+# é feito pelo GitHub Actions com `wrangler deploy` (ver .github/workflows/ci.yml).
+#
+# Trocamos o Netlify por aqui porque o plano Free do Netlify pausa os deploys de
+# produção quando acabam os créditos do mês — o site ficava congelado. O Workers
+# Static Assets não tem esse limite para servir o site.
+
+name = "diario-treino"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "build/web"
+# SPA: qualquer rota desconhecida cai no index.html, e o go_router resolve o
+# resto no cliente (equivale ao redirect "/* -> /index.html" do Netlify).
+not_found_handling = "single-page-application"

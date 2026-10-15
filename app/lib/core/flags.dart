@@ -8,7 +8,7 @@ library;
 /// Robot ainda percorre a tela antiga).
 ///
 /// O default é `true` de propósito: assim o fluxo novo não depende de nenhum
-/// `--dart-define` no Netlify nem no `flutter run` local.
+/// `--dart-define` no build de deploy nem no `flutter run` local.
 const bool treinoAoVivoHabilitado =
     bool.fromEnvironment('TREINO_AO_VIVO', defaultValue: true);
 
