@@ -406,7 +406,8 @@ Etapas de cada rodada. Musculação tem uma etapa; intervalado tem esforço e re
 | intensidade_metrica_id | smallint | não | FK `metrica` |
 | intensidade_alvo | numeric(9,2) | sim | Nulo = livre |
 | volume_metrica_id | smallint | não | FK `metrica` |
-| volume_alvo | numeric(9,2) | sim | |
+| volume_alvo | numeric(9,2) | sim | Mínimo da faixa quando há `volume_alvo_max` (TV-2) |
+| volume_alvo_max | numeric(9,2) | sim | Máximo da faixa de volume (TV-2). `CHECK (volume_alvo_max IS NULL OR volume_alvo_max >= volume_alvo)`. Nulo = sem faixa |
 
 Exemplo: 5 tiros = `rodadas = 5` com etapas (ESFORCO, zona 4, 90 s) e (RECUPERACAO, zona 2, 90 s). Supino 3 x 10 = `rodadas = 3` com uma etapa (ESFORCO, carga 30 kg, 10 repetições).
 
