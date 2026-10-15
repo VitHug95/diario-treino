@@ -1,9 +1,11 @@
 *** Settings ***
 Documentation    Keywords de alto nível do fluxo principal do Diário de Treino.
-...              O app é Flutter web com a árvore de semântica ligada (ADR-07),
-...              então os seletores miram texto/rótulo visível (aria-label), não
-...              o DOM interno do Flutter. Se algum seletor precisar de ajuste
-...              fino, é aqui — as suítes não conhecem seletor.
+...              O app é Flutter web com a árvore de semântica ligada (ADR-07).
+...              Botões são mirados por PAPEL (role=button[name=...]) e não por
+...              texto cru: o Flutter renderiza o rótulo duas vezes (um <span>
+...              visível e um <flt-semantics role=button>), e um seletor por
+...              texto bateria nos dois (strict mode). Campos usam o aria-label.
+...              Se algum seletor precisar de ajuste, é só aqui.
 Library          Browser
 Library          String
 
@@ -23,7 +25,7 @@ Abrir o app
     New Page    ${BASE_URL}
     Set Browser Timeout    ${TIMEOUT}
     # O Flutter web demora a montar a árvore de semântica; espera o botão entrar.
-    Wait For Elements State    text="ENTRAR"    visible    timeout=${TIMEOUT}
+    Wait For Elements State    role=button[name="ENTRAR"]    visible    timeout=${TIMEOUT}
 
 Gerar email de teste
     [Documentation]    Email único por execução, para cada rodada começar limpa.
@@ -34,22 +36,22 @@ Cadastrar e entrar
     [Documentation]    Cria uma conta nova pela tela de cadastro (passando pelo
     ...                Auth Emulator) e entra.
     [Arguments]    ${email}
-    Click    text="Criar conta"
-    Wait For Elements State    text="CRIAR CONTA"    visible
+    Click    role=button[name="Criar conta"]
+    Wait For Elements State    role=button[name="CRIAR CONTA"]    visible
     Fill Text    [aria-label="Seu nome"]    Atleta E2E
     Fill Text    [aria-label="E-mail"]    ${email}
     Fill Text    [aria-label="Senha"]    ${SENHA}
-    Click    text="CRIAR CONTA"
+    Click    role=button[name="CRIAR CONTA"]
     # Depois do cadastro, o usuário sem ficha/sessão cai no primeiro acesso.
     Wait For Elements State
-    ...    text="Registrar sem ficha"    visible    timeout=${TIMEOUT}
+    ...    role=button[name="Registrar sem ficha"]    visible    timeout=${TIMEOUT}
 
 Registrar um treino livre
     [Documentation]    Treino livre: adiciona um exercício do catálogo, marca
     ...                como feito, preenche uma série e finaliza.
-    Click    text="Registrar sem ficha"
+    Click    role=button[name="Registrar sem ficha"]
     Wait For Elements State    text="Treino livre"    visible
-    Click    text="Adicionar exercício"
+    Click    role=button[name="Adicionar exercício"]
     Wait For Elements State    [aria-label="Buscar por nome"]    visible
     Fill Text    [aria-label="Buscar por nome"]    Supino
     Wait For Elements State    text="Supino reto com barra"    visible    timeout=${TIMEOUT}
@@ -60,13 +62,13 @@ Registrar um treino livre
     Wait For Elements State    text="Realizado"    visible
     Fill Text    (//input[@aria-label="Carga"])[1]    30
     Fill Text    (//input[@aria-label="Repetições"])[1]    10
-    Click    text="FINALIZAR TREINO"
+    Click    role=button[name="FINALIZAR TREINO"]
     Wait For Elements State    text="Treino registrado"    visible    timeout=${TIMEOUT}
 
 Ver o progresso do exercício
     [Documentation]    Vai para a aba Progresso e confirma que o exercício
     ...                registrado aparece (seletor do gráfico).
-    Click    text="Ver progresso"
+    Click    role=button[name="Ver progresso"]
     Wait For Elements State    text="Progresso"    visible    timeout=${TIMEOUT}
     Wait For Elements State    text="Supino reto com barra"    visible    timeout=${TIMEOUT}
 
@@ -78,15 +80,15 @@ Excluir a conta de teste
 
 Limpar conta pelo perfil
     Go To    ${BASE_URL}
-    Wait For Elements State    text="Perfil"    visible    timeout=${TIMEOUT}
-    Click    text="Perfil"
-    Wait For Elements State    text="Excluir conta"    visible    timeout=${TIMEOUT}
-    Click    text="Excluir conta"
+    # O perfil é alcançado pelo ícone de usuário no cabeçalho da Início.
+    Wait For Elements State    role=button[name="Perfil"]    visible    timeout=${TIMEOUT}
+    Click    role=button[name="Perfil"]
+    Wait For Elements State    role=button[name="Excluir conta"]    visible    timeout=${TIMEOUT}
+    Click    role=button[name="Excluir conta"]
     Wait For Elements State    [aria-label="EXCLUIR"]    visible
     Fill Text    [aria-label="EXCLUIR"]    EXCLUIR
-    # O botão de confirmar do diálogo também se chama "Excluir conta": pega o
-    # último (o do diálogo, montado por cima).
-    Click    (//flt-semantics[contains(@aria-label,"Excluir conta")])[last()]
+    # O diálogo tem outro botão "Excluir conta"; pega o último (o do diálogo).
+    Click    role=button[name="Excluir conta"] >> nth=-1
 
 Fechar o app
     Close Browser
