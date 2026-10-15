@@ -13,6 +13,10 @@
 # Environment variables). Sem ela, cai no fallback da URL do Fly. Essa URL
 # precisa bater com Cors__OrigensPermitidas__0 no Fly (senão o navegador
 # bloqueia por CORS).
+#
+# A flag TREINO_AO_VIVO (épico pós-MVP, Release 2) é ligada no build por
+# --dart-define. Default aqui é "true" (ligada em produção). Para desligar sem
+# commit, defina a env var TREINO_AO_VIVO=false no painel do Netlify.
 
 [build]
   base = "app"
@@ -25,7 +29,9 @@
     export PATH="$HOME/flutter/bin:$PATH"
     flutter --version
     flutter pub get
-    flutter build web --release --dart-define=API_BASE_URL=${API_BASE_URL:-https://diario-treino-api.fly.dev/api/v1}
+    flutter build web --release \
+      --dart-define=API_BASE_URL=${API_BASE_URL:-https://diario-treino-api.fly.dev/api/v1} \
+      --dart-define=TREINO_AO_VIVO=${TREINO_AO_VIVO:-true}
   """
 
 [build.environment]
