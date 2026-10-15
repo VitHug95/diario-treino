@@ -50,6 +50,49 @@ public sealed class ServicoPlanejamentoTests
                 p.AutorId != p.AtletaId, treinos));
         }
 
+        public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(Planos.FirstOrDefault(p => p.Id == planoId));
+
+        public Guid? DefinidoEmUso;
+        public Task DefinirEmUsoAsync(Guid atletaId, Guid planoId, CancellationToken ct)
+        {
+            foreach (var p in Planos.Where(p => p.AtletaId == atletaId))
+            {
+                p.EmUso = p.Id == planoId;
+            }
+            DefinidoEmUso = planoId;
+            return Task.CompletedTask;
+        }
+
+        public Guid? DuplicadoDe;
+        public string? DuplicadoNome;
+        public Task<Guid> DuplicarPlanoAsync(Guid planoId, string novoNome, CancellationToken ct)
+        {
+            DuplicadoDe = planoId;
+            DuplicadoNome = novoNome;
+            var copiaId = Guid.NewGuid();
+            var orig = Planos.First(p => p.Id == planoId);
+            Planos.Add(new PlanoTreino
+            {
+                Id = copiaId,
+                AutorId = orig.AtletaId,
+                AtletaId = orig.AtletaId,
+                Nome = novoNome,
+                Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
+                Ativo = true,
+                EmUso = false,
+            });
+            return Task.FromResult(copiaId);
+        }
+
+        public Guid? ExcluidoId;
+        public Task ExcluirPlanoAsync(Guid planoId, CancellationToken ct)
+        {
+            ExcluidoId = planoId;
+            Planos.RemoveAll(p => p.Id == planoId);
+            return Task.CompletedTask;
+        }
+
         public void AdicionarPlano(PlanoTreino plano)
         {
             Planos.Add(plano);
@@ -174,7 +217,7 @@ public sealed class ServicoPlanejamentoTests
         var atleta = Guid.NewGuid();
 
         await Montar(repo).AdicionarFichaAsync(
-            atleta, new SalvarTreinoRequest("A", "Peito"), CancellationToken.None);
+            atleta, null, new SalvarTreinoRequest("A", "Peito"), CancellationToken.None);
 
         Assert.Single(repo.Planos);
         Assert.Equal(atleta, repo.Planos[0].AutorId);
@@ -194,7 +237,7 @@ public sealed class ServicoPlanejamentoTests
         };
 
         await Montar(repo).AdicionarFichaAsync(
-            atleta, new SalvarTreinoRequest("C", null), CancellationToken.None);
+            atleta, null, new SalvarTreinoRequest("C", null), CancellationToken.None);
 
         Assert.Equal((short)3, repo.Treinos.Single().Ordem);
     }

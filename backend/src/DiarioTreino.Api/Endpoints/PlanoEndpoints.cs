@@ -61,7 +61,9 @@ public static class PlanoEndpoints
         })
         .WithName("DetalhePlano").WithTags("Planos").WithSummary("Plano com as fichas");
 
-        // Cria o plano ativo (idempotente: devolve o existente se já houver).
+        // Cria um plano. Com corpo { nome } cria um plano nomeado (PBI-44);
+        // SEM corpo mantém o comportamento antigo (idempotente: devolve o plano
+        // em uso, criando um se não houver) — contrato usado pelo E2E.
         grupo.MapPost("/planos", async (
             HttpContext http,
             ServicoPerfil perfilServico,
@@ -71,12 +73,91 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
+            // Corpo opcional: lê { nome } de forma tolerante a corpo vazio.
+            var nome = await LerNomeOpcionalAsync(http, ct);
+            if (!string.IsNullOrWhiteSpace(nome))
+            {
+                var criado = await planejamento.CriarPlanoNomeadoAsync(perfil.Id, nome!, ct);
+                return Results.Created($"/api/v1/planos/{criado.Id}", criado);
+            }
+
             var plano = await planejamento.CriarPlanoAsync(perfil.Id, ct);
             return Results.Ok(plano);
         })
-        .WithName("CriarPlano").WithTags("Fichas").WithSummary("Garante um plano ativo");
+        .WithName("CriarPlano").WithTags("Planos").WithSummary("Cria um plano (com nome) ou garante o em uso");
 
-        // Adiciona uma ficha ao plano ativo (cria o plano se for a primeira).
+        // Renomeia o plano (PBI-44). Plano de outro usuário → 404; plano de
+        // autor diferente do atleta → 403 (somente leitura).
+        grupo.MapPut("/planos/{id:guid}", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<SalvarPlanoRequest> validator,
+            SalvarPlanoRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.RenomearPlanoAsync(perfil.Id, id, request.Nome, ct);
+            return Results.NoContent();
+        })
+        .WithName("RenomearPlano").WithTags("Planos").WithSummary("Renomeia o plano");
+
+        // Define o plano como o em uso do atleta (transação; nunca zero/dois).
+        grupo.MapPost("/planos/{id:guid}/em-uso", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.DefinirEmUsoAsync(perfil.Id, id, ct);
+            return Results.NoContent();
+        })
+        .WithName("DefinirPlanoEmUso").WithTags("Planos").WithSummary("Define o plano em uso");
+
+        // Duplica o plano: cópia de autoria do atleta, fora de uso, sem sessões.
+        grupo.MapPost("/planos/{id:guid}/duplicar", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var copiaId = await planejamento.DuplicarPlanoAsync(perfil.Id, id, ct);
+            return Results.Created($"/api/v1/planos/{copiaId}", new { id = copiaId });
+        })
+        .WithName("DuplicarPlano").WithTags("Planos").WithSummary("Duplica o plano");
+
+        // Exclui o plano (apaga se sem sessões, esconde se com; passa o uso).
+        grupo.MapDelete("/planos/{id:guid}", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.ExcluirPlanoAsync(perfil.Id, id, ct);
+            return Results.NoContent();
+        })
+        .WithName("ExcluirPlano").WithTags("Planos").WithSummary("Exclui o plano");
+
+        // Adiciona uma ficha AO PLANO do id da URL (PBI-44: antes ignorava o id
+        // e usava o plano em uso). Plano de autor diferente → 403.
         grupo.MapPost("/planos/{id:guid}/treinos", async (
             Guid id,
             HttpContext http,
@@ -92,10 +173,10 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var treinoId = await planejamento.AdicionarFichaAsync(perfil.Id, request, ct);
+            var treinoId = await planejamento.AdicionarFichaAsync(perfil.Id, id, request, ct);
             return Results.Created($"/api/v1/treinos/{treinoId}", new { id = treinoId });
         })
-        .WithName("AdicionarFicha").WithTags("Fichas").WithSummary("Adiciona uma ficha");
+        .WithName("AdicionarFicha").WithTags("Fichas").WithSummary("Adiciona uma ficha ao plano");
 
         // Cria uma ficha a partir dos exercícios de um treino livre (PBI-19,
         // "Salvar também como ficha"). Garante o plano, cria a ficha e adiciona
@@ -268,4 +349,27 @@ public static class PlanoEndpoints
     private static IResult TokenInvalido() => Results.Problem(
         title: "Token sem identificador de usuário",
         statusCode: StatusCodes.Status401Unauthorized);
+
+    /// <summary>
+    /// Lê { "nome": ... } do corpo do POST /planos de forma tolerante: corpo
+    /// vazio (o E2E chama sem corpo) devolve nulo, mantendo o comportamento
+    /// idempotente antigo. Não lança em JSON malformado — trata como sem nome.
+    /// </summary>
+    private static async Task<string?> LerNomeOpcionalAsync(HttpContext http, CancellationToken ct)
+    {
+        if (http.Request.ContentLength is null or 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            var corpo = await http.Request.ReadFromJsonAsync<SalvarPlanoRequest>(ct);
+            return corpo?.Nome;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
 }

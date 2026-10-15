@@ -25,6 +25,33 @@ public interface IRepositorioPlano
     /// autoria, ou nulo se não existe/está inativo (PBI-44).</summary>
     public Task<PlanoDetalhe?> ObterPlanoParaDetalheAsync(Guid planoId, CancellationToken ct);
 
+    /// <summary>Plano por id (entidade crua, sem fichas), ou nulo. Para
+    /// renomear/duplicar/excluir depois do controle de acesso (PBI-44).</summary>
+    public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct);
+
+    /// <summary>
+    /// Define o plano como o único em uso do atleta, numa transação só: zera o
+    /// em uso anterior e liga o novo, sem janela com zero ou dois em uso
+    /// (PBI-44, CA 3). Não faz nada se o plano já está em uso.
+    /// </summary>
+    public Task DefinirEmUsoAsync(Guid atletaId, Guid planoId, CancellationToken ct);
+
+    /// <summary>
+    /// Duplica o plano (PBI-44, CA 4): copia fichas, exercícios, alvos (etapas)
+    /// e tags de rodada, com autor = atleta, nome informado, fora de uso e sem
+    /// nenhuma sessão. Devolve o id da cópia.
+    /// </summary>
+    public Task<Guid> DuplicarPlanoAsync(Guid planoId, string novoNome, CancellationToken ct);
+
+    /// <summary>
+    /// Exclui o plano (PBI-44, CA 5, regra 10 do MER), numa transação: se
+    /// nenhuma ficha tem sessão, apaga de verdade (cascata); se alguma tem,
+    /// marca ativo=false e em_uso=false (histórico fica). Se o plano estava em
+    /// uso, o uso passa para o plano do atleta com a sessão mais recente; sem
+    /// outro, fica sem plano em uso.
+    /// </summary>
+    public Task ExcluirPlanoAsync(Guid planoId, CancellationToken ct);
+
     public void AdicionarPlano(PlanoTreino plano);
 
     public void AdicionarTreino(Treino treino);

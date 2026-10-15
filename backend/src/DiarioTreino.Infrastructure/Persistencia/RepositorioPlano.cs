@@ -107,6 +107,186 @@ public sealed class RepositorioPlano : IRepositorioPlano
             plano.Autor ?? string.Empty, plano.SomenteLeitura, treinos);
     }
 
+    public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct) =>
+        _db.PlanosTreino.FirstOrDefaultAsync(p => p.Id == planoId, ct);
+
+    public async Task DefinirEmUsoAsync(Guid atletaId, Guid planoId, CancellationToken ct)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        // Zera o em uso atual do atleta e liga o escolhido, na mesma transação:
+        // nunca há instante com zero nem com dois em uso. O índice único parcial
+        // (atleta_id) WHERE em_uso é respeitado porque o commit é atômico.
+        await _db.PlanosTreino
+            .Where(p => p.AtletaId == atletaId && p.EmUso && p.Id != planoId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.EmUso, false), ct);
+
+        await _db.PlanosTreino
+            .Where(p => p.Id == planoId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.EmUso, true), ct);
+
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task<Guid> DuplicarPlanoAsync(Guid planoId, string novoNome, CancellationToken ct)
+    {
+        var original = await _db.PlanosTreino
+            .FirstOrDefaultAsync(p => p.Id == planoId, ct)
+            ?? throw new InvalidOperationException("Plano não encontrado para duplicar.");
+
+        // Fichas ativas + exercícios + etapas + marcadores (o grafo prescrito;
+        // sessões ficam de fora de propósito — a cópia nasce sem histórico).
+        var fichas = await _db.Treinos
+            .Where(t => t.PlanoId == planoId && t.Ativo)
+            .OrderBy(t => t.Ordem)
+            .ToListAsync(ct);
+        var fichaIds = fichas.Select(f => f.Id).ToList();
+
+        var exercicios = await _db.TreinoExercicios
+            .Where(te => fichaIds.Contains(te.TreinoId))
+            .ToListAsync(ct);
+        var exIds = exercicios.Select(e => e.Id).ToList();
+
+        var etapas = await _db.EtapasPrescritas
+            .Where(e => exIds.Contains(e.TreinoExercicioId))
+            .ToListAsync(ct);
+        var marcadores = await _db.RodadaMarcadores
+            .Where(m => exIds.Contains(m.TreinoExercicioId))
+            .ToListAsync(ct);
+
+        var copia = new PlanoTreino
+        {
+            Id = Guid.NewGuid(),
+            AutorId = original.AtletaId, // cópia é sempre de autoria do atleta
+            AtletaId = original.AtletaId,
+            Nome = novoNome,
+            Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
+            Ativo = true,
+            EmUso = false, // nasce fora de uso
+        };
+        _db.PlanosTreino.Add(copia);
+
+        foreach (var ficha in fichas)
+        {
+            var novaFicha = new Treino
+            {
+                Id = Guid.NewGuid(),
+                PlanoId = copia.Id,
+                Nome = ficha.Nome,
+                Descricao = ficha.Descricao,
+                Ordem = ficha.Ordem,
+                Ativo = true,
+            };
+            _db.Treinos.Add(novaFicha);
+
+            foreach (var te in exercicios.Where(e => e.TreinoId == ficha.Id))
+            {
+                var novoTe = new TreinoExercicio
+                {
+                    Id = Guid.NewGuid(),
+                    TreinoId = novaFicha.Id,
+                    ExercicioId = te.ExercicioId,
+                    Ordem = te.Ordem,
+                    Rodadas = te.Rodadas,
+                    DescansoAlvoSeg = te.DescansoAlvoSeg,
+                    Observacao = te.Observacao,
+                };
+                _db.TreinoExercicios.Add(novoTe);
+
+                foreach (var etapa in etapas.Where(e => e.TreinoExercicioId == te.Id))
+                {
+                    _db.EtapasPrescritas.Add(new EtapaPrescrita
+                    {
+                        Id = Guid.NewGuid(),
+                        TreinoExercicioId = novoTe.Id,
+                        Ordem = etapa.Ordem,
+                        Tipo = etapa.Tipo,
+                        IntensidadeMetricaId = etapa.IntensidadeMetricaId,
+                        IntensidadeAlvo = etapa.IntensidadeAlvo,
+                        VolumeMetricaId = etapa.VolumeMetricaId,
+                        VolumeAlvo = etapa.VolumeAlvo,
+                        VolumeAlvoMax = etapa.VolumeAlvoMax,
+                    });
+                }
+
+                foreach (var m in marcadores.Where(x => x.TreinoExercicioId == te.Id))
+                {
+                    _db.RodadaMarcadores.Add(new RodadaMarcador
+                    {
+                        TreinoExercicioId = novoTe.Id,
+                        Rodada = m.Rodada,
+                        Marcador = m.Marcador,
+                    });
+                }
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return copia.Id;
+    }
+
+    public async Task ExcluirPlanoAsync(Guid planoId, CancellationToken ct)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var plano = await _db.PlanosTreino.FirstOrDefaultAsync(p => p.Id == planoId, ct);
+        if (plano is null)
+        {
+            await tx.CommitAsync(ct);
+            return;
+        }
+
+        // Alguma ficha do plano já foi usada numa sessão? (sessao.treino_id é
+        // Restrict: nesse caso não dá para apagar, só arquivar.)
+        var temSessoes = await _db.Sessoes.AnyAsync(
+            s => _db.Treinos.Any(t => t.Id == s.TreinoId && t.PlanoId == planoId), ct);
+
+        var eraEmUso = plano.EmUso;
+
+        if (temSessoes)
+        {
+            // Esconde: histórico e gráficos continuam. Sai de uso.
+            plano.Ativo = false;
+            plano.EmUso = false;
+            await _db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            // Sem sessões: apaga de verdade (treino → treino_exercicio → etapa →
+            // marcador caem por cascade sob o plano).
+            _db.PlanosTreino.Remove(plano);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        // Se o excluído estava em uso, o uso passa para o plano do atleta com a
+        // sessão mais recente; sem outro plano, fica sem plano em uso.
+        if (eraEmUso)
+        {
+            var candidato = await _db.PlanosTreino
+                .Where(p => p.AtletaId == plano.AtletaId && p.Ativo && p.Id != planoId)
+                .Select(p => new
+                {
+                    p.Id,
+                    UltimaSessao = _db.Sessoes
+                        .Where(s => _db.Treinos.Any(t => t.Id == s.TreinoId && t.PlanoId == p.Id))
+                        .Max(s => (DateOnly?)s.Data),
+                })
+                // Com sessão mais recente primeiro; empate/sem sessão vai por fim.
+                .OrderByDescending(x => x.UltimaSessao.HasValue)
+                .ThenByDescending(x => x.UltimaSessao)
+                .FirstOrDefaultAsync(ct);
+
+            if (candidato is not null)
+            {
+                await _db.PlanosTreino
+                    .Where(p => p.Id == candidato.Id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.EmUso, true), ct);
+            }
+        }
+
+        await tx.CommitAsync(ct);
+    }
+
     public void AdicionarPlano(PlanoTreino plano) => _db.PlanosTreino.Add(plano);
 
     public void AdicionarTreino(Treino treino) => _db.Treinos.Add(treino);
