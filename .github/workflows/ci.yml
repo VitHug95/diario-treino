@@ -69,9 +69,50 @@ jobs:
       - name: Build web
         run: flutter build web --release
 
+  # Publica o front (Flutter web) no Cloudflare (Workers Static Assets) SOMENTE
+  # depois do CI passar e apenas em merge na main. O build roda aqui (ambiente
+  # que já tem Flutter) e o `wrangler deploy` sobe o build/web para o Worker
+  # "diario-treino" (ver app/wrangler.toml). Trocou o Netlify, cujo plano Free
+  # pausava os deploys ao fim dos créditos do mês.
+  #
+  # Secrets necessários (Settings > Secrets and variables > Actions):
+  #   CLOUDFLARE_API_TOKEN   — token com permissão de editar Workers
+  #   CLOUDFLARE_ACCOUNT_ID  — id da conta Cloudflare
+  deploy-web:
+    name: Deploy Web (Cloudflare)
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      - name: Baixar dependências
+        run: flutter pub get
+        working-directory: app
+
+      - name: Build web (produção)
+        working-directory: app
+        run: >
+          flutter build web --release
+          --dart-define=API_BASE_URL=https://diario-treino-api.fly.dev/api/v1
+
+      - name: Publicar no Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: app
+          command: deploy
+
   # Publica a API no Fly SOMENTE depois do CI passar e apenas em merge na main.
-  # O front (web) é publicado automaticamente pelo Netlify ao mergear na main,
-  # então aqui cuidamos só da API. Requer o secret FLY_API_TOKEN no repositório.
+  # Requer o secret FLY_API_TOKEN no repositório.
   deploy-api:
     name: Deploy API (Fly.io)
     needs: [backend, frontend]
