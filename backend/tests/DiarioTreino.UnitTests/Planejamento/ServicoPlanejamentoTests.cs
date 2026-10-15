@@ -17,8 +17,38 @@ public sealed class ServicoPlanejamentoTests
         public short MaiorOrdem;
         public short MaiorOrdemExercicio;
 
-        public Task<PlanoTreino?> ObterPlanoAtivoAsync(Guid atletaId, CancellationToken ct)
+        public Task<PlanoTreino?> ObterPlanoEmUsoAsync(Guid atletaId, CancellationToken ct)
             => Task.FromResult(PlanoAtivo);
+
+        public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct)
+            => Task.FromResult(Planos.Count > 0);
+
+        public Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct)
+            => Task.FromResult(Planos
+                .Where(p => p.AtletaId == atletaId && p.Ativo)
+                .Select(p => new PlanoDaLista(
+                    p.Id, p.Nome, p.Inicio, p.EmUso, "Atleta",
+                    p.AutorId != p.AtletaId,
+                    Treinos.Count(t => t.PlanoId == p.Id && t.Ativo),
+                    0))
+                .ToList());
+
+        public Task<Guid?> ObterAtletaDoPlanoAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(Planos.FirstOrDefault(p => p.Id == planoId)?.AtletaId);
+
+        public Task<PlanoDetalhe?> ObterPlanoParaDetalheAsync(Guid planoId, CancellationToken ct)
+        {
+            var p = Planos.FirstOrDefault(x => x.Id == planoId);
+            if (p is null) return Task.FromResult<PlanoDetalhe?>(null);
+            var treinos = Treinos
+                .Where(t => t.PlanoId == planoId && t.Ativo)
+                .OrderBy(t => t.Ordem)
+                .Select(t => new TreinoResumo(t.Id, t.Nome, t.Descricao, t.Ordem))
+                .ToList();
+            return Task.FromResult<PlanoDetalhe?>(new PlanoDetalhe(
+                p.Id, p.Nome, p.Inicio, p.EmUso, "Atleta",
+                p.AutorId != p.AtletaId, treinos));
+        }
 
         public void AdicionarPlano(PlanoTreino plano)
         {

@@ -9,7 +9,8 @@ public sealed class PlanoTreinoConfiguration : IEntityTypeConfiguration<PlanoTre
 {
     public void Configure(EntityTypeBuilder<PlanoTreino> builder)
     {
-        builder.ToTable("plano_treino");
+        builder.ToTable("plano_treino", t => t.HasCheckConstraint(
+            "ck_plano_treino_em_uso_ativo", "NOT em_uso OR ativo"));
 
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasColumnName("id");
@@ -19,12 +20,15 @@ public sealed class PlanoTreinoConfiguration : IEntityTypeConfiguration<PlanoTre
         builder.Property(p => p.Inicio).HasColumnName("inicio").IsRequired();
         builder.Property(p => p.Fim).HasColumnName("fim");
         builder.Property(p => p.Ativo).HasColumnName("ativo").HasDefaultValue(true).IsRequired();
+        builder.Property(p => p.EmUso).HasColumnName("em_uso").HasDefaultValue(false).IsRequired();
 
-        // Um plano ativo por atleta (índice único parcial).
+        // No máximo um plano EM USO por atleta (índice único parcial). Substitui
+        // o antigo filtro por "ativo": agora "ativo" só marca o plano excluído
+        // com histórico, e "em uso" é o que a Início segue (PBI-44).
         builder.HasIndex(p => p.AtletaId)
             .IsUnique()
-            .HasFilter("ativo")
-            .HasDatabaseName("ux_plano_atleta_ativo");
+            .HasFilter("em_uso")
+            .HasDatabaseName("ux_plano_atleta_em_uso");
 
         builder.HasOne<Domain.Identidade.Usuario>()
             .WithMany()

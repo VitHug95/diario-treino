@@ -32,7 +32,7 @@ public sealed class ServicoPlanejamento
     /// <summary>Plano ativo do atleta como DTO, ou nulo se ainda não há plano.</summary>
     public async Task<PlanoAtivo?> ObterPlanoAtivoAsync(Guid atletaId, CancellationToken ct)
     {
-        var plano = await _repositorio.ObterPlanoAtivoAsync(atletaId, ct);
+        var plano = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct);
         if (plano is null)
         {
             return null;
@@ -45,6 +45,35 @@ public sealed class ServicoPlanejamento
     }
 
     /// <summary>
+    /// Lista os planos do atleta logado (PBI-44): em uso primeiro, depois pelo
+    /// início mais recente. Como recebe o próprio id resolvido no endpoint, não
+    /// precisa do controle de acesso (o atleta só vê os próprios planos).
+    /// </summary>
+    public Task<List<PlanoDaLista>> ListarPlanosAsync(Guid atletaId, CancellationToken ct) =>
+        _repositorio.ListarPlanosDoAtletaAsync(atletaId, ct);
+
+    /// <summary>
+    /// Detalhe de um plano com as fichas (PBI-44). Resolve o atleta dono e passa
+    /// pela regra do MAS 11.3: plano inexistente ou de outro usuário → 404.
+    /// </summary>
+    public async Task<PlanoDetalhe> ObterPlanoAsync(
+        Guid usuarioLogadoId,
+        Guid planoId,
+        CancellationToken ct)
+    {
+        var atletaId = await _repositorio.ObterAtletaDoPlanoAsync(planoId, ct);
+        if (atletaId is null)
+        {
+            throw new RecursoNaoEncontradoException();
+        }
+
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId.Value, ct);
+
+        return await _repositorio.ObterPlanoParaDetalheAsync(planoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+    }
+
+    /// <summary>
     /// Adiciona uma ficha ao plano ativo do atleta. Se ainda não existe plano,
     /// cria um (autor = atleta = usuário). A ordem da ficha é a próxima da fila.
     /// </summary>
@@ -53,9 +82,13 @@ public sealed class ServicoPlanejamento
         SalvarTreinoRequest request,
         CancellationToken ct)
     {
-        var plano = await _repositorio.ObterPlanoAtivoAsync(atletaId, ct);
+        var plano = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct);
         if (plano is null)
         {
+            // Sem plano em uso: cria "Meu plano". Nasce em uso só se for o
+            // primeiro plano do atleta; se já há planos (todos fora de uso), a
+            // ficha vai para um plano novo que não assume o uso sozinho.
+            var primeiro = !await _repositorio.AtletaTemAlgumPlanoAsync(atletaId, ct);
             plano = new PlanoTreino
             {
                 Id = Guid.NewGuid(),
@@ -64,6 +97,7 @@ public sealed class ServicoPlanejamento
                 Nome = "Meu plano",
                 Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
                 Ativo = true,
+                EmUso = primeiro,
                 Treinos = [],
             };
             _repositorio.AdicionarPlano(plano);
@@ -122,7 +156,10 @@ public sealed class ServicoPlanejamento
     /// </summary>
     public async Task<PlanoAtivo> CriarPlanoAsync(Guid atletaId, CancellationToken ct)
     {
-        var existente = await _repositorio.ObterPlanoAtivoAsync(atletaId, ct);
+        // Sem corpo: idempotente — devolve o plano em uso se já houver (contrato
+        // antigo preservado para o E2E, até o front migrar). O primeiro plano do
+        // atleta nasce em uso.
+        var existente = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct);
         if (existente is not null)
         {
             var treinos = existente.Treinos
@@ -131,6 +168,7 @@ public sealed class ServicoPlanejamento
             return new PlanoAtivo(existente.Id, existente.Nome, treinos);
         }
 
+        var primeiro = !await _repositorio.AtletaTemAlgumPlanoAsync(atletaId, ct);
         var plano = new PlanoTreino
         {
             Id = Guid.NewGuid(),
@@ -139,6 +177,7 @@ public sealed class ServicoPlanejamento
             Nome = "Meu plano",
             Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
             Ativo = true,
+            EmUso = primeiro,
             Treinos = [],
         };
         _repositorio.AdicionarPlano(plano);

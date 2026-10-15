@@ -5,8 +5,25 @@ namespace DiarioTreino.Application.Planejamento;
 /// <summary>Persistência de planos e fichas (PBI-12).</summary>
 public interface IRepositorioPlano
 {
-    /// <summary>Plano ativo do atleta com as fichas ativas (ordenadas), ou nulo.</summary>
-    public Task<PlanoTreino?> ObterPlanoAtivoAsync(Guid atletaId, CancellationToken ct);
+    /// <summary>Plano EM USO do atleta (o que a Início segue) com as fichas
+    /// ativas (ordenadas), ou nulo se nenhum plano está em uso (PBI-44).</summary>
+    public Task<PlanoTreino?> ObterPlanoEmUsoAsync(Guid atletaId, CancellationToken ct);
+
+    /// <summary>Indica se o atleta já tem ao menos um plano (de qualquer estado).
+    /// O primeiro plano do atleta nasce em uso (PBI-44).</summary>
+    public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct);
+
+    /// <summary>Planos ativos do atleta para a lista (PBI-44): em uso primeiro,
+    /// depois pelo início mais recente. Com autoria e contagens.</summary>
+    public Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct);
+
+    /// <summary>Atleta dono do plano (para o controle de acesso), ou nulo se o
+    /// plano não existe/está inativo.</summary>
+    public Task<Guid?> ObterAtletaDoPlanoAsync(Guid planoId, CancellationToken ct);
+
+    /// <summary>Detalhe de um plano ativo com as fichas ativas (ordenadas) e a
+    /// autoria, ou nulo se não existe/está inativo (PBI-44).</summary>
+    public Task<PlanoDetalhe?> ObterPlanoParaDetalheAsync(Guid planoId, CancellationToken ct);
 
     public void AdicionarPlano(PlanoTreino plano);
 

@@ -28,7 +28,38 @@ public static class PlanoEndpoints
             var plano = await planejamento.ObterPlanoAtivoAsync(perfil.Id, ct);
             return plano is null ? Results.NoContent() : Results.Ok(plano);
         })
-        .WithName("PlanoAtivo").WithTags("Fichas").WithSummary("Plano ativo com as fichas");
+        .WithName("PlanoAtivo").WithTags("Fichas").WithSummary("Plano em uso com as fichas");
+
+        // Lista os planos do atleta logado (PBI-44): em uso primeiro.
+        grupo.MapGet("/planos", async (
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var planos = await planejamento.ListarPlanosAsync(perfil.Id, ct);
+            return Results.Ok(planos);
+        })
+        .WithName("ListarPlanos").WithTags("Planos").WithSummary("Planos do atleta");
+
+        // Detalhe de um plano com as fichas (PBI-44). Plano de outro usuário → 404.
+        grupo.MapGet("/planos/{id:guid}", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var plano = await planejamento.ObterPlanoAsync(perfil.Id, id, ct);
+            return Results.Ok(plano);
+        })
+        .WithName("DetalhePlano").WithTags("Planos").WithSummary("Plano com as fichas");
 
         // Cria o plano ativo (idempotente: devolve o existente se já houver).
         grupo.MapPost("/planos", async (
