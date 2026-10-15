@@ -1,22 +1,464 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/relogio.dart';
+import '../../core/rotas/app_router.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
+import '../../theme/theme_tokens.dart';
+import '../catalogo/metrica.dart';
+import '../fichas/fichas_repository.dart';
+import 'descanso_controller.dart';
+import 'sessao_edicao.dart';
+import 'sessao_repository.dart';
 import 'treino_ao_vivo_controller.dart';
+import 'widgets_ao_vivo.dart';
 
-/// Tela 16 do protótipo: resumo do treino antes de salvar (TV-6). Conteúdo
-/// preenchido na Fatia 8. Por ora, observa o controller para a rota existir.
-class ResumoTreinoScreen extends ConsumerWidget {
+/// Tela 16 do protótipo: resumo do treino ao vivo antes de salvar (TV-6).
+///
+/// Mostra o que foi feito (volume total, status por exercício), com a data e a
+/// duração editáveis e a observação do dia. "Salvar treino" grava a sessão com
+/// SÓ as séries marcadas como feitas e encerra o treino ao vivo; uma falha de
+/// rede mantém o rascunho para o atleta tentar de novo. "Voltar ao treino"
+/// retorna à tela 14 sem perder nada.
+class ResumoTreinoScreen extends ConsumerStatefulWidget {
   const ResumoTreinoScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResumoTreinoScreen> createState() => _ResumoTreinoScreenState();
+}
+
+class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
+  late DateTime _data;
+  final _duracao = TextEditingController();
+  final _observacao = TextEditingController();
+  bool _salvando = false;
+  bool _iniciado = false;
+
+  @override
+  void dispose() {
+    _duracao.dispose();
+    _observacao.dispose();
+    super.dispose();
+  }
+
+  /// Preenche data e duração a partir do estado vivo na primeira montagem.
+  void _preencherUmaVez(TreinoAoVivoEstado estado) {
+    if (_iniciado) return;
+    _iniciado = true;
+    _data = estado.data;
+    final min = ref.read(relogioProvider).agora().difference(estado.inicio).inMinutes;
+    if (min > 0) _duracao.text = min.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final estado = ref.watch(treinoAoVivoControllerProvider);
+    if (estado == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Resumo do treino')),
+        body: const Center(child: Text('Nenhum treino em andamento.')),
+      );
+    }
+    _preencherUmaVez(estado);
+
+    final cores = AppColors.of(context);
+    final volume = _volumeTotal(estado.exercicios);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Resumo do treino')),
-      body: Center(
-        child: Text(estado == null
-            ? 'Nenhum treino em andamento.'
-            : '${estado.seriesFeitas}/${estado.totalSeries} séries feitas'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.margemTela),
+                children: [
+                  Text(estado.treinoNome, style: AppText.displayS),
+                  const SizedBox(height: AppSpacing.x4),
+                  Text(
+                    '${estado.seriesFeitas} de ${estado.totalSeries} séries · '
+                    '${estado.exerciciosConcluidos} de ${estado.exercicios.length} '
+                    'exercícios concluídos',
+                    style: AppText.body.copyWith(color: cores.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.x16),
+                  if (volume > 0) _CardVolume(volume: volume, cores: cores),
+                  const SizedBox(height: AppSpacing.x16),
+                  _CampoData(data: _data, aoTocar: _escolherData),
+                  const SizedBox(height: AppSpacing.x12),
+                  _CampoDuracao(controlador: _duracao),
+                  const SizedBox(height: AppSpacing.x24),
+                  Text('EXERCÍCIOS',
+                      style: AppText.overline
+                          .copyWith(color: cores.textSecondary)),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final ex in estado.exercicios)
+                    _LinhaResumoExercicio(exercicio: ex),
+                  const SizedBox(height: AppSpacing.x16),
+                  TextField(
+                    controller: _observacao,
+                    maxLines: 4,
+                    minLines: 2,
+                    style: AppText.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Observação do dia (opcional)',
+                      hintText: 'Ex.: dormi mal, ombro incomodou no supino',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _BarraSalvar(
+              salvando: _salvando,
+              aoVoltar: _salvando ? null : () => context.pop(),
+              aoSalvar: _salvando ? null : _salvar,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _escolherData() async {
+    final hoje = DateTime.now();
+    final escolhida = await showDatePicker(
+      context: context,
+      initialDate: _data,
+      firstDate: DateTime(hoje.year - 2),
+      lastDate: DateTime(hoje.year, hoje.month, hoje.day)
+          .add(const Duration(days: 1)),
+      helpText: 'Dia em que você treinou',
+    );
+    if (escolhida != null) setState(() => _data = escolhida);
+  }
+
+  Future<void> _salvar() async {
+    final estado = ref.read(treinoAoVivoControllerProvider);
+    if (estado == null) return;
+
+    // Monta a lista a gravar com SÓ as séries feitas; exercício sem série feita
+    // não é realizado (não vira série no POST, igual à regra do repositório).
+    final paraSalvar = estado.exercicios.map(_somenteFeitas).toList();
+    if (!paraSalvar.any((e) => e.temSerieFeita)) {
+      _erro('Marque ao menos uma série como feita para salvar o treino.');
+      return;
+    }
+
+    setState(() => _salvando = true);
+    try {
+      final repo = ref.read(sessaoRepositoryProvider);
+      final duracao = int.tryParse(_duracao.text.trim());
+      final obs =
+          _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
+
+      final sessaoId = await repo.criarSessao(
+        treinoId: estado.treinoId,
+        data: _data,
+        duracaoMin: duracao,
+        observacao: obs,
+        exercicios: paraSalvar,
+      );
+
+      // Só encerra o treino ao vivo (apaga rascunho + descanso) DEPOIS de a
+      // sessão ser salva: se o POST falha, o rascunho fica para tentar de novo.
+      ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
+      ref.read(descansoControllerProvider.notifier).encerrar();
+      _invalidarInicio();
+
+      if (mounted) await _confirmar(sessaoId);
+    } on SessaoException catch (e) {
+      _erro(e.mensagem);
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  Future<void> _confirmar(String sessaoId) async {
+    final acao = await showDialog<_AcaoPosRegistro>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Treino registrado'),
+        content:
+            const Text('Seu treino foi salvo. O que você quer fazer agora?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.inicio),
+            child: const Text('Ir para o Início'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.verTreino),
+            child: const Text('Ver o treino'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.progresso),
+            child: const Text('Ver progresso'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (acao) {
+      case _AcaoPosRegistro.verTreino:
+        context.go(Rotas.inicio);
+        context.push(Rotas.detalheSessao,
+            extra: DetalheSessaoArgs(sessaoId: sessaoId));
+      case _AcaoPosRegistro.progresso:
+        context.go(Rotas.progresso);
+      case _AcaoPosRegistro.inicio:
+      case null:
+        context.go(Rotas.inicio);
+    }
+  }
+
+  void _invalidarInicio() {
+    ref.invalidate(sessoesRecentesProvider);
+    ref.invalidate(planoAtivoProvider);
+  }
+
+  void _erro(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Volume total do treino: soma de carga × reps das séries feitas que têm
+  /// carga (CARGA_KG) e repetições. Séries de tempo/zona não entram no volume.
+  static double _volumeTotal(List<ExercicioEdicao> exercicios) {
+    var total = 0.0;
+    for (final e in exercicios) {
+      for (final s in e.series) {
+        if (!s.feita) continue;
+        if (s.intensidadeMetricaCodigo != MetricaCodigos.cargaKg) continue;
+        if (s.volumeMetricaCodigo != MetricaCodigos.repeticoes) continue;
+        final carga = _num(s.intensidadeTexto);
+        final reps = _num(s.volumeTexto);
+        if (carga != null && reps != null) total += carga * reps;
+      }
+    }
+    return total;
+  }
+
+  static double? _num(String t) {
+    final limpo = t.trim().replaceAll(',', '.');
+    if (limpo.isEmpty) return null;
+    return double.tryParse(limpo);
+  }
+
+  /// Cópia do exercício contendo só as séries feitas, com `realizado` conforme.
+  static ExercicioEdicao _somenteFeitas(ExercicioEdicao e) {
+    final feitas = e.series.where((s) => s.feita).toList();
+    return ExercicioEdicao(
+      treinoExercicioId: e.treinoExercicioId,
+      exercicioId: e.exercicioId,
+      nome: e.nome,
+      grupoMuscular: e.grupoMuscular,
+      modalidade: e.modalidade,
+      origemPreenchimento: e.origemPreenchimento,
+      series: feitas,
+      realizado: feitas.isNotEmpty,
+      foraDaFicha: e.foraDaFicha,
+    );
+  }
+}
+
+enum _AcaoPosRegistro { inicio, progresso, verTreino }
+
+/// Cartão de destaque com o volume total do treino.
+class _CardVolume extends StatelessWidget {
+  const _CardVolume({required this.volume, required this.cores});
+
+  final double volume;
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = volume == volume.roundToDouble()
+        ? volume.toInt().toString()
+        : volume.toStringAsFixed(1);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cores.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.destaque),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.paddingCard),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('VOLUME TOTAL',
+              style: AppText.overline.copyWith(color: cores.primaryOnTint)),
+          const SizedBox(height: AppSpacing.x4),
+          Semantics(
+            label: 'Volume total: $txt quilos levantados',
+            child: Text('$txt kg',
+                style: AppText.displayM.copyWith(color: cores.primaryOnTint)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Linha de um exercício no resumo: nome + status (Completo / Incompleto N/M /
+/// Não realizado), com uma barra de progresso por série.
+class _LinhaResumoExercicio extends StatelessWidget {
+  const _LinhaResumoExercicio({required this.exercicio});
+
+  final ExercicioEdicao exercicio;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final total = exercicio.series.length;
+    final feitas = exercicio.series.where((s) => s.feita).length;
+    final (status, cor) = _status(total, feitas, cores, context);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.entreItens),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: cores.lineDefault),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
+      child: Semantics(
+        label: '${exercicio.nome}: $status',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(exercicio.nome,
+                      style: AppText.titleS, overflow: TextOverflow.ellipsis),
+                ),
+                Text(status, style: AppText.label.copyWith(color: cor)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            BarraSeries(total: total, feitas: feitas),
+          ],
+        ),
+      ),
+    );
+  }
+
+  (String, Color) _status(
+      int total, int feitas, AppColors cores, BuildContext context) {
+    if (total == 0 || feitas == 0) {
+      return ('Não realizado', cores.textSecondary);
+    }
+    if (feitas == total) {
+      return ('Completo', Theme.of(context).colorScheme.primary);
+    }
+    return ('Incompleto $feitas/$total', cores.obs);
+  }
+}
+
+class _CampoData extends StatelessWidget {
+  const _CampoData({required this.data, required this.aoTocar});
+
+  final DateTime data;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final texto = '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/${data.year}';
+    return InkWell(
+      onTap: aoTocar,
+      borderRadius: BorderRadius.circular(AppRadius.campoForm),
+      child: InputDecorator(
+        decoration: const InputDecoration(labelText: 'Dia em que treinou'),
+        child: Row(
+          children: [
+            Icon(LucideIcons.calendar,
+                size: AppSizes.iconeSm, color: cores.iconMuted),
+            const SizedBox(width: AppSpacing.x8),
+            Text(texto, style: AppText.inputValue),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CampoDuracao extends StatelessWidget {
+  const _CampoDuracao({required this.controlador});
+  final TextEditingController controlador;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controlador,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      style: AppText.inputValue,
+      decoration: const InputDecoration(
+        labelText: 'Duração (opcional)',
+        suffixText: 'min',
+      ),
+    );
+  }
+}
+
+/// Barra inferior com "Voltar ao treino" e "Salvar treino".
+class _BarraSalvar extends StatelessWidget {
+  const _BarraSalvar({
+    required this.salvando,
+    required this.aoVoltar,
+    required this.aoSalvar,
+  });
+
+  final bool salvando;
+  final VoidCallback? aoVoltar;
+  final VoidCallback? aoSalvar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.margemTela),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: cores.lineDivider)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: AppSizes.botaoPrincipal,
+              child: OutlinedButton(
+                onPressed: aoVoltar,
+                child: const Text('Voltar ao treino'),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: AppSizes.botaoPrincipal,
+              child: FilledButton(
+                onPressed: aoSalvar,
+                child: salvando
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('SALVAR TREINO'),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
