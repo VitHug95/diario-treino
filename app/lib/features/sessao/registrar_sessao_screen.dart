@@ -617,12 +617,11 @@ class _FormularioState extends ConsumerState<_Formulario> {
       canPop: !_emAndamento || _encerrado,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        final navigator = Navigator.of(context);
         final podeSair = await _aoTentarSair();
-        if (podeSair && mounted) {
-          _encerrado = true; // evita re-perguntar no pop programático
-          navigator.maybePop();
-        }
+        if (!podeSair || !mounted) return;
+        // Libera o PopScope (canPop passa a true) e sai de fato pelo go_router.
+        setState(() => _encerrado = true);
+        if (context.mounted && context.canPop()) context.pop();
       },
       child: Column(
       children: [
