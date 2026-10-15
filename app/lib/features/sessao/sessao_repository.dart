@@ -157,6 +157,7 @@ class SessaoRepository {
         'volumeMetricaId': s.volumeMetricaId,
         'volume': volume,
         'descansoSeg': int.tryParse(s.descansoTexto.trim()),
+        'marcador': s.marcador,
       });
     }
     return lista;

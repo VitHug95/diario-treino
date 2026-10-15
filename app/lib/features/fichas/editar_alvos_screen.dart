@@ -6,6 +6,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../../shared/tags/seletor_tag_serie.dart';
+import '../../shared/tags/tag_serie.dart';
 import '../catalogo/catalogo_repository.dart';
 import '../catalogo/metrica.dart';
 import 'fichas_repository.dart';
@@ -37,6 +39,9 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
   late int _series;
   int? _intensidadeId;
   int? _volumeId;
+
+  /// Tag de cada série prescrita (TV-1), por rodada (1-based). Só guarda ≠ VALIDA.
+  final Map<int, String> _marcadores = {};
   late final TextEditingController _intensidadeAlvo;
   late final TextEditingController _volumeAlvo;
   late final TextEditingController _descanso;
@@ -50,6 +55,9 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
     final te = widget.exercicio;
     final alvo = te.alvo;
     _series = te.rodadas.clamp(_minSeries, _maxSeries);
+    for (final m in te.marcadores) {
+      if (m.marcador != TagsSerie.valida) _marcadores[m.rodada] = m.marcador;
+    }
     _intensidadeId = alvo?.intensidadeMetricaId;
     _volumeId = alvo?.volumeMetricaId;
     _intensidadeAlvo = TextEditingController(text: _formatar(alvo?.intensidadeAlvo));
@@ -99,7 +107,11 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
       };
 
   void _ajustarSeries(int delta) {
-    setState(() => _series = (_series + delta).clamp(_minSeries, _maxSeries));
+    setState(() {
+      _series = (_series + delta).clamp(_minSeries, _maxSeries);
+      // Reduzir séries descarta as tags das rodadas que deixaram de existir.
+      _marcadores.removeWhere((rodada, _) => rodada > _series);
+    });
   }
 
   Future<void> _salvar() async {
@@ -119,6 +131,10 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
             volumeAlvo: _parse(_volumeAlvo.text),
             descansoSeg: int.tryParse(_descanso.text.trim()),
             instrucao: _instrucao.text.trim().isEmpty ? null : _instrucao.text.trim(),
+            marcadores: [
+              for (final e in _marcadores.entries)
+                MarcadorRodada(rodada: e.key, marcador: e.value),
+            ],
           );
       if (mounted) Navigator.pop(context, ResultadoAlvos.salvo);
     } on FichasException catch (e) {
@@ -195,6 +211,18 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
                 podeMais: _series < _maxSeries,
                 aoMenos: () => _ajustarSeries(-1),
                 aoMais: () => _ajustarSeries(1),
+              ),
+              const SizedBox(height: AppSpacing.x16),
+              _TagsPorSerie(
+                series: _series,
+                marcadorDaRodada: (r) => _marcadores[r] ?? TagsSerie.valida,
+                aoTrocar: (rodada, marcador) => setState(() {
+                  if (marcador == TagsSerie.valida) {
+                    _marcadores.remove(rodada);
+                  } else {
+                    _marcadores[rodada] = marcador;
+                  }
+                }),
               ),
               const SizedBox(height: AppSpacing.x20),
               _SeletorMetrica(
@@ -391,6 +419,54 @@ class _BotaoPasso extends StatelessWidget {
           child: Icon(icone, size: AppSizes.iconeSm),
         ),
       ),
+    );
+  }
+}
+
+/// Lista de chips de tag, um por série prescrita (TV-1). Cada chip abre o
+/// seletor; a atual aparece como "Válida" (tom secundário) ou com a cor da tag.
+class _TagsPorSerie extends StatelessWidget {
+  const _TagsPorSerie({
+    required this.series,
+    required this.marcadorDaRodada,
+    required this.aoTrocar,
+  });
+
+  final int series;
+  final String Function(int rodada) marcadorDaRodada;
+  final void Function(int rodada, String marcador) aoTrocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Tag de cada série', style: AppText.title),
+        const SizedBox(height: AppSpacing.x4),
+        Text('Opcional. Identifica como cada série é feita.',
+            style: AppText.caption.copyWith(color: cores.textSecondary)),
+        const SizedBox(height: AppSpacing.x12),
+        for (var rodada = 1; rodada <= series; rodada++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.entreItens),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 72,
+                  child: Text('Série $rodada',
+                      style: AppText.body.copyWith(color: cores.textSecondary)),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                ChipTagSerie(
+                  marcador: marcadorDaRodada(rodada),
+                  rodada: rodada,
+                  aoTocar: (novo) => aoTrocar(rodada, novo),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

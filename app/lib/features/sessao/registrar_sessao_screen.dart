@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -900,6 +901,7 @@ class _CorpoSeries extends StatelessWidget {
             key: ValueKey(exercicio.series[i].id),
             serie: exercicio.series[i],
             podeRemover: exercicio.series.length > 1,
+            aoMudar: aoMudar,
             aoRemover: () {
               exercicio.removerSerie(i);
               aoMudar();
@@ -1039,11 +1041,13 @@ class _LinhaSerie extends StatelessWidget {
     required this.serie,
     required this.podeRemover,
     required this.aoRemover,
+    required this.aoMudar,
   });
 
   final SerieEdicao serie;
   final bool podeRemover;
   final VoidCallback aoRemover;
+  final VoidCallback aoMudar;
 
   @override
   Widget build(BuildContext context) {
@@ -1057,6 +1061,16 @@ class _LinhaSerie extends StatelessWidget {
             width: 24,
             child: Text('${serie.rodada}',
                 style: AppText.numeralS.copyWith(color: cores.textSecondary)),
+          ),
+          const SizedBox(width: AppSpacing.x6),
+          // Tag da série (TV-1), modo edição: toca para trocar.
+          ChipTagSerie(
+            marcador: serie.marcador,
+            rodada: serie.rodada,
+            aoTocar: (novo) {
+              serie.marcador = novo;
+              aoMudar();
+            },
           ),
           const SizedBox(width: AppSpacing.x6),
           if (serie.intensidadePorPesoCorporal)

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -265,9 +266,13 @@ class _LinhaSerie extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.x8),
           Expanded(child: Text(texto, style: AppText.body)),
-          if (serie.descansoSeg != null)
+          // Tag da série (TV-1), modo leitura: VALIDA não mostra chip.
+          ChipTagSerie(marcador: serie.marcador, rodada: serie.rodada),
+          if (serie.descansoSeg != null) ...[
+            const SizedBox(width: AppSpacing.x8),
             Text('${serie.descansoSeg}s',
                 style: AppText.caption.copyWith(color: cores.textSecondary)),
+          ],
         ],
       ),
     );
