@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Relógio fixo para o teste não depender do tempo real.
 class _RelogioFixo implements Relogio {
   _RelogioFixo(this._agora);
-  DateTime _agora;
+  final DateTime _agora;
   @override
   DateTime agora() => _agora;
 }
