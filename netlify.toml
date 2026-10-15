@@ -14,9 +14,11 @@
 # precisa bater com Cors__OrigensPermitidas__0 no Fly (senão o navegador
 # bloqueia por CORS).
 #
-# A flag TREINO_AO_VIVO (épico pós-MVP, Release 2) é ligada no build por
-# --dart-define. Default aqui é "true" (ligada em produção). Para desligar sem
-# commit, defina a env var TREINO_AO_VIVO=false no painel do Netlify.
+# A flag TREINO_AO_VIVO (épico pós-MVP, Release 2) é ligada FIXA no build via
+# --dart-define=TREINO_AO_VIVO=true. É fixa de propósito: um valor literal não
+# depende de env var do painel do Netlify (um TREINO_AO_VIVO=false configurado
+# lá venceria um default `${VAR:-true}` e manteria o Release 2 fora do bundle).
+# Para desligar, troque para "false" aqui e faça commit.
 
 [build]
   base = "app"
@@ -31,7 +33,7 @@
     flutter pub get
     flutter build web --release \
       --dart-define=API_BASE_URL=${API_BASE_URL:-https://diario-treino-api.fly.dev/api/v1} \
-      --dart-define=TREINO_AO_VIVO=${TREINO_AO_VIVO:-true}
+      --dart-define=TREINO_AO_VIVO=true
   """
 
 [build.environment]
@@ -43,3 +45,22 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Cache: o "shell" do app (HTML + bootstrap + service worker) nunca é cacheado,
+# para um deploy novo aparecer na hora, sem o usuário precisar limpar o
+# navegador. Os assets com hash no nome podem ser cacheados à vontade (o nome
+# muda a cada build). Isto evita a classe de bug "deployei e a tela não mudou".
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/flutter_bootstrap.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
