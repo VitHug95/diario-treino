@@ -1726,6 +1726,12 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("autor_id");
 
+                    b.Property<bool>("EmUso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("em_uso");
+
                     b.Property<DateOnly?>("Fim")
                         .HasColumnType("date")
                         .HasColumnName("fim");
@@ -1744,12 +1750,15 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
                     b.HasIndex("AtletaId")
                         .IsUnique()
-                        .HasDatabaseName("ux_plano_atleta_ativo")
-                        .HasFilter("ativo");
+                        .HasDatabaseName("ux_plano_atleta_em_uso")
+                        .HasFilter("em_uso");
 
                     b.HasIndex("AutorId");
 
-                    b.ToTable("plano_treino", (string)null);
+                    b.ToTable("plano_treino", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_plano_treino_em_uso_ativo", "NOT em_uso OR ativo");
+                        });
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.RodadaMarcador", b =>

@@ -17,8 +17,81 @@ public sealed class ServicoPlanejamentoTests
         public short MaiorOrdem;
         public short MaiorOrdemExercicio;
 
-        public Task<PlanoTreino?> ObterPlanoAtivoAsync(Guid atletaId, CancellationToken ct)
+        public Task<PlanoTreino?> ObterPlanoEmUsoAsync(Guid atletaId, CancellationToken ct)
             => Task.FromResult(PlanoAtivo);
+
+        public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct)
+            => Task.FromResult(Planos.Count > 0);
+
+        public Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct)
+            => Task.FromResult(Planos
+                .Where(p => p.AtletaId == atletaId && p.Ativo)
+                .Select(p => new PlanoDaLista(
+                    p.Id, p.Nome, p.Inicio, p.EmUso, "Atleta",
+                    p.AutorId != p.AtletaId,
+                    Treinos.Count(t => t.PlanoId == p.Id && t.Ativo),
+                    0))
+                .ToList());
+
+        public Task<Guid?> ObterAtletaDoPlanoAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(Planos.FirstOrDefault(p => p.Id == planoId)?.AtletaId);
+
+        public Task<PlanoDetalhe?> ObterPlanoParaDetalheAsync(Guid planoId, CancellationToken ct)
+        {
+            var p = Planos.FirstOrDefault(x => x.Id == planoId);
+            if (p is null) return Task.FromResult<PlanoDetalhe?>(null);
+            var treinos = Treinos
+                .Where(t => t.PlanoId == planoId && t.Ativo)
+                .OrderBy(t => t.Ordem)
+                .Select(t => new TreinoResumo(t.Id, t.Nome, t.Descricao, t.Ordem))
+                .ToList();
+            return Task.FromResult<PlanoDetalhe?>(new PlanoDetalhe(
+                p.Id, p.Nome, p.Inicio, p.EmUso, "Atleta",
+                p.AutorId != p.AtletaId, treinos));
+        }
+
+        public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(Planos.FirstOrDefault(p => p.Id == planoId));
+
+        public Guid? DefinidoEmUso;
+        public Task DefinirEmUsoAsync(Guid atletaId, Guid planoId, CancellationToken ct)
+        {
+            foreach (var p in Planos.Where(p => p.AtletaId == atletaId))
+            {
+                p.EmUso = p.Id == planoId;
+            }
+            DefinidoEmUso = planoId;
+            return Task.CompletedTask;
+        }
+
+        public Guid? DuplicadoDe;
+        public string? DuplicadoNome;
+        public Task<Guid> DuplicarPlanoAsync(Guid planoId, string novoNome, CancellationToken ct)
+        {
+            DuplicadoDe = planoId;
+            DuplicadoNome = novoNome;
+            var copiaId = Guid.NewGuid();
+            var orig = Planos.First(p => p.Id == planoId);
+            Planos.Add(new PlanoTreino
+            {
+                Id = copiaId,
+                AutorId = orig.AtletaId,
+                AtletaId = orig.AtletaId,
+                Nome = novoNome,
+                Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
+                Ativo = true,
+                EmUso = false,
+            });
+            return Task.FromResult(copiaId);
+        }
+
+        public Guid? ExcluidoId;
+        public Task ExcluirPlanoAsync(Guid planoId, CancellationToken ct)
+        {
+            ExcluidoId = planoId;
+            Planos.RemoveAll(p => p.Id == planoId);
+            return Task.CompletedTask;
+        }
 
         public void AdicionarPlano(PlanoTreino plano)
         {
@@ -144,7 +217,7 @@ public sealed class ServicoPlanejamentoTests
         var atleta = Guid.NewGuid();
 
         await Montar(repo).AdicionarFichaAsync(
-            atleta, new SalvarTreinoRequest("A", "Peito"), CancellationToken.None);
+            atleta, null, new SalvarTreinoRequest("A", "Peito"), CancellationToken.None);
 
         Assert.Single(repo.Planos);
         Assert.Equal(atleta, repo.Planos[0].AutorId);
@@ -164,7 +237,7 @@ public sealed class ServicoPlanejamentoTests
         };
 
         await Montar(repo).AdicionarFichaAsync(
-            atleta, new SalvarTreinoRequest("C", null), CancellationToken.None);
+            atleta, null, new SalvarTreinoRequest("C", null), CancellationToken.None);
 
         Assert.Equal((short)3, repo.Treinos.Single().Ordem);
     }
@@ -490,5 +563,134 @@ public sealed class ServicoPlanejamentoTests
                 terceiro, teId,
                 new DefinirAlvosRequest(3, 1, 30, 10, 10, 90, null),
                 CancellationToken.None));
+    }
+
+    // ---- Vários planos por atleta (PBI-44) ----
+
+    [Fact]
+    public async Task Primeiro_plano_nomeado_nasce_em_uso()
+    {
+        var atleta = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+
+        var plano = await Montar(repo).CriarPlanoNomeadoAsync(atleta, "Hipertrofia", CancellationToken.None);
+
+        Assert.True(plano.EmUso);
+        Assert.True(repo.Planos.Single().EmUso);
+    }
+
+    [Fact]
+    public async Task Segundo_plano_nasce_fora_de_uso_e_nao_mexe_no_atual()
+    {
+        var atleta = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(new PlanoTreino
+        {
+            Id = Guid.NewGuid(),
+            AtletaId = atleta,
+            AutorId = atleta,
+            Nome = "Hipertrofia",
+            EmUso = true,
+        });
+
+        var novo = await Montar(repo).CriarPlanoNomeadoAsync(atleta, "Treino de viagem", CancellationToken.None);
+
+        Assert.False(novo.EmUso); // o novo nasce fora de uso
+        // O que já estava em uso continua em uso.
+        Assert.Equal("Hipertrofia", repo.Planos.Single(p => p.EmUso).Nome);
+    }
+
+    [Fact]
+    public async Task Definir_em_uso_troca_o_plano_que_a_inicio_segue()
+    {
+        var atleta = Guid.NewGuid();
+        var hipertrofia = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = atleta, Nome = "Hipertrofia", EmUso = true,
+        };
+        var viagem = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = atleta, Nome = "Viagem", EmUso = false,
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.AddRange([hipertrofia, viagem]);
+
+        await Montar(repo).DefinirEmUsoAsync(atleta, viagem.Id, CancellationToken.None);
+
+        Assert.False(hipertrofia.EmUso);
+        Assert.True(viagem.EmUso);
+    }
+
+    [Fact]
+    public async Task Renomear_plano_de_outro_autor_lanca_somente_leitura_403()
+    {
+        var atleta = Guid.NewGuid();
+        var professor = Guid.NewGuid();
+        // Plano do atleta, mas montado pelo professor (autor != atleta).
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = professor, Nome = "Força 5 dias",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            Montar(repo).RenomearPlanoAsync(atleta, plano.Id, "Meu jeito", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Renomear_plano_de_outro_usuario_lanca_recurso_nao_encontrado_404()
+    {
+        var dono = Guid.NewGuid();
+        var terceiro = Guid.NewGuid();
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = dono, AutorId = dono, Nome = "Hipertrofia",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+
+        // O 404 (acesso) vem ANTES do 403 (somente leitura).
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
+            Montar(repo).RenomearPlanoAsync(terceiro, plano.Id, "X", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Definir_em_uso_de_plano_do_professor_e_permitido()
+    {
+        var atleta = Guid.NewGuid();
+        var professor = Guid.NewGuid();
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = professor, Nome = "Força 5 dias",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+
+        // Usar (seguir) o plano do professor não é escrita: não dá 403.
+        await Montar(repo).DefinirEmUsoAsync(atleta, plano.Id, CancellationToken.None);
+
+        Assert.Equal(plano.Id, repo.DefinidoEmUso);
+    }
+
+    [Fact]
+    public async Task Duplicar_gera_copia_de_autoria_do_atleta()
+    {
+        var atleta = Guid.NewGuid();
+        var professor = Guid.NewGuid();
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = professor, Nome = "Força 5 dias",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+
+        var copiaId = await Montar(repo).DuplicarPlanoAsync(atleta, plano.Id, CancellationToken.None);
+
+        Assert.Equal(plano.Id, repo.DuplicadoDe);
+        Assert.Equal("Força 5 dias (cópia)", repo.DuplicadoNome);
+        var copia = repo.Planos.Single(p => p.Id == copiaId);
+        Assert.Equal(atleta, copia.AutorId); // autoria do atleta
+        Assert.False(copia.EmUso);           // fora de uso
     }
 }

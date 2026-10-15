@@ -24,6 +24,9 @@ try
     // Traduz RecursoNaoEncontradoException em 404 (MAS 11.3).
     builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.RecursoNaoEncontradoHandler>();
 
+    // Traduz PlanoSomenteLeituraException em 403 (plano do professor; PBI-44).
+    builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.PlanoSomenteLeituraHandler>();
+
     // Problem Details (RFC 9457) como formato padrão de erro da API.
     builder.Services.AddProblemDetails(options =>
     {

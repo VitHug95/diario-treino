@@ -6,6 +6,40 @@ public sealed record PlanoAtivo(
     string Nome,
     IReadOnlyList<TreinoResumo> Treinos);
 
+/// <summary>
+/// Um plano na lista de planos do atleta (PBI-44, GET /planos). Traz o resumo
+/// que a tela 18 mostra: em uso, autoria (para o chip "Do professor") e as
+/// contagens de fichas e exercícios.
+/// </summary>
+public sealed record PlanoDaLista(
+    Guid Id,
+    string Nome,
+    DateOnly Inicio,
+    bool EmUso,
+    /// <summary>Nome do autor do plano (para "Prof. Nome" quando não é o atleta).</summary>
+    string Autor,
+    /// <summary>true quando autor ≠ atleta: o atleta só lê, treina e copia.</summary>
+    bool SomenteLeitura,
+    int QuantidadeFichas,
+    int QuantidadeExercicios);
+
+/// <summary>
+/// Detalhe de um plano com suas fichas (PBI-44, GET /planos/{id}). No mesmo
+/// formato de fichas do <see cref="PlanoAtivo"/>, mais o estado de uso e a
+/// autoria para o cabeçalho da tela 19/20.
+/// </summary>
+public sealed record PlanoDetalhe(
+    Guid Id,
+    string Nome,
+    DateOnly Inicio,
+    bool EmUso,
+    string Autor,
+    bool SomenteLeitura,
+    IReadOnlyList<TreinoResumo> Treinos);
+
+/// <summary>Dados para criar/renomear um plano (PBI-44).</summary>
+public sealed record SalvarPlanoRequest(string Nome);
+
 /// <summary>Ficha (treino) dentro do plano.</summary>
 public sealed record TreinoResumo(
     Guid Id,
