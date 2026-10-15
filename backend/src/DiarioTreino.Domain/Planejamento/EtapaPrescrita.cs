@@ -19,6 +19,12 @@ public class EtapaPrescrita
     public short VolumeMetricaId { get; set; }
     public decimal? VolumeAlvo { get; set; }
 
+    /// <summary>
+    /// Limite superior opcional do volume (TV-2): forma a faixa "min a max"
+    /// (ex.: 8 a 12 reps). Nulo = sem faixa, só o alvo único. Só prescrição.
+    /// </summary>
+    public decimal? VolumeAlvoMax { get; set; }
+
     public TreinoExercicio? TreinoExercicio { get; set; }
     public Metrica? IntensidadeMetrica { get; set; }
     public Metrica? VolumeMetrica { get; set; }

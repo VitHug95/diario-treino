@@ -1680,6 +1680,11 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("numeric(9,2)")
                         .HasColumnName("volume_alvo");
 
+                    b.Property<decimal?>("VolumeAlvoMax")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("numeric(9,2)")
+                        .HasColumnName("volume_alvo_max");
+
                     b.Property<short>("VolumeMetricaId")
                         .HasColumnType("smallint")
                         .HasColumnName("volume_metrica_id");
@@ -1695,6 +1700,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.ToTable("etapa_prescrita", null, t =>
                         {
                             t.HasCheckConstraint("ck_etapa_prescrita_tipo", "tipo IN ('ESFORCO','RECUPERACAO')");
+
+                            t.HasCheckConstraint("ck_etapa_prescrita_volume_max", "volume_alvo_max IS NULL OR volume_alvo_max >= volume_alvo");
                         });
                 });
 
