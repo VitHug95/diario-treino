@@ -31,15 +31,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _executar(Future<void> Function() acao) async {
-    if (_carregando) return;
+  Future<bool> _executar(Future<void> Function() acao) async {
+    if (_carregando) return false;
     setState(() => _carregando = true);
     try {
       await acao();
+      return true;
     } on AuthException catch (e) {
       _mostrarErro(e.mensagem);
+      return false;
     } finally {
       if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  /// Vai para o início quando já há sessão ativa. Normalmente o redirect por
+  /// authStateProvider faz isso sozinho; chamamos explícito porque o emissor do
+  /// Firebase pode atrasar (Auth Emulator) e deixar o usuário preso no login.
+  void _irParaInicioSeLogado() {
+    if (mounted && ref.read(authServiceProvider).usuarioAtual != null) {
+      context.go(Rotas.inicio);
     }
   }
 
@@ -52,14 +63,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _entrarComEmail() async {
     if (!_formKey.currentState!.validate()) return;
-    await _executar(() => ref.read(authServiceProvider).entrarComEmail(
+    final ok = await _executar(() => ref.read(authServiceProvider).entrarComEmail(
           email: _email.text,
           senha: _senha.text,
         ));
+    if (ok) _irParaInicioSeLogado();
   }
 
-  Future<void> _entrarComGoogle() =>
-      _executar(() => ref.read(authServiceProvider).entrarComGoogle());
+  Future<void> _entrarComGoogle() async {
+    final ok =
+        await _executar(() => ref.read(authServiceProvider).entrarComGoogle());
+    if (ok) _irParaInicioSeLogado();
+  }
 
   Future<void> _esqueciSenha() async {
     final email = _email.text.trim();
