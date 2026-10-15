@@ -74,6 +74,7 @@ jobs:
     name: E2E (Robot + navegador)
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    timeout-minutes: 25
     env:
       PROJECT_ID: demo-diario-treino
       API_PORT: "8080"
@@ -134,10 +135,13 @@ jobs:
           echo "Aguardando o Auth Emulator na porta $AUTH_EMULATOR_PORT..."
           for i in $(seq 1 60); do
             if curl -sf "http://127.0.0.1:${AUTH_EMULATOR_PORT}/" > /dev/null; then
-              echo "Emulator no ar."; break
+              echo "Emulator no ar."; ok=1; break
             fi
             sleep 1
           done
+          if [ -z "$ok" ]; then
+            echo "::error::Auth Emulator não subiu em 60s"; cat "$RUNNER_TEMP/emulator.log"; exit 1
+          fi
 
       # --- API .NET apontada ao Postgres e ao emulador ---
       - name: Build da API
@@ -159,12 +163,15 @@ jobs:
         run: |
           dotnet run --project src/DiarioTreino.Api --configuration Release --no-build > "$RUNNER_TEMP/api.log" 2>&1 &
           echo "Aguardando a API em /health..."
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if curl -sf "http://127.0.0.1:${API_PORT}/health" > /dev/null; then
-              echo "API no ar."; break
+              echo "API no ar."; ok=1; break
             fi
             sleep 1
           done
+          if [ -z "$ok" ]; then
+            echo "::error::A API não respondeu em /health em 90s"; cat "$RUNNER_TEMP/api.log"; exit 1
+          fi
 
       # --- Flutter web apontado à API local e ao emulador ---
       - name: Build web (dart-defines do E2E)
@@ -184,23 +191,38 @@ jobs:
           python -m http.server "$WEB_PORT" --bind 127.0.0.1 > "$RUNNER_TEMP/web.log" 2>&1 &
           for i in $(seq 1 30); do
             if curl -sf "http://127.0.0.1:${WEB_PORT}/" > /dev/null; then
-              echo "Web no ar."; break
+              echo "Web no ar."; ok=1; break
             fi
             sleep 1
           done
+          if [ -z "$ok" ]; then
+            echo "::error::O servidor web não respondeu em 30s"; cat "$RUNNER_TEMP/web.log"; exit 1
+          fi
 
       # --- Robot Framework ---
       - name: Instalar Robot + Browser
         working-directory: e2e
         run: |
           pip install -r requirements.txt
-          rfbrowser init
+          # Dependências de SO do navegador do Playwright no runner Ubuntu, senão
+          # o Chromium não abre e os waits do Robot estouram o tempo.
+          sudo npx --yes playwright install-deps chromium
+          # Baixa só o Chromium (o init da Browser library instala o navegador).
+          rfbrowser init chromium
 
       - name: Rodar a suíte E2E
         working-directory: e2e
+        timeout-minutes: 8
         run: |
           robot --variable BASE_URL:http://127.0.0.1:8000 \
             --outputdir resultados suites/
+
+      - name: Logs dos serviços (diagnóstico em falha)
+        if: failure()
+        run: |
+          echo "===== API ====="; tail -n 200 "$RUNNER_TEMP/api.log" 2>/dev/null || true
+          echo "===== EMULATOR ====="; tail -n 100 "$RUNNER_TEMP/emulator.log" 2>/dev/null || true
+          echo "===== WEB ====="; tail -n 50 "$RUNNER_TEMP/web.log" 2>/dev/null || true
 
       - name: Publicar artefatos do Robot
         if: always()
