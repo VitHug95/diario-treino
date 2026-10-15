@@ -69,6 +69,10 @@ public sealed class ServicoPlanejamentoTests
         public void AdicionarEtapa(EtapaPrescrita etapa) => Etapas.Add(etapa);
         public void RemoverEtapa(EtapaPrescrita etapa) => Etapas.Remove(etapa);
 
+        public readonly List<RodadaMarcador> Marcadores = [];
+        public void AdicionarMarcador(RodadaMarcador marcador) => Marcadores.Add(marcador);
+        public void RemoverMarcador(RodadaMarcador marcador) => Marcadores.Remove(marcador);
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
     }
 

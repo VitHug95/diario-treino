@@ -1,3 +1,4 @@
+using DiarioTreino.Domain.Comum;
 using FluentValidation;
 
 namespace DiarioTreino.Application.Planejamento;
@@ -28,5 +29,16 @@ public sealed class DefinirAlvosValidator : AbstractValidator<DefinirAlvosReques
             .GreaterThanOrEqualTo((short)0).When(x => x.DescansoSeg.HasValue);
 
         RuleFor(x => x.Instrucao).MaximumLength(200);
+
+        // Marcadores de série (TV-1): código na lista fixa e rodada em [1, Series].
+        RuleForEach(x => x.Marcadores)
+            .Must(m => TagSerie.EhValido(m.Marcador))
+            .WithMessage("Tag de série inválida.")
+            .When(x => x.Marcadores is not null);
+
+        RuleForEach(x => x.Marcadores)
+            .Must((req, m) => m.Rodada >= 1 && m.Rodada <= req.Series)
+            .WithMessage("A rodada do marcador precisa estar entre 1 e o número de séries.")
+            .When(x => x.Marcadores is not null);
     }
 }

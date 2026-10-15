@@ -37,6 +37,7 @@ public sealed record TreinoDetalhe(
 /// <summary>
 /// Exercício prescrito dentro de uma ficha, com os alvos (PBI-14).
 /// <see cref="Alvo"/> é nulo até o atleta definir séries/alvos.
+/// <see cref="Marcadores"/> traz só as rodadas com tag ≠ VALIDA (TV-1).
 /// </summary>
 public sealed record TreinoExercicioResumo(
     Guid Id,
@@ -47,7 +48,14 @@ public sealed record TreinoExercicioResumo(
     short Rodadas,
     short? DescansoSeg,
     string? Instrucao,
-    AlvoExercicio? Alvo);
+    AlvoExercicio? Alvo,
+    IReadOnlyList<MarcadorRodada> Marcadores);
+
+/// <summary>
+/// Tag prescrita para uma rodada de um exercício da ficha (TV-1). Só trafega o
+/// que for diferente de VALIDA; rodada ausente vale VALIDA.
+/// </summary>
+public sealed record MarcadorRodada(short Rodada, string Marcador);
 
 /// <summary>Alvos prescritos de um exercício (etapa de esforço).</summary>
 public sealed record AlvoExercicio(
@@ -66,7 +74,10 @@ public sealed record AdicionarExercicioRequest(Guid ExercicioId);
 /// <summary>Nova ordem dos exercícios da ficha (ids na sequência desejada).</summary>
 public sealed record ReordenarExerciciosRequest(IReadOnlyList<Guid> TreinoExercicioIds);
 
-/// <summary>Alvos do exercício na ficha (PBI-14, tela 10).</summary>
+/// <summary>
+/// Alvos do exercício na ficha (PBI-14, tela 10). <see cref="Marcadores"/>
+/// (TV-1) é opcional e só precisa trazer as rodadas com tag ≠ VALIDA.
+/// </summary>
 public sealed record DefinirAlvosRequest(
     short Series,
     short IntensidadeMetricaId,
@@ -74,4 +85,5 @@ public sealed record DefinirAlvosRequest(
     short VolumeMetricaId,
     decimal? VolumeAlvo,
     short? DescansoSeg,
-    string? Instrucao);
+    string? Instrucao,
+    IReadOnlyList<MarcadorRodada>? Marcadores = null);

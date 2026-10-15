@@ -54,6 +54,12 @@ public interface IRepositorioPlano
 
     public void RemoverEtapa(EtapaPrescrita etapa);
 
+    // ---- Marcadores de série prescritos (TV-1) ----
+
+    public void AdicionarMarcador(RodadaMarcador marcador);
+
+    public void RemoverMarcador(RodadaMarcador marcador);
+
     /// <summary>Exercícios prescritos de uma ficha, na ordem.</summary>
     public Task<List<TreinoExercicio>> ObterExerciciosDaFichaAsync(Guid treinoId, CancellationToken ct);
 

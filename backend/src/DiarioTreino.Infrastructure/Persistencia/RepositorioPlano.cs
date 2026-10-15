@@ -76,6 +76,7 @@ public sealed class RepositorioPlano : IRepositorioPlano
         treino.Exercicios = await _db.TreinoExercicios
             .Include(te => te.Exercicio)
             .Include(te => te.Etapas)
+            .Include(te => te.Marcadores)
             .Where(te => te.TreinoId == treinoId)
             .OrderBy(te => te.Ordem)
             .ToListAsync(ct);
@@ -95,6 +96,7 @@ public sealed class RepositorioPlano : IRepositorioPlano
     public Task<TreinoExercicio?> ObterTreinoExercicioComEtapasAsync(Guid id, CancellationToken ct) =>
         _db.TreinoExercicios
             .Include(te => te.Etapas)
+            .Include(te => te.Marcadores)
             .FirstOrDefaultAsync(te => te.Id == id, ct);
 
     public async Task<(string Codigo, string Nome)?> ObterMetricaAsync(
@@ -125,6 +127,10 @@ public sealed class RepositorioPlano : IRepositorioPlano
     public void AdicionarEtapa(EtapaPrescrita etapa) => _db.EtapasPrescritas.Add(etapa);
 
     public void RemoverEtapa(EtapaPrescrita etapa) => _db.EtapasPrescritas.Remove(etapa);
+
+    public void AdicionarMarcador(RodadaMarcador marcador) => _db.RodadaMarcadores.Add(marcador);
+
+    public void RemoverMarcador(RodadaMarcador marcador) => _db.RodadaMarcadores.Remove(marcador);
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 }
