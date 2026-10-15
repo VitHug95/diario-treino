@@ -44,6 +44,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
   final Map<int, String> _marcadores = {};
   late final TextEditingController _intensidadeAlvo;
   late final TextEditingController _volumeAlvo;
+  late final TextEditingController _volumeAlvoMax;
   late final TextEditingController _descanso;
   late final TextEditingController _instrucao;
 
@@ -62,6 +63,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
     _volumeId = alvo?.volumeMetricaId;
     _intensidadeAlvo = TextEditingController(text: _formatar(alvo?.intensidadeAlvo));
     _volumeAlvo = TextEditingController(text: _formatar(alvo?.volumeAlvo));
+    _volumeAlvoMax = TextEditingController(text: _formatar(alvo?.volumeAlvoMax));
     _descanso = TextEditingController(
         text: te.descansoSeg == null ? '' : te.descansoSeg.toString());
     _instrucao = TextEditingController(text: te.instrucao ?? '');
@@ -71,6 +73,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
   void dispose() {
     _intensidadeAlvo.dispose();
     _volumeAlvo.dispose();
+    _volumeAlvoMax.dispose();
     _descanso.dispose();
     _instrucao.dispose();
     super.dispose();
@@ -119,6 +122,21 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
       _erro('Escolha as métricas de intensidade e volume.');
       return;
     }
+
+    // Faixa de volume (TV-2): o "até" só vale com um alvo e não pode ser menor.
+    final volAlvo = _parse(_volumeAlvo.text);
+    final volMax = _parse(_volumeAlvoMax.text);
+    if (volMax != null) {
+      if (volAlvo == null) {
+        _erro('Informe o alvo de volume antes do "até".');
+        return;
+      }
+      if (volMax < volAlvo) {
+        _erro('O "até" não pode ser menor que o alvo.');
+        return;
+      }
+    }
+
     setState(() => _salvando = true);
     try {
       await ref.read(fichasRepositoryProvider).definirAlvos(
@@ -128,7 +146,8 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
             intensidadeMetricaId: _intensidadeId!,
             intensidadeAlvo: _parse(_intensidadeAlvo.text),
             volumeMetricaId: _volumeId!,
-            volumeAlvo: _parse(_volumeAlvo.text),
+            volumeAlvo: volAlvo,
+            volumeAlvoMax: volMax,
             descansoSeg: int.tryParse(_descanso.text.trim()),
             instrucao: _instrucao.text.trim().isEmpty ? null : _instrucao.text.trim(),
             marcadores: [
@@ -246,11 +265,27 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
                 aoSelecionar: (id) => setState(() => _volumeId = id),
               ),
               const SizedBox(height: AppSpacing.x12),
-              _CampoAlvo(
-                controlador: _volumeAlvo,
-                rotulo: 'Alvo de ${mVolume?.nome ?? 'volume'} (opcional)',
-                sufixo: mVolume?.unidade,
-                aoMudar: () => setState(() {}),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _CampoAlvo(
+                      controlador: _volumeAlvo,
+                      rotulo: 'Alvo de ${mVolume?.nome ?? 'volume'} (opcional)',
+                      sufixo: mVolume?.unidade,
+                      aoMudar: () => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: _CampoAlvo(
+                      controlador: _volumeAlvoMax,
+                      rotulo: 'até (opcional)',
+                      sufixo: mVolume?.unidade,
+                      aoMudar: () => setState(() {}),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.x20),
               _CampoAlvo(
@@ -278,6 +313,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
                 intensidadeAlvo: _parse(_intensidadeAlvo.text),
                 volume: mVolume,
                 volumeAlvo: _parse(_volumeAlvo.text),
+                volumeAlvoMax: _parse(_volumeAlvoMax.text),
                 descansoSeg: int.tryParse(_descanso.text.trim()),
               ),
               const SizedBox(height: AppSpacing.x24),
@@ -541,6 +577,7 @@ class _Resumo extends StatelessWidget {
     required this.intensidadeAlvo,
     required this.volume,
     required this.volumeAlvo,
+    required this.volumeAlvoMax,
     required this.descansoSeg,
   });
 
@@ -549,6 +586,7 @@ class _Resumo extends StatelessWidget {
   final double? intensidadeAlvo;
   final Metrica? volume;
   final double? volumeAlvo;
+  final double? volumeAlvoMax;
   final int? descansoSeg;
 
   @override
@@ -574,6 +612,7 @@ class _Resumo extends StatelessWidget {
               intensidadeAlvo: intensidadeAlvo,
               volume: volume,
               volumeAlvo: volumeAlvo,
+              volumeAlvoMax: volumeAlvoMax,
               descansoSeg: descansoSeg,
             ),
             style: AppText.body.copyWith(color: cores.primaryOnTint),
@@ -593,6 +632,7 @@ String montarResumo({
   required Metrica? volume,
   required double? volumeAlvo,
   required int? descansoSeg,
+  double? volumeAlvoMax,
 }) {
   String num(double v) => v == v.roundToDouble()
       ? v.toInt().toString()
@@ -601,9 +641,12 @@ String montarResumo({
   final plural = series == 1 ? 'série' : 'séries';
   final partes = <String>['$series $plural'];
 
-  // Volume: "de 10 repetições" / "de 10".
+  // Volume: faixa "de 8 a 12 repetições" (TV-2) ou alvo único "de 10 ...".
   if (volume != null && volumeAlvo != null) {
-    partes.add('de ${num(volumeAlvo)} ${volume.unidade}'.trimRight());
+    final valor = (volumeAlvoMax != null && volumeAlvoMax != volumeAlvo)
+        ? '${num(volumeAlvo)} a ${num(volumeAlvoMax)}'
+        : num(volumeAlvo);
+    partes.add('de $valor ${volume.unidade}'.trimRight());
   }
   // Intensidade: "com 30 kg".
   if (intensidade != null && intensidadeAlvo != null) {
