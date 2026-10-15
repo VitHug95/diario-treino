@@ -13,6 +13,7 @@ import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
+import '../sessao/treino_em_andamento.dart';
 import 'inicio_logica.dart';
 import 'primeiro_acesso_screen.dart';
 
@@ -33,6 +34,7 @@ class InicioScreen extends ConsumerWidget {
     final primeiroNome = (usuario?.displayName ?? 'Atleta').split(' ').first;
     final planoAsync = ref.watch(planoAtivoProvider);
     final sessoesAsync = ref.watch(sessoesRecentesProvider);
+    final emAndamento = ref.watch(treinoEmAndamentoProvider);
 
     // Primeiro acesso (PBI-09): sem nenhuma ficha E sem nenhuma sessão, mostra
     // a tela 6 no lugar da inicial. Exige os dois carregados para não piscar a
@@ -84,6 +86,10 @@ class InicioScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.x20),
+              if (emAndamento != null) ...[
+                _ContinuarTreino(treino: emAndamento),
+                const SizedBox(height: AppSpacing.x20),
+              ],
               planoAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.only(top: AppSpacing.x28),
@@ -446,6 +452,67 @@ class _CartaoFicha extends StatelessWidget {
               ),
               Icon(LucideIcons.chevronRight,
                   color: cores.iconMuted, size: AppSizes.iconeMd),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Card "Continuar treino" (PBI-37): aparece quando há um treino em andamento
+/// salvo no aparelho. Toque reabre o registro de onde parou.
+class _ContinuarTreino extends StatelessWidget {
+  const _ContinuarTreino({required this.treino});
+
+  final TreinoEmAndamento treino;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final feitos = treino.exercicios.where((e) => e.realizado).length;
+    final total = treino.exercicios.length;
+
+    return Material(
+      color: cores.primaryTint,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        onTap: () {
+          if (treino.treinoLivre || treino.treinoId == null) {
+            context.push(Rotas.treinoLivre);
+          } else {
+            context.push(
+              Rotas.registrarSessao,
+              extra: RegistrarSessaoArgs(
+                treinoId: treino.treinoId!,
+                treinoNome: treino.treinoNome,
+              ),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.paddingCard),
+          child: Row(
+            children: [
+              Icon(LucideIcons.play, color: cores.primaryOnTint, size: AppSizes.iconeMd),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Continuar treino',
+                        style: AppText.overline.copyWith(color: cores.primaryOnTint)),
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(treino.treinoNome,
+                        style: AppText.title.copyWith(color: cores.primaryOnTint)),
+                    Text('$feitos de $total exercícios marcados',
+                        style: AppText.caption.copyWith(color: cores.primaryOnTint)),
+                  ],
+                ),
+              ),
+              Icon(LucideIcons.chevronRight,
+                  color: cores.primaryOnTint, size: AppSizes.iconeMd),
             ],
           ),
         ),

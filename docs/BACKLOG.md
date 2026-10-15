@@ -682,6 +682,83 @@ não aceita mais `grupoMuscular`. Build Release limpo (0 avisos com warnings-as-
 **Depende de:** PBI-12, PBI-15, PBI-18.
 **Prioridade:** alta (lacuna de UX numa funcionalidade central).
 
+#### PBI-37 · Treino em andamento: iniciar, finalizar e rascunho local
+
+**História:** Como atleta, quero iniciar um treino, marcar cada exercício
+conforme faço e finalizar no fim, com o que já preenchi guardado no aparelho se
+eu sair no meio, para o registro refletir o treino de verdade e não parecer
+"pronto" antes de eu começar.
+
+**Contexto:** hoje o registro de uma ficha abre com os exercícios já marcados
+como "Realizado" e as séries preenchidas pelo pré-preenchimento. Isso deixa o
+layout estranho (parece que o treino já foi feito) e faz o check perder o
+sentido. Falta a noção de "treino em andamento": começar desmarcado, marcar o
+que foi feito e finalizar. Decisão do PO (**Opção 1 + rascunho local**): sem
+mudança de banco nem de API — o treino em andamento vive só no aparelho
+(`shared_preferences`) e vira sessão de verdade só ao finalizar (o mesmo
+`POST /sessoes` de hoje). Um treino em andamento por vez.
+
+**Critérios de aceite**
+- **Checks começam desmarcados.** Ao abrir o registro, cada exercício mostra as
+  séries da última execução (ou dos alvos) como **sugestão em tom secundário**,
+  com o check "Realizado" **desligado**. Tocar no check — ou em qualquer campo do
+  exercício — marca como realizado; aí os valores passam a valer e ficam
+  editáveis.
+- **Finalizar no lugar de salvar.** O botão principal passa a ser "Finalizar
+  treino". Com todos os exercícios marcados, finaliza direto. Se houver
+  exercício sem marcar, mostra: "Ainda tem N exercícios sem marcar. Finalizar
+  mesmo assim? Eles ficam como não realizados." (Cancelar / Finalizar).
+- **Rascunho local.** O treino em andamento é salvo no aparelho
+  (`shared_preferences`) a cada alteração e apagado ao finalizar ou descartar.
+  Só um em andamento por vez. O rascunho sobrevive a fechar e reabrir o app.
+- **Continuar treino.** Havendo um treino em andamento, a tela inicial mostra
+  "Continuar treino [ficha]" que reabre o registro de onde parou.
+- **Sair com treino iniciado.** Ao tentar sair da tela (voltar ou trocar de aba)
+  com um treino em andamento, abre um diálogo com três opções: "Finalizar agora",
+  "Continuar depois" (mantém o rascunho) e "Descartar treino" (com confirmação).
+- **Duração automática.** A hora de início é guardada ao abrir; ao finalizar, a
+  duração vem calculada e editável antes de confirmar.
+- **Registrar depois do fato continua.** Na ficha há dois caminhos: "Iniciar
+  treino agora" (data de hoje, cronômetro/duração automática) e "Registrar treino
+  já feito" (data editável, duração digitada), ambos com as mesmas regras de
+  check e o mesmo aviso ao finalizar.
+- **Próximo treino nasce limpo.** Ao abrir a ficha de novo depois de finalizar,
+  os checks começam desmarcados e as séries aparecem com os valores da última
+  sessão como sugestão (não como "feito").
+
+**Fora de escopo:** retomar um treino em andamento em outro aparelho (o rascunho
+é local); nenhum estado "em andamento" é persistido no servidor.
+
+**Testes:** o rascunho sobrevive a fechar e reabrir o app; finalizar com
+exercício sem marcar mostra o aviso e grava os não marcados como não realizados;
+o próximo treino da mesma ficha nasce desmarcado, com os valores da última
+sessão como sugestão.
+
+**API:** nenhuma mudança (usa `POST /sessoes` com as séries dos exercícios
+marcados). **Banco:** nenhuma mudança. **Telas:** 3 (registro) e 2 (início, com
+"Continuar treino").
+**Depende de:** PBI-15, PBI-16, PBI-19.
+**Prioridade:** alta (ajuste de fluxo central do registro; entra antes de fechar
+o MVP).
+**Status:** FEITO (front, sem mudança de banco/API). Rascunho local em
+`shared_preferences` (`treino_em_andamento`, um por vez) com serviço
+`RascunhoTreinoService` e `treinoEmAndamentoProvider`. No registro de uma ficha
+os checks começam **desmarcados**: as séries da última execução/alvos aparecem
+em tom secundário como sugestão e tocar nelas (ou no check) marca o exercício e
+abre os campos. O autosave grava o rascunho a cada alteração; a saída pela seta
+ou troca de aba abre o diálogo Finalizar agora / Continuar depois / Descartar
+(com confirmação). O botão é "Finalizar treino", com o aviso de N exercícios sem
+marcar; a duração vem automática do início e é editável. A Início mostra
+"Continuar treino [ficha]" quando há rascunho. A ficha ganhou "Iniciar treino
+agora" e "Registrar treino já feito". Finalizar grava via `POST /sessoes` (não
+marcados = não realizados) e apaga o rascunho. Testes: round-trip do rascunho
+(sobrevive a reabrir), aviso ao finalizar com exercício sem marcar, exercício
+nasce desmarcado com os valores da última sessão como sugestão, e o fluxo de UI
+(fluxo_registro) atualizado. **GOTCHA:** o `RegistrarSessaoScreen` **lê** (não
+observa) o `treinoEmAndamentoProvider` ao decidir retomar — observá-lo causaria
+um loop de rebuild que reseta o formulário a cada tecla (o autosave invalida o
+provider).
+
 ---
 
 ## 9. Épicos futuros (ainda não refinados)
@@ -721,6 +798,6 @@ Sprints de uma semana, com review no fim de semana usando o app no celular do PO
 | 2 | O atleta monta suas fichas com alvos | 10, 11, 12, 13, 14 |
 | 3 | O atleta registra o primeiro treino de verdade | 15, 16, 17, 18 |
 | 4 | O atleta vê a evolução e entende cada queda | 20, 21, 22, 23, 31, 32 |
-| 5 | MVP pronto para uso diário | 05, 09, 19, 24, 25, 26 |
+| 5 | MVP pronto para uso diário | 05, 09, 19, 24, 25, 37, 26 |
 
 A Sprint 1 é a mais pesada em infraestrutura e a de maior risco. Se não couber, o corte natural é deixar o login com Google (parte da PBI-08) para a Sprint 2 e manter o resto, porque publicar logo é o que libera o feedback do PO.

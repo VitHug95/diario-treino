@@ -1,4 +1,4 @@
-# Diário de Treino — Guia visual
+ # Diário de Treino — Guia visual
 
 Guia visual do app, com os dois temas aprovados: **claro (opção A)** e **escuro
 (opção B)**. Os valores saem do protótipo navegável do canvas "Telas App de
@@ -116,6 +116,14 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
   altura 44, raio 10.
 - Campo de série: `bg-input`, borda `line-default`, raio 10, altura 44, valor `input-value`.
 - Card de exercício: `bg-surface`, borda `line-default`, raio 16.
+- Exercício em andamento (PBI-37): o treino começa **desmarcado**. Enquanto não
+  for marcado como feito, a série vem como **sugestão em tom secundário**
+  (`bg-input`, texto `text-secondary`, prefixo "Sugestão:"), com o atalho
+  "Marcar" em `primary-text`. Tocar na sugestão (ou no check) marca o exercício
+  e abre os campos editáveis — só então os valores valem. O card não deve
+  parecer "feito" antes do atleta confirmar.
+- Continuar treino (PBI-37): card `primary-tint` com `primary-on-tint` na
+  Início, raio 16, mostrando a ficha e "X de Y marcados".
 - Aviso de pré-preenchimento: `primary-tint` com `primary-on-tint`, raio 8.
 - Bloco de observação: `obs-tint`, borda `obs-line`, título `obs-title`, corpo `obs-body`, raio 16.
 - Chip de filtro: pílula 44. Selecionado: fundo `text-primary`, texto `bg-surface`.

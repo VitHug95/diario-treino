@@ -217,18 +217,38 @@ class _ConteudoFichas extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-          child: SizedBox(
-            width: double.infinity,
-            height: AppSizes.botaoPrincipal,
-            child: FilledButton.icon(
-              onPressed: () => context.push(
-                Rotas.registrarSessao,
-                extra: RegistrarSessaoArgs(
-                    treinoId: ficha.id, treinoNome: ficha.nome),
+          child: Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: AppSizes.botaoPrincipal,
+                child: FilledButton.icon(
+                  onPressed: () => context.push(
+                    Rotas.registrarSessao,
+                    extra: RegistrarSessaoArgs(
+                        treinoId: ficha.id, treinoNome: ficha.nome),
+                  ),
+                  icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
+                  label: const Text('INICIAR TREINO AGORA'),
+                ),
               ),
-              icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
-              label: const Text('REGISTRAR TREINO'),
-            ),
+              const SizedBox(height: AppSpacing.entreItens),
+              SizedBox(
+                width: double.infinity,
+                height: AppSizes.botaoSecundario,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(
+                    Rotas.registrarSessao,
+                    extra: RegistrarSessaoArgs(
+                        treinoId: ficha.id,
+                        treinoNome: ficha.nome,
+                        registroPosterior: true),
+                  ),
+                  icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
+                  label: const Text('Registrar treino já feito'),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.x16),

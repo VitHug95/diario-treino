@@ -152,8 +152,10 @@ class ExercicioEdicao {
         modalidade: e.modalidade,
         origemPreenchimento: e.origemPreenchimento,
         series: e.series.map(SerieEdicao.doRascunho).toList(),
-        // Começa marcado como realizado quando já há séries sugeridas.
-        realizado: e.series.isNotEmpty,
+        // PBI-37: o treino começa "em andamento", não feito. As séries vêm
+        // como sugestão (tom secundário), mas o exercício começa desmarcado;
+        // o atleta marca o que fez tocando no check ou num campo.
+        realizado: false,
       );
 
   /// Monta um exercício para edição a partir do detalhe da sessão (PBI-18).
