@@ -97,9 +97,11 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
   }
 }
 
-/// Chips de filtro por membro (PBI-31): "Todos" + os 8 membros na ordem do
-/// `GET /membros`, com rolagem horizontal. Reaproveitado pelo catálogo e pelo
-/// seletor de exercício. `selecionado` nulo = "Todos".
+/// Filtro por membro (PBI-31, revisado na PBI-54): um campo "Músculo" que abre
+/// uma folha de baixo com "Todos" + os membros do `GET /membros` em lista
+/// vertical — sem rolagem lateral de chips, que escondia Core/Cardio/Mobilidade.
+/// Reaproveitado pelo catálogo e pelo seletor de exercício (mesma API).
+/// `selecionado` nulo = "Todos".
 class FiltroMembro extends ConsumerWidget {
   const FiltroMembro({
     super.key,
@@ -112,57 +114,172 @@ class FiltroMembro extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final membrosAsync = ref.watch(membrosProvider);
+    // Enquanto `GET /membros` carrega ou falha, trata como lista vazia: o campo
+    // mostra só "Todos" (sem travar o filtro), como no comportamento antigo.
+    final membros =
+        ref.watch(membrosProvider).maybeWhen(data: (m) => m, orElse: () => const <Membro>[]);
 
-    return membrosAsync.when(
-      // Enquanto carrega/erro, pelo menos o "Todos" para não deixar vazio.
-      loading: () => _Chips(membros: const [], selecionado: null, aoSelecionar: aoSelecionar),
-      error: (_, __) =>
-          _Chips(membros: const [], selecionado: null, aoSelecionar: aoSelecionar),
-      data: (membros) =>
-          _Chips(membros: membros, selecionado: selecionado, aoSelecionar: aoSelecionar),
+    final cores = AppColors.of(context);
+    final selecionadoMembro =
+        membros.where((m) => m.id == selecionado).cast<Membro?>().firstOrNull;
+    final ativo = selecionadoMembro != null;
+    final valor = selecionadoMembro?.nome ?? 'Todos';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: Semantics(
+        button: true,
+        label: 'Filtrar por músculo: $valor',
+        child: Material(
+          color: ativo ? cores.primaryTint : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppRadius.campoForm),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.campoForm),
+            onTap: () => _abrirFolha(context, membros),
+            child: Container(
+              height: AppSizes.botaoSecundario, // 48
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: ativo ? cores.primaryText : cores.lineDefault,
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.campoForm),
+              ),
+              child: Row(
+                children: [
+                  Text('Músculo',
+                      style: AppText.caption.copyWith(color: cores.textSecondary)),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      valor,
+                      style: AppText.title.copyWith(
+                        color: ativo ? cores.primaryText : null,
+                      ),
+                    ),
+                  ),
+                  Icon(LucideIcons.chevronDown,
+                      size: AppSizes.iconeSm,
+                      color: ativo ? cores.primaryText : cores.iconMuted),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _abrirFolha(BuildContext context, List<Membro> membros) async {
+    final escolhido = await showModalBottomSheet<_EscolhaMembro>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => _FolhaFiltroMembro(membros: membros, selecionado: selecionado),
+    );
+    // null = fechou sem escolher (arrastou/toque fora): mantém o filtro atual.
+    if (escolhido != null) aoSelecionar(escolhido.id);
+  }
+}
+
+/// Resultado da folha. Embrulha o id (que pode ser nulo = "Todos") para
+/// distinguir "escolheu Todos" de "fechou sem escolher" (null do showModal).
+class _EscolhaMembro {
+  const _EscolhaMembro(this.id);
+  final int? id;
+}
+
+/// Folha de baixo com a lista de opções de filtro: "Todos" + os membros. Uma
+/// opção por linha (54 px), a atual em destaque com check. Escolher fecha e
+/// devolve a opção. Grupo de seleção única para a semântica.
+class _FolhaFiltroMembro extends StatelessWidget {
+  const _FolhaFiltroMembro({required this.membros, required this.selecionado});
+
+  final List<Membro> membros;
+  final int? selecionado;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return SafeArea(
+      child: Semantics(
+        container: true,
+        label: 'Filtrar por músculo',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x16, AppSpacing.x4, AppSpacing.x16, AppSpacing.x8),
+              child: Text('FILTRAR POR MÚSCULO',
+                  style: AppText.overline.copyWith(color: cores.textSecondary)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  _OpcaoFiltro(
+                    nome: 'Todos',
+                    selecionada: selecionado == null,
+                    aoTocar: () => Navigator.pop(context, const _EscolhaMembro(null)),
+                  ),
+                  for (final m in membros)
+                    _OpcaoFiltro(
+                      nome: m.nome,
+                      selecionada: m.id == selecionado,
+                      aoTocar: () => Navigator.pop(context, _EscolhaMembro(m.id)),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _Chips extends StatelessWidget {
-  const _Chips({
-    required this.membros,
-    required this.selecionado,
-    required this.aoSelecionar,
+/// Uma linha da folha de filtro (54 px). Selecionada: texto azul + check.
+class _OpcaoFiltro extends StatelessWidget {
+  const _OpcaoFiltro({
+    required this.nome,
+    required this.selecionada,
+    required this.aoTocar,
   });
 
-  final List<Membro> membros;
-  final int? selecionado;
-  final ValueChanged<int?> aoSelecionar;
+  final String nome;
+  final bool selecionada;
+  final VoidCallback aoTocar;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.x8),
-            child: ChoiceChip(
-              label: const Text('Todos'),
-              selected: selecionado == null,
-              showCheckmark: false,
-              onSelected: (_) => aoSelecionar(null),
-            ),
-          ),
-          for (final m in membros)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.x8),
-              child: ChoiceChip(
-                label: Text(m.nome),
-                selected: m.id == selecionado,
-                showCheckmark: false,
-                onSelected: (_) => aoSelecionar(m.id),
+    final cores = AppColors.of(context);
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      selected: selecionada,
+      button: true,
+      child: InkWell(
+        onTap: aoTocar,
+        child: Container(
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  nome,
+                  style: AppText.title.copyWith(
+                    color: selecionada ? cores.primaryText : null,
+                    fontWeight: selecionada ? FontWeight.w600 : null,
+                  ),
+                ),
               ),
-            ),
-        ],
+              if (selecionada)
+                Icon(LucideIcons.check,
+                    size: AppSizes.iconeSm, color: cores.primaryText),
+            ],
+          ),
+        ),
       ),
     );
   }
