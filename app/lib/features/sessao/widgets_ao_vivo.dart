@@ -224,6 +224,31 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
   }
 }
 
+/// Faixa FIXA no rodapé da tela do exercício com a barra de descanso (protótipo
+/// 15): fica visível nas três abas e não rola junto com a lista de séries. Não
+/// ocupa espaço quando não há descanso ativo.
+class BarraDescansoFixa extends ConsumerWidget {
+  const BarraDescansoFixa({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(descansoControllerProvider) == null) {
+      return const SizedBox.shrink();
+    }
+    final cores = AppColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: cores.lineDivider)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(AppSpacing.x12),
+        child: BarraDescanso(),
+      ),
+    );
+  }
+}
+
 /// Botãozinho da barra de descanso (−15s / +15s / Pular).
 class _BotaoDescanso extends StatelessWidget {
   const _BotaoDescanso({

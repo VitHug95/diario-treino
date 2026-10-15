@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -70,6 +70,11 @@ class DetalheSessaoArgs {
   final String? treinoNome;
 }
 
+/// Navigator raiz: as telas do treino ao vivo são empilhadas nele (e não no
+/// navigator da aba Fichas) para ocupar a tela toda, sem a barra inferior,
+/// como nos protótipos 14 a 16.
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'raiz');
+
 /// go_router com casca de navegação inferior (Início/Fichas/Progresso) e
 /// redirecionamento por estado de autenticação.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -78,6 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authStateProvider, (_, __) => refresh.value++);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: Rotas.inicio,
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -181,11 +187,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   // Treino ao vivo (TV-3), empilhado sobre a aba Fichas.
                   GoRoute(
+                    parentNavigatorKey: _rootNavigatorKey,
                     path: 'ao-vivo',
                     name: 'treinoAoVivo',
                     builder: (context, state) => const TreinoAoVivoScreen(),
                     routes: [
                       GoRoute(
+                        parentNavigatorKey: _rootNavigatorKey,
                         path: 'exercicio',
                         name: 'exercicioAoVivo',
                         builder: (context, state) => ExercicioAoVivoScreen(
@@ -193,6 +201,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                       GoRoute(
+                        parentNavigatorKey: _rootNavigatorKey,
                         path: 'resumo',
                         name: 'resumoTreino',
                         builder: (context, state) => const ResumoTreinoScreen(),

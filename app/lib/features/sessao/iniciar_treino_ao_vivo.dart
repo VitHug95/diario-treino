@@ -34,7 +34,10 @@ Future<void> iniciarTreinoAoVivoDaFicha(
   }
 
   // Carrega o rascunho pré-preenchido da ficha. Barra de progresso enquanto vai.
-  final navigator = Navigator.of(context);
+  // showDialog usa o navigator RAIZ por padrão; pegar o mesmo aqui. Com o
+  // Navigator.of(context) simples, dentro da casca de abas, o pop() atingia
+  // o navigator da aba (e não o diálogo) e o indicador ficava preso.
+  final navigator = Navigator.of(context, rootNavigator: true);
   showDialog<void>(
     context: context,
     barrierDismissible: false,
