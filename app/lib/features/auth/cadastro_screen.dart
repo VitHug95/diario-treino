@@ -88,6 +88,7 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
                     CampoHeader(
                       controller: _nome,
                       hint: 'Seu nome',
+                      rotulo: 'Nome',
                       textCapitalization: TextCapitalization.words,
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Informe seu nome' : null,
@@ -98,6 +99,7 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
                     CampoHeader(
                       controller: _email,
                       hint: 'seu@email.com',
+                      rotulo: 'E-mail',
                       keyboardType: TextInputType.emailAddress,
                       autofill: const [AutofillHints.email],
                       validator: (v) => (v == null || !v.contains('@'))
@@ -110,6 +112,7 @@ class _CadastroScreenState extends ConsumerState<CadastroScreen> {
                     CampoHeader(
                       controller: _senha,
                       hint: 'Pelo menos 6 caracteres',
+                      rotulo: 'Senha',
                       obscure: true,
                       autofill: const [AutofillHints.newPassword],
                       validator: (v) => (v == null || v.length < 6)

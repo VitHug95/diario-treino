@@ -54,7 +54,7 @@ Cadastrar e entrar
     [Arguments]    ${email}
     Click    role=button[name="Criar conta"]
     Wait For Elements State    role=button[name="CRIAR CONTA"]    visible
-    Fill Text    [aria-label="Seu nome"]    Atleta E2E
+    Fill Text    [aria-label="Nome"]    Atleta E2E
     Fill Text    [aria-label="E-mail"]    ${email}
     Fill Text    [aria-label="Senha"]    ${SENHA}
     Click    role=button[name="CRIAR CONTA"]
