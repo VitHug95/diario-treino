@@ -35,8 +35,16 @@ class AuthService {
         email: email.trim(),
         password: senha,
       );
-      await cred.user?.updateDisplayName(nome.trim());
-      await cred.user?.reload();
+      // Aqui a conta já existe e a sessão já está ativa: o authStateChanges
+      // dispara e o roteador redireciona. O nome de exibição é cosmético;
+      // uma falha ao gravá-lo (acontece no Auth Emulator) não pode impedir o
+      // login, então tratamos de forma tolerante.
+      try {
+        await cred.user?.updateDisplayName(nome.trim());
+        await cred.user?.reload();
+      } catch (_) {
+        // Ignora: não bloqueia o login por causa do nome de exibição.
+      }
     } on FirebaseAuthException catch (e) {
       throw AuthException(_traduzir(e));
     }
