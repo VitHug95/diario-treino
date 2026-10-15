@@ -1,12 +1,17 @@
 # Deploy automático da API (Fly.io) via CI
 
 A partir desta configuração, **a API é publicada automaticamente** no Fly a cada
-merge na `main`, logo após o CI passar (build + testes). O front (web) já era
-publicado automaticamente pelo Netlify; agora o back acompanha.
+merge na `main`, logo após o CI passar (build + testes). O front (web) também é
+publicado automaticamente a cada merge (ver "Deploy do front" abaixo).
 
 Isso resolve o problema que causou o bug "PBI-33 continuava quebrado": antes, o
-merge atualizava só o front (Netlify), e a API no Fly dependia de um
+merge atualizava só o front, e a API no Fly dependia de um
 `flyctl deploy` manual — fácil de esquecer.
+
+> **Nota (15/10/2026):** o front era publicado pelo Netlify, mas migramos para o
+> Cloudflare (Workers Static Assets) — o plano Free do Netlify pausava os deploys
+> de produção ao fim dos créditos do mês. Detalhes no ADR-09 do MAS e no
+> `docs/POST-MORTEM-deploy-release2.md`.
 
 ## Como funciona (`.github/workflows/ci.yml`)
 
@@ -41,6 +46,23 @@ O workflow lê `secrets.FLY_API_TOKEN`. Sem esse secret, o job de deploy falha
 
 3. Pronto. No próximo merge na `main`, o deploy roda sozinho. Acompanhe em
    **Actions** (job "Deploy API (Fly.io)") ou com `flyctl status --app diario-treino-api`.
+
+## Deploy do front (Cloudflare)
+
+O job `deploy-web` builda o Flutter web e publica no Cloudflare (Workers Static
+Assets) a cada merge na `main`, com as mesmas garantias do `deploy-api` (só após
+o CI passar, só em push na `main`).
+
+- Config do Worker: `app/wrangler.toml` (nome `diario-treino`, serve `build/web`
+  como SPA).
+- Publica com `cloudflare/wrangler-action` rodando `wrangler deploy`.
+- Secrets do repositório necessários:
+  - `CLOUDFLARE_API_TOKEN` — token com permissão **Workers Scripts: Edit**
+    (criar em Cloudflare → My Profile → API Tokens → template "Edit Cloudflare
+    Workers"; em Zone Resources use "All zones" para não travar na validação).
+  - `CLOUDFLARE_ACCOUNT_ID` — o Account ID da conta (Workers & Pages, barra lateral).
+- O deploy NÃO usa a integração Git do Cloudflare (ela foi desconectada); vai só
+  por API token pelo Actions.
 
 ## Como testar sem esperar um merge
 

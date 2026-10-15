@@ -11,11 +11,11 @@
 
 Registrar as decisões de arquitetura do aplicativo, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
 
-### 1.1 Estado de implementação (14/10/2026)
+### 1.1 Estado de implementação (15/10/2026)
 
-O MVP de registro está **publicado e em uso** (Fly + Netlify + Neon). Resumo do que a arquitetura já tem no ar vs. o que falta:
+O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon). Resumo do que a arquitetura já tem no ar vs. o que falta:
 
-**Concluído e na `main`:** fundação back/front (PBI-01/02/03), publicação (PBI-04) com **deploy automático** da API no CI (ADR-09), autenticação Firebase + `/me` (PBI-06), controle de acesso centralizado (PBI-07), login/cadastro (PBI-08), catálogo buscar/criar (PBI-10/11) com **carga de 89 exercícios globais**, fichas (PBI-12/13/14), registro de sessão com edição e treino fora da ficha (PBI-15/16/17/18), tela inicial com fichas e rotação (PBI-23), **progresso completo** — gráfico de evolução + observação no ponto + lista de sessões (PBI-20/21/22), design system (temas claro/escuro por tokens), e correções de uso real (PBI-32/33). Teste de fluxo via `flutter test` no lugar do E2E Robot (PBI-26 parcial).
+**Concluído e na `main`:** fundação back/front (PBI-01/02/03), publicação (PBI-04) com **deploy automático** de API e front no CI (ADR-09), autenticação Firebase + `/me` (PBI-06), controle de acesso centralizado (PBI-07), login/cadastro (PBI-08), catálogo buscar/criar (PBI-10/11) com **carga de 89 exercícios globais**, fichas (PBI-12/13/14), registro de sessão com edição e treino fora da ficha (PBI-15/16/17/18), tela inicial com fichas e rotação (PBI-23), **progresso completo** — gráfico de evolução + observação no ponto + lista de sessões (PBI-20/21/22), design system (temas claro/escuro por tokens), correções de uso real (PBI-32/33) e o épico **Treino ao vivo, série por série** (TV-1 a TV-6: tag de série, faixa de repetições e o fluxo ao vivo com cronômetro, série por série, descanso e resumo). Teste de fluxo via `flutter test` no lugar do E2E Robot (PBI-26 parcial).
 
 **Pendente:** backup do banco (PBI-05), primeiro acesso (PBI-09), treino livre (PBI-19), **tema completo com persistência e opção em Perfil (PBI-24)**, **perfil e conta — ver dados / sair / excluir conta (PBI-25)**, E2E Robot completo (PBI-26), filtro por membro (PBI-31, ADR-10), métrica flexível no registro (PBI-34), cronograma semanal (PBI-35) e todo o incremento 2 de cardio (PBI-27 a PBI-30).
 
@@ -112,9 +112,10 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 
 ### ADR-09: Hospedagem provisória para a fase de testes
 - **Contexto:** para validar o app em uso real sem montar a infraestrutura definitiva, a publicação da PBI-04 foi feita em serviços gerenciados.
-- **Decisão:** durante a fase de testes, a API roda no Fly.io (`diario-treino-api.fly.dev`) e o front no Netlify (`diario-treino.netlify.app`), com o banco no Neon e login no Firebase. É uma situação **provisória**. A implantação final segue a seção 14: máquina própria com Docker e Caddy, e domínio próprio.
-- **Consequência:** nada no código pode depender de recurso exclusivo do Fly ou do Netlify. Configuração só por variável de ambiente, API empacotada em Docker e front como arquivos estáticos, para a migração ser só troca de destino do deploy. Na migração: registrar o domínio, atualizar `Cors__OrigensPermitidas`, autorizar o domínio novo no Firebase e apontar o deploy do CI para a máquina.
-- **Deploy automático (implementado):** o CI (`.github/workflows/ci.yml`) publica a API no Fly a cada merge na `main` depois do build + testes (job `deploy-api`, secret `FLY_API_TOKEN`); o front tem deploy automático pelo Netlify. Migrations aplicam no startup da API em produção. Ver `docs/DEPLOY-AUTOMATICO.md`.
+- **Decisão:** durante a fase de testes, a API roda no Fly.io (`diario-treino-api.fly.dev`) e o front no Cloudflare (Workers Static Assets, `diario-treino.vitorhugo-an.workers.dev`), com o banco no Neon e login no Firebase. É uma situação **provisória**. A implantação final segue a seção 14: máquina própria com Docker e Caddy, e domínio próprio.
+- **Consequência:** nada no código pode depender de recurso exclusivo do Fly ou do Cloudflare. Configuração só por variável de ambiente, API empacotada em Docker e front como arquivos estáticos (`build/web`), para a migração ser só troca de destino do deploy. Na migração: registrar o domínio, atualizar `Cors__OrigensPermitidas`, autorizar o domínio novo no Firebase e apontar o deploy do CI para a máquina.
+- **Deploy automático (implementado):** o CI (`.github/workflows/ci.yml`) publica a cada merge na `main`, depois do build + testes: a **API no Fly** (job `deploy-api`, secret `FLY_API_TOKEN`) e o **front no Cloudflare** (job `deploy-web` com `wrangler deploy`, secrets `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`; config em `app/wrangler.toml`). Migrations aplicam no startup da API em produção. Ver `docs/DEPLOY-AUTOMATICO.md`.
+- **Histórico — por que saímos do Netlify (15/10/2026):** o front era publicado no Netlify. O plano Free (300 créditos/mês) **pausa os deploys de produção** quando os créditos do ciclo acabam — o site ficou congelado servindo um build antigo, e um release novo não aparecia apesar de mergeado. Migramos para o Cloudflare (Workers Static Assets), que serve o site estático sem esse limite, e o deploy passou a ser feito pelo nosso CI via `wrangler`. Post-mortem completo em `docs/POST-MORTEM-deploy-release2.md`.
 
 ### ADR-10: Exercícios classificados por membro, em lista fechada
 - **Status:** aceito e **implementado** na PBI-31 (4 etapas). O banco usa `membro_id`/`musculo_id`; o antigo texto livre `grupo_muscular` foi removido na etapa 4.
@@ -339,7 +340,7 @@ Rotas de dados de atleta aceitam `atletaId` opcional na query para o educador; s
 
 ## 14. Implantação
 
-> **Fase de testes:** enquanto o app está em validação, a publicação é provisória no Fly.io (API) e no Netlify (front), conforme o ADR-09. O desenho abaixo é o da implantação final, em máquina própria com domínio próprio.
+> **Fase de testes:** enquanto o app está em validação, a publicação é provisória no Fly.io (API) e no Cloudflare (front, Workers Static Assets), conforme o ADR-09. O desenho abaixo é o da implantação final, em máquina própria com domínio próprio.
 
 ```mermaid
 flowchart LR
