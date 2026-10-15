@@ -177,11 +177,41 @@ class SessaoRepository {
   static String _traduzir(DioException e) {
     final status = e.response?.statusCode;
     return switch (status) {
-      400 => 'Confira os campos: alguma informação está inválida.',
+      400 => _mensagemDoProblema(e.response?.data) ??
+          'Confira os campos: alguma informação está inválida.',
       404 => 'Ficha não encontrada.',
       null => 'Sem conexão. Verifique sua internet e tente de novo.',
       _ => 'Não foi possível registrar o treino. Tente novamente.',
     };
+  }
+
+  /// Extrai a mensagem concreta de um erro 400 (RFC 9457 / Problem Details).
+  /// A API devolve ou um `errors` (ValidationProblem do FluentValidation) ou um
+  /// `title` (ArgumentException). Mostrar isso evita o usuário "caçar" o campo.
+  static String? _mensagemDoProblema(dynamic corpo) {
+    if (corpo is! Map) return null;
+
+    // ValidationProblem: { "errors": { "Campo": ["msg1", ...], ... } }
+    final errors = corpo['errors'];
+    if (errors is Map && errors.isNotEmpty) {
+      final mensagens = <String>[];
+      for (final valor in errors.values) {
+        if (valor is List) {
+          mensagens.addAll(valor.map((m) => m.toString()));
+        } else if (valor != null) {
+          mensagens.add(valor.toString());
+        }
+      }
+      if (mensagens.isNotEmpty) return mensagens.join(' ');
+    }
+
+    // ArgumentException vira Problem com "title" (e às vezes "detail").
+    final detail = corpo['detail'];
+    if (detail is String && detail.trim().isNotEmpty) return detail;
+    final title = corpo['title'];
+    if (title is String && title.trim().isNotEmpty) return title;
+
+    return null;
   }
 }
 
