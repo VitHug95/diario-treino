@@ -66,7 +66,9 @@ public sealed record AlvoExercicio(
     short VolumeMetricaId,
     string VolumeMetricaCodigo,
     string VolumeMetricaNome,
-    decimal? VolumeAlvo);
+    decimal? VolumeAlvo,
+    /// <summary>Máximo da faixa de volume (TV-2); nulo = sem faixa.</summary>
+    decimal? VolumeAlvoMax);
 
 /// <summary>Pedido para adicionar um exercício do catálogo à ficha.</summary>
 public sealed record AdicionarExercicioRequest(Guid ExercicioId);
@@ -86,4 +88,6 @@ public sealed record DefinirAlvosRequest(
     decimal? VolumeAlvo,
     short? DescansoSeg,
     string? Instrucao,
-    IReadOnlyList<MarcadorRodada>? Marcadores = null);
+    IReadOnlyList<MarcadorRodada>? Marcadores = null,
+    /// <summary>Máximo da faixa de volume (TV-2); opcional. Exige VolumeAlvo.</summary>
+    decimal? VolumeAlvoMax = null);
