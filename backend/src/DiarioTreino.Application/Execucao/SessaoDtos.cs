@@ -57,6 +57,25 @@ public sealed record SerieRascunho(
     /// <summary>Tag da série (TV-1), já pré-preenchida. Padrão VALIDA.</summary>
     string Marcador);
 
+/// <summary>
+/// Histórico recente de um exercício (TV-4, GET /exercicios/{id}/historico):
+/// as N sessões mais recentes do atleta com esse exercício, para a aba
+/// "Histórico" da tela do exercício.
+/// </summary>
+public sealed record HistoricoExercicio(
+    Guid ExercicioId,
+    string Nome,
+    string Modalidade,
+    IReadOnlyList<SessaoHistorico> Sessoes);
+
+/// <summary>Uma sessão no histórico do exercício: data, observação e séries.</summary>
+public sealed record SessaoHistorico(
+    Guid SessaoId,
+    DateOnly Data,
+    /// <summary>Observação do dia; nula quando não houve.</summary>
+    string? Observacao,
+    IReadOnlyList<SerieDetalhe> Series);
+
 /// <summary>Pedido para gravar uma sessão (PBI-15, POST /sessoes).</summary>
 public sealed record CriarSessaoRequest(
     Guid? TreinoId,

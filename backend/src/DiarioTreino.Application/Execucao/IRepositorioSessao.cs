@@ -16,6 +16,15 @@ public interface IRepositorioSessao
         Guid atletaId, Guid exercicioId, CancellationToken ct);
 
     /// <summary>
+    /// As <paramref name="limite"/> sessões mais recentes do atleta que contêm
+    /// o exercício (TV-4, aba Histórico), em ordem de data decrescente. Cada
+    /// item traz a data, a observação do dia e as séries daquele exercício.
+    /// </summary>
+    public Task<IReadOnlyList<(Guid SessaoId, DateOnly Data, string? Observacao,
+        IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
+        Guid atletaId, Guid exercicioId, int limite, CancellationToken ct);
+
+    /// <summary>
     /// Sessões do atleta no período (PBI-22), em ordem de data decrescente.
     /// `de`/`ate` são limites opcionais e inclusivos. Cada item já traz o nome
     /// da ficha, a contagem de exercícios distintos e se tem observação.

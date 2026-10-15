@@ -343,6 +343,119 @@ public sealed class SessaoEndpointTests
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
 
+    // ---------- Histórico do exercício (TV-4) ----------
+
+    private sealed record HistoricoResp(
+        Guid ExercicioId, string Nome, string Modalidade, List<SessaoHistResp> Sessoes);
+    private sealed record SessaoHistResp(
+        Guid SessaoId, DateOnly Data, string? Observacao, List<SerieHistResp> Series);
+    private sealed record SerieHistResp(
+        short Rodada, short Ordem, string Tipo,
+        short IntensidadeMetricaId, decimal? Intensidade,
+        short VolumeMetricaId, decimal Volume, short? DescansoSeg, string Marcador);
+
+    private static Task RegistrarSessaoLivre(
+        HttpClient client, Guid exercicioId, DateOnly data, decimal carga, decimal reps,
+        string? observacao = null) =>
+        client.PostAsJsonAsync("/api/v1/sessoes", new
+        {
+            treinoId = (Guid?)null,
+            data,
+            duracaoMin = (short?)null,
+            observacao,
+            exercicios = new[]
+            {
+                new
+                {
+                    exercicioId,
+                    treinoExercicioId = (Guid?)null,
+                    series = new[]
+                    {
+                        new { rodada = (short)1, ordem = (short)1, tipo = "ESFORCO",
+                              intensidadeMetricaId = CargaKg, intensidade = carga,
+                              volumeMetricaId = Repeticoes, volume = reps, descansoSeg = (short?)90 },
+                    },
+                },
+            },
+        });
+
+    [Fact]
+    public async Task Historico_traz_as_tres_ultimas_em_ordem_com_observacao()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        // 4 sessões; a mais antiga deve ficar de fora com limite=3.
+        await RegistrarSessaoLivre(client, SupinoReto, hoje.AddDays(-9), 20, 12);
+        await RegistrarSessaoLivre(client, SupinoReto, hoje.AddDays(-6), 25, 10);
+        await RegistrarSessaoLivre(client, SupinoReto, hoje.AddDays(-3), 30, 8, observacao: "Pesado");
+        await RegistrarSessaoLivre(client, SupinoReto, hoje, 32, 7);
+
+        var hist = await client.GetFromJsonAsync<HistoricoResp>(
+            $"/api/v1/exercicios/{SupinoReto}/historico?limite=3");
+
+        Assert.Equal(SupinoReto, hist!.ExercicioId);
+        Assert.Equal(3, hist.Sessoes.Count);
+        // Ordem decrescente de data: hoje, -3, -6.
+        Assert.Equal(hoje, hist.Sessoes[0].Data);
+        Assert.Equal(hoje.AddDays(-3), hist.Sessoes[1].Data);
+        Assert.Equal(hoje.AddDays(-6), hist.Sessoes[2].Data);
+        // A observação chega no ponto certo.
+        Assert.Equal("Pesado", hist.Sessoes[1].Observacao);
+        Assert.Null(hist.Sessoes[0].Observacao);
+        // As séries da sessão vêm junto.
+        var serie = Assert.Single(hist.Sessoes[0].Series);
+        Assert.Equal(32m, serie.Intensidade);
+        Assert.Equal(7m, serie.Volume);
+    }
+
+    [Fact]
+    public async Task Historico_vazio_quando_nunca_treinou_o_exercicio()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var hist = await client.GetFromJsonAsync<HistoricoResp>(
+            $"/api/v1/exercicios/{SupinoReto}/historico");
+
+        Assert.Empty(hist!.Sessoes);
+    }
+
+    [Fact]
+    public async Task Historico_de_exercicio_proprio_de_outro_usuario_responde_404()
+    {
+        var (apiA, clientA, _) = Autenticar(_postgres);
+        await using var _apiA = apiA;
+        var criado = await clientA.PostAsJsonAsync("/api/v1/exercicios", new
+        {
+            nome = $"Secreto hist {Guid.NewGuid():n}",
+            membroId = (short)4,
+            modalidade = "FORCA",
+            intensidadeMetricaId = 1,
+            volumeMetricaId = 10,
+        });
+        criado.EnsureSuccessStatusCode();
+        var exId = (await criado.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var (apiB, clientB, _) = Autenticar(_postgres);
+        await using var _apiB = apiB;
+        var resposta = await clientB.GetAsync($"/api/v1/exercicios/{exId}/historico");
+
+        Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Historico_sem_token_responde_401()
+    {
+        await using var api = new ApiFactory(_postgres.ConnectionString);
+        var client = api.CreateClient();
+
+        var resposta = await client.GetAsync($"/api/v1/exercicios/{SupinoReto}/historico");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
+
     // ---------- Treino livre (PBI-19) ----------
 
     private sealed record RascunhoAvulsoResp(
