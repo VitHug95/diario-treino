@@ -154,14 +154,14 @@ class _Conteudo extends StatelessWidget {
 
 /// Estado completo: histórico disponível. Recomenda a próxima ficha, mostra a
 /// faixa semanal e a "última vez" de cada ficha.
-class _ComHistorico extends StatelessWidget {
+class _ComHistorico extends ConsumerWidget {
   const _ComHistorico({required this.fichas, required this.sessoes});
 
   final List<TreinoResumo> fichas;
   final List<SessaoResumo> sessoes;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final recomendada = InicioLogica.proximaFicha(fichas, sessoes) ?? fichas.first;
     final ultimaVez = InicioLogica.ultimaVezPorFicha(sessoes);
     final dias = InicioLogica.diasDaSemana(DateTime.now(), sessoes);
@@ -169,7 +169,7 @@ class _ComHistorico extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FaixaSemana(dias: dias, aoTocarDia: (d) => _registrar(context, recomendada, data: d)),
+        _FaixaSemana(dias: dias, aoTocarDia: (d) => _registrar(context, ref, recomendada, data: d)),
         const SizedBox(height: AppSpacing.x20),
         _CartaoDestaque(ficha: recomendada),
         const SizedBox(height: AppSpacing.x24),
@@ -230,9 +230,28 @@ class _SemHistorico extends StatelessWidget {
   }
 }
 
-/// Abre o registro de uma ficha. [data] opcional pré-seleciona o dia (faixa
-/// semanal); hoje é o padrão da própria tela de registro quando não informado.
-void _registrar(BuildContext context, TreinoResumo ficha, {DateTime? data}) {
+/// Abre o registro de uma ficha a partir da tela inicial. [data] opcional
+/// pré-seleciona o dia (faixa semanal).
+///
+/// Com a flag TV-3 ligada e sem [data] (ou seja, "treinar agora"), abre o
+/// treino ao vivo (tela 14). Com um dia específico escolhido na faixa semanal
+/// ([data] != null) é um registro retroativo — segue no formulário de sempre,
+/// que aceita data passada. Flag desligada mantém tudo no fluxo antigo.
+void _registrar(
+  BuildContext context,
+  WidgetRef ref,
+  TreinoResumo ficha, {
+  DateTime? data,
+}) {
+  if (treinoAoVivoHabilitado && data == null) {
+    iniciarTreinoAoVivoDaFicha(
+      context,
+      ref,
+      treinoId: ficha.id,
+      treinoNome: ficha.nome,
+    );
+    return;
+  }
   context.push(
     Rotas.registrarSessao,
     extra: RegistrarSessaoArgs(
@@ -363,13 +382,13 @@ class _MarcaDia extends StatelessWidget {
 /// Cartão de recomendação — fundo escuro (bg-header). Sugere a próxima ficha da
 /// sequência (rotação a partir da última registrada). É recomendação, não trava:
 /// qualquer ficha pode ser registrada pela lista abaixo (PBI-23A).
-class _CartaoDestaque extends StatelessWidget {
+class _CartaoDestaque extends ConsumerWidget {
   const _CartaoDestaque({required this.ficha});
 
   final TreinoResumo ficha;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
     final titulo = ficha.descricao != null && ficha.descricao!.isNotEmpty
         ? '${ficha.nome} · ${ficha.descricao}'
@@ -395,7 +414,7 @@ class _CartaoDestaque extends StatelessWidget {
               style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x16),
           FilledButton.icon(
-            onPressed: () => _registrar(context, ficha),
+            onPressed: () => _registrar(context, ref, ficha),
             icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
             label: const Text('REGISTRAR TREINO'),
           ),
@@ -406,14 +425,14 @@ class _CartaoDestaque extends StatelessWidget {
 }
 
 /// Ficha da lista: toque abre o registro direto. Mostra a data da última vez.
-class _CartaoFicha extends StatelessWidget {
+class _CartaoFicha extends ConsumerWidget {
   const _CartaoFicha({required this.ficha, required this.ultimaVez});
 
   final TreinoResumo ficha;
   final DateTime? ultimaVez;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
     final temDescricao = ficha.descricao != null && ficha.descricao!.isNotEmpty;
 
@@ -422,7 +441,7 @@ class _CartaoFicha extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
-        onTap: () => _registrar(context, ficha),
+        onTap: () => _registrar(context, ref, ficha),
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(color: cores.lineDefault),
