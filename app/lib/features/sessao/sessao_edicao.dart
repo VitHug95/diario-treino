@@ -23,6 +23,7 @@ class SerieEdicao {
     required String volumeTexto,
     required String descansoTexto,
     this.marcador = 'VALIDA',
+    this.feita = false,
   })  : id = UniqueKey(),
         intensidade = TextEditingController(text: intensidadeTexto),
         volume = TextEditingController(text: volumeTexto),
@@ -37,6 +38,9 @@ class SerieEdicao {
 
   /// Tag da série (TV-1). Mutável: o atleta troca no registro. Padrão 'VALIDA'.
   String marcador;
+
+  /// Check por série (TV-3, treino ao vivo). Mutável: "Completar série" liga.
+  bool feita;
   final int intensidadeMetricaId;
   final String intensidadeMetricaCodigo;
   final String intensidadeMetricaNome;

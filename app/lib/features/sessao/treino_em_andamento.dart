@@ -127,6 +127,8 @@ class SerieEmAndamento {
     required this.volumeMetricaNome,
     required this.volumeTexto,
     required this.descansoTexto,
+    this.marcador = 'VALIDA',
+    this.feita = false,
   });
 
   final int rodada;
@@ -142,6 +144,12 @@ class SerieEmAndamento {
   final String volumeTexto;
   final String descansoTexto;
 
+  /// Tag da série (TV-1), preservada no rascunho ao reabrir.
+  final String marcador;
+
+  /// Check por série (TV-3): true quando o atleta concluiu esta série.
+  final bool feita;
+
   Map<String, dynamic> paraJson() => {
         'rodada': rodada,
         'ordem': ordem,
@@ -155,6 +163,8 @@ class SerieEmAndamento {
         'volumeMetricaNome': volumeMetricaNome,
         'volumeTexto': volumeTexto,
         'descansoTexto': descansoTexto,
+        'marcador': marcador,
+        'feita': feita,
       };
 
   factory SerieEmAndamento.doJson(Map<String, dynamic> json) => SerieEmAndamento(
@@ -170,6 +180,8 @@ class SerieEmAndamento {
         volumeMetricaNome: json['volumeMetricaNome'] as String,
         volumeTexto: json['volumeTexto'] as String,
         descansoTexto: json['descansoTexto'] as String,
+        marcador: json['marcador'] as String? ?? 'VALIDA',
+        feita: json['feita'] as bool? ?? false,
       );
 }
 
@@ -227,6 +239,8 @@ extension ConversaoRascunho on ExercicioEmAndamento {
                   volumeMetricaNome: s.volumeMetricaNome,
                   volumeTexto: s.volumeTexto,
                   descansoTexto: s.descansoTexto,
+                  marcador: s.marcador,
+                  feita: s.feita,
                 ))
             .toList(),
       );
@@ -256,6 +270,8 @@ ExercicioEmAndamento exercicioParaRascunho(ExercicioEdicao e) =>
                 volumeMetricaNome: s.volumeMetricaNome,
                 volumeTexto: s.volumeTexto,
                 descansoTexto: s.descansoTexto,
+                marcador: s.marcador,
+                feita: s.feita,
               ))
           .toList(),
     );
