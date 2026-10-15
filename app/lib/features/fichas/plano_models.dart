@@ -57,6 +57,7 @@ class TreinoExercicioResumo {
     required this.descansoSeg,
     required this.instrucao,
     required this.alvo,
+    this.marcadores = const [],
   });
 
   final String id;
@@ -76,8 +77,19 @@ class TreinoExercicioResumo {
   /// Alvos prescritos (intensidade/volume). Nulo até o atleta definir.
   final AlvoExercicio? alvo;
 
+  /// Tags prescritas por rodada (TV-1). Só rodadas com tag ≠ VALIDA vêm aqui.
+  final List<MarcadorRodada> marcadores;
+
   /// Já tem alvos definidos (etapa de esforço gravada).
   bool get temAlvo => alvo != null;
+
+  /// Tag prescrita de uma rodada (1-based), ou 'VALIDA' se não houver.
+  String marcadorDaRodada(int rodada) =>
+      marcadores
+          .where((m) => m.rodada == rodada)
+          .map((m) => m.marcador)
+          .firstOrNull ??
+      'VALIDA';
 
   factory TreinoExercicioResumo.doJson(Map<String, dynamic> json) =>
       TreinoExercicioResumo(
@@ -93,6 +105,24 @@ class TreinoExercicioResumo {
         alvo: json['alvo'] == null
             ? null
             : AlvoExercicio.doJson(json['alvo'] as Map<String, dynamic>),
+        marcadores: ((json['marcadores'] as List<dynamic>?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(MarcadorRodada.doJson)
+            .toList(),
+      );
+}
+
+/// Tag prescrita de uma rodada de um exercício da ficha (TV-1). Espelha o
+/// MarcadorRodada da API.
+class MarcadorRodada {
+  const MarcadorRodada({required this.rodada, required this.marcador});
+
+  final int rodada;
+  final String marcador;
+
+  factory MarcadorRodada.doJson(Map<String, dynamic> json) => MarcadorRodada(
+        rodada: (json['rodada'] as num).toInt(),
+        marcador: json['marcador'] as String,
       );
 }
 

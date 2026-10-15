@@ -112,6 +112,7 @@ class SerieRascunho {
     required this.volumeMetricaNome,
     required this.volume,
     required this.descansoSeg,
+    this.marcador = 'VALIDA',
   });
 
   final int rodada;
@@ -126,6 +127,9 @@ class SerieRascunho {
   final String volumeMetricaNome;
   final double? volume;
   final int? descansoSeg;
+
+  /// Tag da série (TV-1), já pré-preenchida pelo servidor. Padrão 'VALIDA'.
+  final String marcador;
 
   /// Peso corporal não tem valor de intensidade a digitar (MER 3.11).
   bool get intensidadePorPesoCorporal =>
@@ -144,6 +148,7 @@ class SerieRascunho {
         volumeMetricaNome: json['volumeMetricaNome'] as String,
         volume: (json['volume'] as num?)?.toDouble(),
         descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
+        marcador: json['marcador'] as String? ?? 'VALIDA',
       );
 }
 
@@ -244,6 +249,7 @@ class SerieDetalhe {
     required this.volumeMetricaNome,
     required this.volume,
     required this.descansoSeg,
+    this.marcador = 'VALIDA',
   });
 
   final int rodada;
@@ -258,6 +264,9 @@ class SerieDetalhe {
   final String volumeMetricaNome;
   final double volume;
   final int? descansoSeg;
+
+  /// Tag da série (TV-1). 'VALIDA' quando não marcada.
+  final String marcador;
 
   bool get intensidadePorPesoCorporal =>
       intensidadeMetricaCodigo == 'PESO_CORPORAL';
@@ -275,6 +284,7 @@ class SerieDetalhe {
         volumeMetricaNome: json['volumeMetricaNome'] as String,
         volume: (json['volume'] as num).toDouble(),
         descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
+        marcador: json['marcador'] as String? ?? 'VALIDA',
       );
 }
 
