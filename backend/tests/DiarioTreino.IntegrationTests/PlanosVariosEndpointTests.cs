@@ -168,6 +168,10 @@ public sealed class PlanosVariosEndpointTests
     {
         var (api, client, uid) = Autenticar(_postgres);
         await using var _api = api;
+
+        // Provisiona o atleta no Postgres (o usuário só é criado na primeira
+        // chamada autenticada). Sem isso, IdDoUsuario não acha o registro.
+        (await client.GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
         var atletaId = await IdDoUsuario(uid);
 
         // Plano com autor diferente do atleta (montado pelo "professor"),
