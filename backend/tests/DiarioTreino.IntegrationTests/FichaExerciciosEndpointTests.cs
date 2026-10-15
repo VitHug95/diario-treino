@@ -29,7 +29,7 @@ public sealed class FichaExerciciosEndpointTests
     private sealed record AlvoResp(
         short IntensidadeMetricaId, string IntensidadeMetricaCodigo, string IntensidadeMetricaNome,
         decimal? IntensidadeAlvo, short VolumeMetricaId, string VolumeMetricaCodigo,
-        string VolumeMetricaNome, decimal? VolumeAlvo);
+        string VolumeMetricaNome, decimal? VolumeAlvo, decimal? VolumeAlvoMax);
     private sealed record CriadoResp(Guid Id);
 
     // Exercício global do seed usado nos testes.
@@ -404,6 +404,108 @@ public sealed class FichaExerciciosEndpointTests
                 intensidadeMetricaId = 1,
                 volumeMetricaId = 10,
                 marcadores = new[] { new { rodada = (short)5, marcador = "FALHA" } },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
+    }
+
+    // ---- TV-2: faixa de repetições (volume_alvo_max) ----
+
+    [Fact]
+    public async Task Definir_faixa_de_volume_vai_e_volta_no_detalhe()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                intensidadeAlvo = 30,
+                volumeMetricaId = 10,
+                volumeAlvo = 8,
+                volumeAlvoMax = 12,
+                descansoSeg = 90,
+            });
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        var alvo = ficha!.Exercicios.Single().Alvo!;
+        Assert.Equal(8m, alvo.VolumeAlvo);
+        Assert.Equal(12m, alvo.VolumeAlvoMax);
+    }
+
+    [Fact]
+    public async Task Alvo_sem_faixa_relê_com_maximo_nulo()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        // Sem volumeAlvoMax (comportamento de antes do TV-2).
+        await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                volumeAlvo = 10,
+            });
+
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        var alvo = ficha!.Exercicios.Single().Alvo!;
+        Assert.Equal(10m, alvo.VolumeAlvo);
+        Assert.Null(alvo.VolumeAlvoMax);
+    }
+
+    [Fact]
+    public async Task Faixa_com_maximo_menor_que_minimo_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                volumeAlvo = 12,
+                volumeAlvoMax = 8,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
+    }
+
+    [Fact]
+    public async Task Faixa_com_maximo_sem_minimo_responde_400()
+    {
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+        var teId = (await (await AddExercicio(client, treinoId, SupinoReto)).Content
+            .ReadFromJsonAsync<CriadoResp>())!.Id;
+
+        var put = await client.PutAsJsonAsync(
+            $"/api/v1/treinos/{treinoId}/exercicios/{teId}/alvos",
+            new
+            {
+                series = 3,
+                intensidadeMetricaId = 1,
+                volumeMetricaId = 10,
+                volumeAlvoMax = 12, // sem volumeAlvo
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);

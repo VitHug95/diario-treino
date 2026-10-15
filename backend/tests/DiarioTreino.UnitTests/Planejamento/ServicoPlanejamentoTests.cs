@@ -425,6 +425,36 @@ public sealed class ServicoPlanejamentoTests
     }
 
     [Fact]
+    public async Task Definir_alvos_grava_a_faixa_de_volume()
+    {
+        var dono = Guid.NewGuid();
+        var teId = Guid.NewGuid();
+        var te = new TreinoExercicio { Id = teId, TreinoId = Guid.NewGuid(), Rodadas = 1 };
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios = { te },
+        };
+
+        await Montar(repo).DefinirAlvosAsync(
+            dono, teId,
+            new DefinirAlvosRequest(
+                Series: 3,
+                IntensidadeMetricaId: 1,
+                IntensidadeAlvo: 30,
+                VolumeMetricaId: 10,
+                VolumeAlvo: 8,
+                DescansoSeg: 90,
+                Instrucao: null,
+                VolumeAlvoMax: 12),
+            CancellationToken.None);
+
+        var etapa = Assert.Single(repo.Etapas);
+        Assert.Equal(8m, etapa.VolumeAlvo);
+        Assert.Equal(12m, etapa.VolumeAlvoMax);
+    }
+
+    [Fact]
     public async Task Definir_alvos_com_metrica_de_eixo_errado_lanca_argumento()
     {
         var dono = Guid.NewGuid();
