@@ -80,3 +80,16 @@ final progressoDoExercicioProvider =
       .watch(progressoRepositoryProvider)
       .obterProgresso(exercicioId, de: de);
 });
+
+/// Progresso de UM exercício por id (TV-4, aba Evolução da tela do exercício).
+/// Não depende do seletor global da aba Progresso; usa o mesmo período padrão
+/// (90 dias) para dar uma visão ampla da evolução.
+final progressoPorExercicioProvider = FutureProvider.autoDispose
+    .family<ProgressoExercicio?, String>((ref, exercicioId) async {
+  final hoje = DateTime.now();
+  final de = DateTime(hoje.year, hoje.month, hoje.day)
+      .subtract(const Duration(days: 90));
+  return ref
+      .watch(progressoRepositoryProvider)
+      .obterProgresso(exercicioId, de: de);
+});
