@@ -70,9 +70,32 @@ void main() {
     expect(find.text('Registrar sem ficha'), findsOneWidget);
   });
 
-  testWidgets('Com sessão mas sem ficha, mostra a inicial (não o primeiro acesso)',
+  testWidgets('PBI-47: sem plano em uso mostra o Primeiro acesso, mesmo com sessões',
       (tester) async {
-    // Já treinou (treino livre), então o primeiro acesso não aparece mais.
+    // Excluiu todos os planos, mas tem histórico: sem plano em uso, a Início
+    // mostra a tela 6.
+    final sessoes = [
+      SessaoResumo(
+        id: 's1',
+        data: DateTime.now().subtract(const Duration(days: 1)),
+        treinoId: 'A',
+        treinoNome: 'A',
+        quantidadeExercicios: 2,
+        duracaoMin: 30,
+        temObservacao: false,
+      ),
+    ];
+    await tester.pumpWidget(await _tela(null, sessoes: sessoes));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seu diário de treino'), findsOneWidget);
+    expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
+  });
+
+  testWidgets('Plano em uso sem fichas, mas com sessão: mostra a inicial',
+      (tester) async {
+    // Já treinou (treino livre) e tem plano em uso vazio: o primeiro acesso
+    // não aparece; a inicial convida a montar as fichas.
     final sessoes = [
       SessaoResumo(
         id: 's1',
@@ -84,11 +107,44 @@ void main() {
         temObservacao: false,
       ),
     ];
-    await tester.pumpWidget(await _tela(null, sessoes: sessoes));
+    const vazio = PlanoAtivo(id: 'p1', nome: 'Meu plano', treinos: []);
+    await tester.pumpWidget(await _tela(vazio, sessoes: sessoes));
     await tester.pumpAndSettle();
 
     expect(find.text('Seu diário de treino'), findsNothing);
     expect(find.text('Monte suas fichas'), findsOneWidget);
+  });
+
+  testWidgets('PBI-47: lista as fichas do plano em uso com o nome dele',
+      (tester) async {
+    final plano = PlanoAtivo(
+      id: 'p2',
+      nome: 'Treino de viagem',
+      treinos: [
+        _ficha('V1', 1, descricao: 'Corpo todo'),
+        _ficha('V2', 2, descricao: 'Core'),
+      ],
+    );
+    // Ontem treinou uma ficha de OUTRO plano (A): a sugestão continua a
+    // primeira do plano em uso.
+    final sessoes = [
+      SessaoResumo(
+        id: 's1',
+        data: DateTime.now().subtract(const Duration(days: 1)),
+        treinoId: 'A',
+        treinoNome: 'A',
+        quantidadeExercicios: 3,
+        duracaoMin: 40,
+        temObservacao: false,
+      ),
+    ];
+    await tester.pumpWidget(await _tela(plano, sessoes: sessoes));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SUAS FICHAS'), findsOneWidget);
+    expect(find.text(' · TREINO DE VIAGEM'), findsOneWidget);
+    expect(find.text('V1 · Corpo todo'), findsOneWidget);
+    expect(find.text('Ainda não registrada'), findsNWidgets(2));
   });
 
   testWidgets('Sem histórico, sugere a primeira ficha da ordem', (tester) async {
