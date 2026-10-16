@@ -970,9 +970,9 @@ Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
 |---|---|---|---|
 | PBI-70 | Telas atualizam pela origem da mudança | todas | ✅ na `main` (PR #88) |
 | PBI-67 | Treino em andamento visível ao voltar | 19 e 23 | ✅ na `main` (PR #86); o ponto único de aviso veio com a 70 |
-| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | em revisão (branch `feat/pbi-68-69-sem-plano-e-criar-plano`) |
-| PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | em revisão (mesma branch da 68) |
-| PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | a fazer |
+| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | ✅ na `main` (PR #89) |
+| PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | ✅ na `main` (PR #89) |
+| PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | em revisão (branch `feat/pbi-71-registrar-treino`) |
 | PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | a fazer (front + API) |
 
 PBI-70, notas: as telas gravam por `fichasComandosProvider`,
@@ -999,6 +999,16 @@ ficha para abrir. O "Montar fichas" da Início (plano vazio com histórico) abre
 o detalhe do plano. **Robot:** "Registrar sem ficha" virou "Registrar treino";
 "MONTAR MINHAS FICHAS" e "CRIAR FICHA" não existem mais (o caminho é "Criar meu
 plano" → "Criar plano" → "Nova ficha" → "Salvar").
+
+PBI-71, notas: a linha "Registrar treino" (56 px, rótulo falado "Registrar
+treino") fica logo abaixo da semana, sempre visível. Com plano em uso e
+fichas, abre o sheet "Qual treino?" com as fichas que têm exercícios (a
+contagem vem do `fichaDetalheProvider`, o mesmo do plano) e "Sem ficha"; sem
+plano ou com plano vazio, vai direto ao treino livre. A ficha abre o registro
+de treino já feito com hoje como padrão (dá para trocar por um dia passado).
+O "Registrar treino" do Bem-vindo já abria o treino livre desde a PBI-68.
+**Robot:** o passo depois do cadastro toca em "Registrar treino" (Bem-vindo);
+para quem já tem plano, "Registrar treino" → "Sem ficha" leva ao treino livre.
 
 ---
 

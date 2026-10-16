@@ -160,6 +160,11 @@ class _Conteudo extends StatelessWidget {
               fichas: fichas,
               planoNome: plano?.nome),
         ),
+        // PBI-71: registrar fica sempre à mão, com ou sem plano.
+        const SizedBox(height: AppSpacing.entreCards),
+        _LinhaRegistrarTreino(
+          aoTocar: () => abrirRegistrarTreino(context, plano: plano, fichas: fichas),
+        ),
         if (ultima != null) ...[
           const SizedBox(height: AppSpacing.entreCards),
           _CartaoUltimoTreino(sessao: ultima),
@@ -657,14 +662,14 @@ class _FolhaDoDia extends StatelessWidget {
 /// Uma opção da folha do dia: ícone ou quadrado, título e subtítulo.
 class _LinhaFolha extends StatelessWidget {
   const _LinhaFolha({
-    required this.inicio,
+    this.inicio,
     required this.titulo,
     required this.subtitulo,
     required this.rotulo,
     required this.aoTocar,
   });
 
-  final Widget inicio;
+  final Widget? inicio;
   final String titulo;
   final String? subtitulo;
   final String rotulo;
@@ -694,8 +699,10 @@ class _LinhaFolha extends StatelessWidget {
                 horizontal: AppSpacing.x12, vertical: AppSpacing.x8),
             child: Row(
               children: [
-                inicio,
-                const SizedBox(width: AppSpacing.x12),
+                if (inicio != null) ...[
+                  inicio!,
+                  const SizedBox(width: AppSpacing.x12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -901,3 +908,184 @@ class _SemFichas extends StatelessWidget {
 }
 
 // _Erro extraído para shared/estado_erro.dart (PBI-51).
+
+/// Linha-botão "Registrar treino" (tela 23, PBI-71): logo abaixo da semana,
+/// sempre visível, inclusive com treino em andamento. Alvo de 56 px.
+class _LinhaRegistrarTreino extends StatelessWidget {
+  const _LinhaRegistrarTreino({required this.aoTocar});
+
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final raio = BorderRadius.circular(AppRadius.card);
+    return Semantics(
+      button: true,
+      label: 'Registrar treino',
+      hint: 'De uma ficha, sem ficha ou de outro dia',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: raio,
+        child: InkWell(
+          borderRadius: raio,
+          onTap: aoTocar,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: AppSizes.botaoPrincipal),
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: raio,
+            ),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.paddingCardCompacto,
+                vertical: AppSpacing.x10),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.touchMin,
+                  height: AppSizes.touchMin,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: cores.primaryTint,
+                    borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                  ),
+                  child: Icon(LucideIcons.clipboardCheck,
+                      size: AppSizes.iconeSm, color: cores.primaryOnTint),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Registrar treino', style: AppText.title),
+                      Text('De uma ficha, sem ficha ou de outro dia',
+                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight,
+                    color: cores.iconMuted, size: AppSizes.iconeSm),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Registrar treino" (PBI-71). Com plano em uso e fichas, abre o sheet "Qual
+/// treino?"; sem plano (ou plano sem fichas), vai direto ao treino livre. O dia
+/// se escolhe na tela seguinte ("Dia em que treinou", padrão hoje).
+Future<void> abrirRegistrarTreino(
+  BuildContext context, {
+  required PlanoAtivo? plano,
+  required List<TreinoResumo> fichas,
+}) async {
+  // Hoje como padrão; a próxima tela deixa trocar por um dia passado.
+  final agora = DateTime.now();
+  final hoje = DateTime(agora.year, agora.month, agora.day);
+  if (plano == null || fichas.isEmpty) {
+    context.push(Rotas.treinoLivre, extra: hoje);
+    return;
+  }
+  final escolha = await showModalBottomSheet<_EscolhaDia>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _SheetQualTreino(planoNome: plano.nome, fichas: fichas),
+  );
+  if (escolha == null || !context.mounted) return;
+
+  switch (escolha) {
+    case _RegistrarFicha(:final ficha):
+      // Treino já feito: data editável (hoje por padrão) e duração digitada.
+      context.push(
+        Rotas.registrarSessao,
+        extra: RegistrarSessaoArgs(
+          treinoId: ficha.id,
+          treinoNome: ficha.nome,
+          data: hoje,
+          registroPosterior: true,
+        ),
+      );
+    case _RegistrarSemFicha():
+      context.push(Rotas.treinoLivre, extra: hoje);
+    case _VerSessao():
+      break; // não existe neste sheet
+  }
+}
+
+/// Sheet "Qual treino?" (tela 23, PBI-71): as fichas do plano em uso que têm
+/// exercícios e "Sem ficha". Ficha vazia não aparece (não há o que registrar).
+class _SheetQualTreino extends ConsumerWidget {
+  const _SheetQualTreino({required this.planoNome, required this.fichas});
+
+  final String planoNome;
+  final List<TreinoResumo> fichas;
+
+  static String _titulo(TreinoResumo f) =>
+      (f.descricao != null && f.descricao!.trim().isNotEmpty)
+          ? '${f.nome} · ${f.descricao}'
+          : f.nome;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cores = AppColors.of(context);
+    void escolher(_EscolhaDia e) => Navigator.of(context).pop(e);
+
+    // Só fichas com exercícios; enquanto a contagem carrega, a linha espera.
+    final comExercicios = [
+      for (final f in fichas)
+        if ((ref.watch(fichaDetalheProvider(f.id)).value?.exercicios.length ?? 0) > 0)
+          f,
+    ];
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.margemTela, 0, AppSpacing.margemTela, AppSpacing.margemTela),
+          children: [
+            Text('REGISTRAR TREINO',
+                style: AppText.overline.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x4),
+            Semantics(
+              header: true,
+              child: Text('QUAL TREINO?', style: AppText.displayS),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            for (final f in comExercicios) ...[
+              _LinhaFolha(
+                titulo: _titulo(f),
+                subtitulo: planoNome,
+                rotulo: 'Registrar ${_titulo(f)}',
+                aoTocar: () => escolher(_RegistrarFicha(f)),
+              ),
+              const SizedBox(height: AppSpacing.entreItens),
+            ],
+            _LinhaFolha(
+              titulo: 'Sem ficha',
+              subtitulo: 'Treino livre, só com os exercícios que você escolher',
+              rotulo: 'Registrar sem ficha, treino livre',
+              aoTocar: () => escolher(const _RegistrarSemFicha()),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            Text('O dia do treino você escolhe na próxima tela.',
+                style: AppText.caption.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x8),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

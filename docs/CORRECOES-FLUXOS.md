@@ -8,9 +8,9 @@ Respostas do PO de 16/10 já dentro. Layouts das telas 19, 23, 25, 27, 28 e 29 n
 |---|---|---|
 | PBI-70 | Telas atualizam pela origem da mudança | ✅ na `main` (PR #88) |
 | PBI-67 | Treino em andamento visível ao voltar | ✅ na `main` (PR #86). Entrou antes da 70; o "ponto único" de aviso do rascunho veio com a 70 |
-| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | em revisão (branch `feat/pbi-68-69-sem-plano-e-criar-plano`) |
-| PBI-69 | Criar plano e primeira ficha em um caminho só | em revisão (mesma branch da 68) |
-| PBI-71 | Registrar treino sempre à mão na Início | a fazer (depois da 68) |
+| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | ✅ na `main` (PR #89) |
+| PBI-69 | Criar plano e primeira ficha em um caminho só | ✅ na `main` (PR #89) |
+| PBI-71 | Registrar treino sempre à mão na Início | em revisão (branch `feat/pbi-71-registrar-treino`) |
 | PBI-72 | Manter na ficha o exercício adicionado no treino? | a fazer (front + API) |
 
 ## O que o PO decidiu e onde entrou
@@ -289,6 +289,13 @@ Hoje o treino livre só é alcançável pelo Primeiro acesso e pelo card "Contin
 
 - **Widget:** as quatro situações acima em `inicio_screen_test.dart` e `primeiro_acesso_screen_test.dart`.
 - **Robot:** **impacta.** O passo que toca em "Registrar sem ficha" passa a tocar em "Registrar treino".
+
+### Como foi entregue (branch `feat/pbi-71-registrar-treino`)
+
+- **Linha na Início:** `_LinhaRegistrarTreino`, entre a semana e o último treino, com ícone de prancheta, 56 px e rótulo falado "Registrar treino". Aparece em toda Início fora do Bem-vindo, inclusive com treino em andamento e sem plano.
+- **Comportamento:** `abrirRegistrarTreino`. Com plano e fichas, o sheet `_SheetQualTreino` ("Registrar treino · Qual treino?") lista as fichas com exercícios ("A · Peito", com o nome do plano embaixo), "Sem ficha" e o aviso "O dia do treino você escolhe na próxima tela."; sem plano ou plano vazio, abre o treino livre direto. A data chega como hoje e a tela seguinte deixa trocar.
+- **Bem-vindo:** o botão "Registrar treino" já abria o treino livre desde a PBI-68.
+- **Testes:** posição e alvo, sheet com ficha vazia de fora (tema escuro), ficha → registro de hoje, "Sem ficha" → treino livre, sem plano direto ao treino livre, visível com treino em andamento.
 
 ### Fora do escopo
 
