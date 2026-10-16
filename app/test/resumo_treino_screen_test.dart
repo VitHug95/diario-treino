@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:diario_treino/core/relogio.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/sessao/resumo_treino_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
+import 'package:diario_treino/features/sessao/sessao_repository.dart';
 import 'package:diario_treino/features/sessao/treino_ao_vivo_controller.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -122,4 +124,59 @@ void main() {
 
     c.dispose();
   });
+
+  testWidgets('PBI-63: treino vazio confirmado salva e encerra o treino',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = _RepoSessao();
+    final c = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      relogioProvider.overrideWithValue(_RelogioFixo(DateTime(2026, 10, 15, 20, 0))),
+      sessaoRepositoryProvider.overrideWithValue(repo),
+    ]);
+    c.read(treinoAoVivoControllerProvider.notifier).iniciar(
+      treinoId: 'A',
+      treinoNome: 'Treino A',
+      treinoLivre: false,
+      data: DateTime(2026, 10, 15),
+      inicio: DateTime(2026, 10, 15, 19, 0),
+      exercicios: [_ex('Supino', [_serie(feita: false)])],
+    );
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: MaterialApp(
+          theme: AppTheme.claro, home: const ResumoTreinoScreen(salvarVazio: true)),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SALVAR TREINO'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Marque ao menos uma série'), findsNothing);
+    expect(repo.salvou, isTrue);
+    expect(c.read(treinoAoVivoControllerProvider), isNull);
+
+    c.dispose();
+  });
+}
+
+/// Repositório que só registra que a sessão foi gravada.
+class _RepoSessao extends SessaoRepository {
+  _RepoSessao() : super(Dio());
+
+  bool salvou = false;
+
+  @override
+  Future<String> criarSessao({
+    required String? treinoId,
+    required DateTime data,
+    int? duracaoMin,
+    String? observacao,
+    required List<ExercicioEdicao> exercicios,
+  }) async {
+    salvou = true;
+    return 's1';
+  }
 }
