@@ -212,9 +212,10 @@ void main() {
       await _assentar(tester);
 
       // Confirmação: volta ao Início.
-      expect(find.text('Treino registrado'), findsOneWidget);
-      await tester.tap(find.text('Ir para o Início'));
-      await _assentar(tester);
+      // PBI-64: sem diálogo; vai direto à Início com o aviso "Treino salvo".
+      expect(find.text('Treino registrado'), findsNothing);
+      expect(find.text('Treino salvo'), findsOneWidget);
+      expect(find.text('Ver treino'), findsOneWidget);
 
       // Regressão do bug PBI-23A: ao voltar, a Início reflete a nova sessão
       // (semana marcada e último treino), sem precisar recarregar.

@@ -32,12 +32,9 @@ class TreinoAoVivoScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final estado = ref.watch(treinoAoVivoControllerProvider);
 
-    if (estado == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Treino')),
-        body: const Center(child: Text('Nenhum treino em andamento.')),
-      );
-    }
+    // Treino encerrado (descartado aqui, no Resumo ou vindo do último
+    // exercício): a tela sai sozinha, de volta ao plano.
+    if (estado == null) return const _SaiQuandoEncerrado();
 
     // PBI-63 (rodada 3): a seta e o voltar do sistema só levam à Início, sem
     // diálogo, sem salvar e sem descartar. O treino segue em andamento, salvo
@@ -101,41 +98,26 @@ class TreinoAoVivoScreen extends ConsumerWidget {
     );
   }
 
-  /// Finalizar (PBI-63, rodada 2): nunca salva e nunca abre diálogo. Vai direto
-  /// ao Resumo (TV-6), que é o único passo de salvar e onde mora o aviso de
-  /// treino vazio. Se o atleta descartar por lá, o Resumo devolve `true` e esta
-  /// tela também sai, de volta ao plano.
+  /// Finalizar (PBI-63): nunca salva e nunca abre diálogo. Vai direto ao
+  /// Resumo (TV-6), o único passo de salvar. Se o atleta descartar por lá, o
+  /// treino é encerrado e esta tela sai sozinha ([_SaiQuandoEncerrado]).
   Future<void> _finalizar(BuildContext context) async {
-    final descartou = await context.push<bool>(Rotas.resumoTreino);
-    if (descartou == true && context.mounted) _sair(context);
+    await context.push<bool>(Rotas.resumoTreino);
   }
 
-  /// Descartar pela barra: confirma, apaga o rascunho e volta para a tela de
-  /// onde o treino começou (o plano, pelo play da PBI-61). Nenhuma sessão é
-  /// gravada.
+  /// Descartar pela barra: confirma e apaga o rascunho. Nenhuma sessão é
+  /// gravada; com o treino encerrado, a tela volta sozinha ao plano.
   Future<void> _descartar(BuildContext context, WidgetRef ref) async {
     final confirmar = await confirmarDescarte(context, rotuloCancelar: 'Voltar ao treino');
     if (!confirmar || !context.mounted) return;
 
     ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
     ref.read(descansoControllerProvider.notifier).encerrar();
-    _sair(context);
   }
 
   /// Seta e voltar do sistema (PBI-63): vai à Início e deixa o treino como
   /// está. Nada é salvo nem apagado; o cronômetro segue pelo `inicio`.
   static void _irParaInicio(BuildContext context) => context.go(Rotas.inicio);
-
-  /// Sai da tela do treino depois de descartar. Navigator.pop ignora o
-  /// PopScope (que só barra o voltar do sistema).
-  static void _sair(BuildContext context) {
-    final navegador = Navigator.of(context);
-    if (navegador.canPop()) {
-      navegador.pop();
-    } else {
-      context.go(Rotas.planoDetalhe);
-    }
-  }
 
   Future<void> _adicionarForaDaFicha(BuildContext context, WidgetRef ref) async {
     final nomeTreino = ref.read(treinoAoVivoControllerProvider)?.treinoNome;
@@ -382,6 +364,105 @@ class _CardExercicioVivo extends StatelessWidget {
 /// de M"), nome, alvo e cronômetro pequeno; navegação anterior/próximo; e três
 /// abas: Séries (completar série, tag, stepper), Histórico (3 últimas sessões) e
 /// Evolução (gráfico do exercício).
+/// Mostrado quando não há treino aberto: sai da tela do treino uma vez, se ela
+/// for a rota do topo (para não fechar outra tela por engano). Sem tela
+/// anterior, vai ao detalhe do plano em uso.
+class _SaiQuandoEncerrado extends StatefulWidget {
+  const _SaiQuandoEncerrado();
+
+  @override
+  State<_SaiQuandoEncerrado> createState() => _SaiQuandoEncerradoState();
+}
+
+class _SaiQuandoEncerradoState extends State<_SaiQuandoEncerrado> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      final navegador = Navigator.of(context);
+      if (navegador.canPop()) {
+        navegador.pop();
+      } else {
+        context.go(Rotas.planoDetalhe);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Treino')),
+        body: const Center(child: Text('Nenhum treino em andamento.')),
+      );
+}
+
+/// Rodapé da tela do exercício (PBI-65): o aviso das séries sem marcar (que
+/// ficam de fora, sem diálogo) e o botão "Concluir exercício" / "Concluir e ir
+/// ao resumo", 48 px.
+class _RodapeConcluir extends StatelessWidget {
+  const _RodapeConcluir({
+    required this.exercicio,
+    required this.ultimo,
+    required this.proximo,
+    required this.aoConcluir,
+  });
+
+  final ExercicioEdicao exercicio;
+  final bool ultimo;
+
+  /// Número (1-based) do próximo exercício, para o rótulo falado.
+  final int proximo;
+  final VoidCallback aoConcluir;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final pendentes = exercicio.series.where((s) => !s.feita).length;
+    final rotulo = ultimo ? 'CONCLUIR E IR AO RESUMO' : 'CONCLUIR EXERCÍCIO';
+    final falado = ultimo
+        ? 'Concluir e ir ao resumo'
+        : 'Concluir exercício, ir para o exercício $proximo';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: cores.lineDivider)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.margemTela, AppSpacing.x8, AppSpacing.margemTela, AppSpacing.x12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (pendentes > 0) ...[
+            Text(
+              pendentes == 1
+                  ? '1 série sem marcar fica de fora.'
+                  : '$pendentes séries sem marcar ficam de fora.',
+              textAlign: TextAlign.center,
+              style: AppText.caption.copyWith(color: cores.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.x6),
+          ],
+          Semantics(
+            button: true,
+            label: falado,
+            excludeSemantics: true,
+            child: FilledButton.icon(
+              onPressed: aoConcluir,
+              style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, AppSizes.botaoSecundario)),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(LucideIcons.chevronRight, size: AppSizes.iconeSm),
+              label: Text(rotulo),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Aba ativa da tela do exercício (0 Séries, 1 Histórico, 2 Evolução), para as
 /// setas anterior/próximo não voltarem para Séries (PBI-66).
 final abaExercicioAoVivoProvider =
@@ -424,6 +505,18 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
       ..removeListener(_guardarAba)
       ..dispose();
     super.dispose();
+  }
+
+  /// "Concluir exercício" (PBI-65): marca como concluído e abre o próximo
+  /// sempre na aba Séries (exceção à PBI-66). No último, vai ao Resumo.
+  void _concluir(ExercicioEdicao exercicio, int indice, int total) {
+    ref.read(treinoAoVivoControllerProvider.notifier).concluirExercicio(exercicio);
+    ref.read(abaExercicioAoVivoProvider.notifier).definir(0);
+    if (indice == total - 1) {
+      context.pushReplacement(Rotas.resumoTreino);
+    } else {
+      context.pushReplacement(Rotas.exercicioAoVivo, extra: indice + 1);
+    }
   }
 
   @override
@@ -473,6 +566,13 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
                     _AbaEvolucao(exercicioId: exercicio.exercicioId),
                   ],
                 ),
+              ),
+              // Concluir e seguir (PBI-65), fixo acima do descanso, nas três abas.
+              _RodapeConcluir(
+                exercicio: exercicio,
+                ultimo: indice == total - 1,
+                proximo: indice + 2,
+                aoConcluir: () => _concluir(exercicio, indice, total),
               ),
               // Descanso entre séries (TV-5): fixo no rodapé, nas três abas.
               const BarraDescansoFixa(),

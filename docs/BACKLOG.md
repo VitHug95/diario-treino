@@ -909,8 +909,8 @@ Dez pedidos do PO em 15/10 (rodadas 1 a 3). Detalhamento, perguntas abertas e aj
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
 | PBI-63 | Finalizar treino: seta só sai, botões encerram | 24 e 25 | rodadas 1 e 2 na `main` (PR #78 e #82); rodada 3 (seta volta, só leva à Início) em revisão (branch `fix/pbi-63-seta-volta`) |
-| PBI-64 | Depois de salvar: Início com aviso, sem diálogo | 23 | a fazer (junto da 65) |
-| PBI-65 | Concluir exercício e ir para o próximo | 26 | a fazer (junto da 64) |
+| PBI-64 | Depois de salvar: Início com aviso, sem diálogo | 23 | em revisão (branch `feat/pbi-64-65-salvar-e-concluir`) |
+| PBI-65 | Concluir exercício e ir para o próximo | 26 | em revisão (mesma branch da 64) |
 | PBI-66 | Bug: trocar de exercício não deve resetar a aba | 26 | em revisão (branch `fix/pbi-66-aba-exercicio`) |
 
 PBI-57, 62 e 61 vão juntas: a 57 tira os botões de treinar da ficha e a 61 os
@@ -936,6 +936,17 @@ do dia; escolher uma ficha abre o registro de treino já feito naquela data, e
 dia). "Último treino" e a semana vêm das sessões recentes (~60 dias): sem
 sessão nesse período, o cartão não aparece. `InicioLogica.proximaFicha` saiu
 (sem uso); `ultimaVezPorFicha` fica, usada no plano e na ficha.
+
+PBI-64 e 65, notas: salvar (Resumo ou registro) vai à Início com o aviso
+"Treino salvo" e a ação "Ver treino" (shared/aviso_treino_salvo.dart); o
+diálogo "Treino registrado" e dialogo_pos_registro.dart saíram. O push do
+detalhe só acontece no toque, com a Início já aberta. "Concluir exercício"
+grava a marca concluido no exercício (também no rascunho do aparelho;
+rascunhos antigos abrem como não concluído) e o Resumo mostra "Concluído N/M".
+Sem nenhuma série feita, continua "Não realizado". A tela do treino sai sozinha
+quando o treino é encerrado (descartado na barra ou no Resumo).
+**Robot:** os passos que tocam em "Ir para o Início" ou esperam "Treino
+registrado" depois de salvar precisam esperar a Início e o aviso "Treino salvo".
 
 ---
 

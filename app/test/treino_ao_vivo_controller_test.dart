@@ -130,4 +130,34 @@ void main() {
     expect(c.read(treinoAoVivoControllerProvider), isNull);
     expect(c.read(rascunhoTreinoServiceProvider).carregar(), isNull);
   });
+
+  test('PBI-65: concluir exercício conta como concluído e sobrevive ao rascunho',
+      () async {
+    final c = await _container(DateTime(2026, 10, 15, 19, 4));
+    final ctrl = c.read(treinoAoVivoControllerProvider.notifier);
+    final ex = _exercicio(); // 2 séries
+    ctrl.iniciar(
+      treinoId: 'A', treinoNome: 'A', treinoLivre: false,
+      data: DateTime(2026, 10, 15), exercicios: [ex],
+    );
+
+    // Concluído sem série feita: continua "Não realizado".
+    ctrl.concluirExercicio(ex);
+    expect(c.read(treinoAoVivoControllerProvider)!.exerciciosConcluidos, 0);
+
+    // Com 1 de 2 feita, conta como concluído; a pendente não é marcada.
+    ctrl.definirSerieFeita(ex, ex.series.first, true);
+    final estado = c.read(treinoAoVivoControllerProvider)!;
+    expect(estado.exerciciosConcluidos, 1);
+    expect(estado.seriesFeitas, 1);
+
+    // A marca vai e volta pelo rascunho do aparelho.
+    expect(ctrl.retomarDoRascunho(), isTrue);
+    expect(c.read(treinoAoVivoControllerProvider)!.exercicios.first.concluido, isTrue);
+  });
+
+  test('PBI-65: rascunho antigo, sem o campo "concluido", abre como não concluído', () {
+    final json = exercicioParaRascunho(_exercicio()).paraJson()..remove('concluido');
+    expect(ExercicioEmAndamento.doJson(json).concluido, isFalse);
+  });
 }

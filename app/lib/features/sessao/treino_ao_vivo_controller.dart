@@ -52,9 +52,14 @@ class TreinoAoVivoEstado {
   int get seriesFeitas => exercicios.fold(
       0, (soma, e) => soma + e.series.where((s) => s.feita).length);
 
-  /// Exercícios com todas as séries feitas (e ao menos uma série).
+  /// Exercícios concluídos: todas as séries feitas, ou encerrado pelo
+  /// "Concluir exercício" (PBI-65) com ao menos uma série feita. Concluído sem
+  /// nenhuma série feita continua "Não realizado".
   int get exerciciosConcluidos => exercicios
-      .where((e) => e.series.isNotEmpty && e.series.every((s) => s.feita))
+      .where((e) =>
+          e.series.isNotEmpty &&
+          (e.series.every((s) => s.feita) ||
+              (e.concluido && e.series.any((s) => s.feita))))
       .length;
 }
 
@@ -127,6 +132,12 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
       // o POST /sessoes (que grava só exercícios realizados) continuar certo.
       exercicio.realizado = exercicio.series.any((s) => s.feita);
     });
+  }
+
+  /// "Concluir exercício" (PBI-65): marca o exercício como encerrado. Não
+  /// marca séries por baixo dos panos: as pendentes ficam de fora ao salvar.
+  void concluirExercicio(ExercicioEdicao exercicio) {
+    mudar((_) => exercicio.concluido = true);
   }
 
   /// Adiciona um exercício fora da ficha (PBI-17) ao treino em andamento.
