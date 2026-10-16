@@ -218,16 +218,19 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 
 ```
 lib/
-  core/          cliente HTTP (Dio), interceptor do token, tema, rotas (go_router)
+  core/          cliente HTTP (Dio) e token, rotas (go_router), tema, relógio,
+                 dados/invalidacao.dart (mapa único de invalidação, PBI-70)
   features/
-    auth/        login, cadastro, perfil (GET /me)
-    inicio/      tela inicial, próximo treino, rotação de fichas, botão de tema
-    catalogo/    buscar/criar exercício, seletor reaproveitado
-    fichas/      montar e editar fichas, definir alvos
-    sessao/      registrar/editar/ver/excluir treino
+    auth/        login, cadastro, perfil e conta
+    inicio/      Início (semana, último treino, dicas, Registrar treino), Bem-vindo
+    planos/      lista de planos, detalhe do plano, criar plano
+    fichas/      edição da ficha, alvos; fichas_comandos (escritas de plano e ficha)
+    catalogo/    buscar/criar exercício, seletor; catalogo_comandos
+    sessao/      treino ao vivo, Resumo, registro, detalhe, rascunho no aparelho,
+                 "Manter na ficha?"; sessao_comandos
     progresso/   gráfico de evolução, observação no ponto, lista de sessões
-  shared/        componentes reutilizáveis
-  theme/         tokens de cor e tipografia dos temas claro e escuro
+  shared/        componentes reutilizáveis (estados, diálogos de perigo, tags, aviso)
+  theme/         tokens de cor, tipografia, espaçamento e tamanhos
 ```
 
 | Necessidade | Escolha |
@@ -308,13 +311,13 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/membros` | Membros e seus músculos, na ordem dos chips | ✅ (PBI-31 etapa 2) |
 | GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |
 | POST | `/exercicios` | Cria exercício próprio (exige `membroId`; `musculoId` opcional) | ✅ |
-| GET | `/planos` | Planos do atleta (id, nome, início, emUso, autor, somenteLeitura, nº de fichas e de exercícios) | ⏳ PBI-44 |
-| GET | `/planos/{id}` | Detalhe do plano com as fichas | ⏳ PBI-44 |
-| POST | `/planos` | Com `{ nome }` cria o plano. Sem corpo, mantém o comportamento atual (idempotente) até o E2E fechar | ⏳ PBI-44 |
-| PUT | `/planos/{id}` | Renomeia | ⏳ PBI-44 |
-| POST | `/planos/{id}/em-uso` | Define como em uso, em transação | ⏳ PBI-44 |
-| POST | `/planos/{id}/duplicar` | Cria "Nome (cópia)" fora de uso, sem sessões | ⏳ PBI-44 |
-| DELETE | `/planos/{id}` | Exclui (apaga ou esconde, regra 10 do MER) | ⏳ PBI-44 |
+| GET | `/planos` | Planos do atleta (id, nome, início, emUso, autor, somenteLeitura, nº de fichas e de exercícios) | ✅ (PBI-44) |
+| GET | `/planos/{id}` | Detalhe do plano com as fichas | ✅ (PBI-44) |
+| POST | `/planos` | Com `{ nome }` cria o plano (o primeiro nasce em uso). Sem corpo, mantém o comportamento antigo (idempotente) para o E2E | ✅ (PBI-44) |
+| PUT | `/planos/{id}` | Renomeia (403 em plano do professor) | ✅ (PBI-44) |
+| POST | `/planos/{id}/em-uso` | Define como em uso, em transação | ✅ (PBI-44) |
+| POST | `/planos/{id}/duplicar` | Cria "Nome (cópia)" fora de uso, sem sessões | ✅ (PBI-44) |
+| DELETE | `/planos/{id}` | Exclui (apaga ou esconde, regra 10 do MER; 403 em plano do professor) | ✅ (PBI-44) |
 | GET | `/planos/ativo` | Alias do plano em uso até o front migrar | ✅ |
 | POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
 | POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
@@ -327,6 +330,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
 | GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
 | GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
+| GET | `/exercicios/{id}/historico?limite=` | Últimas sessões com o exercício (aba Histórico do treino ao vivo) | ✅ (TV-4) |
 | POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor | ✅ |
 | GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
 | PUT | `/sessoes/{id}` | Edita sessão (com `manterNaFicha` responde 400: editar não mexe na ficha) | ✅ |

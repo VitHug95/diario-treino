@@ -973,7 +973,7 @@ Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
 | PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | ✅ na `main` (PR #89) |
 | PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | ✅ na `main` (PR #89) |
 | PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | ✅ na `main` (PR #90) |
-| PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | em revisão (branch `feat/pbi-72-manter-na-ficha`) |
+| PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | ✅ na `main` (PR #91) |
 
 PBI-70, notas: as telas gravam por `fichasComandosProvider`,
 `sessaoComandosProvider` e `catalogoComandosProvider`; cada comando chama o
