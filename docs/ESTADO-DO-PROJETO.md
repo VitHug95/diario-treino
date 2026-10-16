@@ -7,6 +7,9 @@ publicação). Base: histórico Git (`main`), código em `app/` e `backend/`, e 
 Data do levantamento: 14/10/2026 (atualizado após progresso completo, tela
 inicial e carga do catálogo).
 
+> O que entrou depois disso (treino ao vivo, planos, ajustes de layout até a PBI-67)
+> está, PR por PR, em [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
+
 ---
 
 ## 1. Visão geral
