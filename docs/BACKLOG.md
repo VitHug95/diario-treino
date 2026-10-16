@@ -891,8 +891,8 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-44 | Vários planos por atleta: banco e API | Banco + API | R1 | ✅ na `main` (PR #67) |
 | PBI-45 | Lista de planos (tela 18) | Front | R1 | ✅ na `main` (PR #72) |
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
-| PBI-47 | Início segue o plano em uso | Front | R1 | em andamento |
-| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | com o épico do educador |
+| PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
+| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
 | PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | depois do E2E, sujeita ao PO |
 
 ---
@@ -903,11 +903,29 @@ Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready aind
 
 | Épico | Itens previstos |
 |---|---|
-| **E7 · Modo educador** | Papel de educador; convite e aceite de vínculo; lista de alunos; ver treino e progresso do aluno; montar ficha para o aluno; exportar progresso em PDF; termo de consentimento LGPD; alerta de aluno sem registrar ou com observações de dor seguidas |
+| **E7 · Modo educador** | Papel de educador; convite e aceite de vínculo; lista de alunos; ver treino e progresso do aluno; montar ficha para o aluno; exportar progresso em PDF; termo de consentimento LGPD; alerta de aluno sem registrar ou com observações de dor seguidas. **Decisão (PO):** vira um épico próprio na próxima sprint; a PBI-48 (plano do professor) entra junto. Ver nota abaixo da tabela. |
 | **E8 · Inteligência no feedback** | Músculos secundários e cartão "séries por músculo na semana" (base no ADR-10); Tags rápidas na observação; recorde pessoal e 1RM estimado; sugestão de aumento de carga |
 | **E9 · Corrida avançada** | Faixas de zona por atleta; importação de arquivo do relógio ou Strava |
 | **E10 · Lojas** | Publicação na Google Play; avaliação de custo e processo da App Store |
 | **E11 · Conforto no registro** | Cronômetro de descanso dentro do registro |
+
+**Nota sobre o E7 (decisão do PO, depois do Release 1 do épico Planos):** o modo
+educador fica para a **próxima sprint**, como um **épico próprio**, refinado antes
+de entrar. Pontos já combinados para o refinamento:
+
+- **Login único.** Não há login separado para professor: a identidade continua no
+  Firebase e o que muda é o **papel** no Postgres (`usuario_papel`, ATLETA e/ou
+  EDUCADOR). Uma pessoa pode ter os dois. O app escolhe as telas pelo papel.
+- **Já existe só a estrutura:** papel `EDUCADOR`, tabela `vinculo`
+  (PENDENTE/ATIVO/ENCERRADO), regra única de acesso (`IControleAcesso`: o próprio
+  atleta ou educador com vínculo ativo) e plano de autor ≠ atleta como somente
+  leitura (403, PBI-44).
+- **Falta virar PBI:** tornar-se educador, convite e aceite de vínculo, lista de
+  alunos, ver treino e progresso do aluno, montar plano para o aluno, termo de
+  consentimento LGPD (antes de qualquer acesso do educador), PDF e a PBI-48.
+- **Decisões a levar ao Vinicius:** o aluno pode esconder uma observação do
+  educador; o educador perde o histórico quando o vínculo acaba; o que vai no PDF;
+  excluir plano do professor depois do fim do vínculo (premissa da PBI-48).
 
 ---
 
