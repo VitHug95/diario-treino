@@ -12,6 +12,7 @@ import '../../shared/estado_vazio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../inicio/inicio_logica.dart';
 import '../sessao/sessao_repository.dart';
@@ -335,17 +336,26 @@ class _ListaExerciciosFicha extends ConsumerWidget {
     await ref.read(fichaDetalheProvider(treinoId).future);
   }
 
-  Future<void> _adicionar(BuildContext context, WidgetRef ref) async {
-    final exercicioId = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const SelecionarExercicioScreen()),
+  /// Seletor com vários exercícios (PBI-49): adiciona na ordem escolhida. Se
+  /// algum falhar, os outros ficam e o aviso diz quais não entraram.
+  Future<void> _adicionar(BuildContext context, WidgetRef ref, String nomeFicha) async {
+    final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
+      MaterialPageRoute(builder: (_) => SelecionarExercicioScreen(destino: nomeFicha)),
     );
-    if (exercicioId == null) return;
-    try {
-      await ref.read(fichasRepositoryProvider).adicionarExercicio(
-          treinoId: treinoId, exercicioId: exercicioId);
-      await _recarregar(ref);
-    } on FichasException catch (e) {
-      if (context.mounted) _erro(context, e.mensagem);
+    if (escolhidos == null || escolhidos.isEmpty) return;
+
+    final repo = ref.read(fichasRepositoryProvider);
+    final falharam = <String>[];
+    for (final e in escolhidos) {
+      try {
+        await repo.adicionarExercicio(treinoId: treinoId, exercicioId: e.id);
+      } on FichasException {
+        falharam.add(e.nome);
+      }
+    }
+    await _recarregar(ref);
+    if (falharam.isNotEmpty && context.mounted) {
+      _erro(context, 'Não foi possível adicionar: ${falharam.join(', ')}. Tente de novo.');
     }
   }
 
@@ -437,7 +447,7 @@ class _ListaExerciciosFicha extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x16),
               child: BotaoTracejado(
                 rotulo: 'Adicionar exercício à ficha',
-                aoTocar: () => _adicionar(context, ref),
+                aoTocar: () => _adicionar(context, ref, ficha.nome),
               ),
             ),
           ],

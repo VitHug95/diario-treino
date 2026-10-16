@@ -121,10 +121,15 @@ class FiltroMembro extends ConsumerWidget {
     super.key,
     required this.selecionado,
     required this.aoSelecionar,
+    this.contagens,
   });
 
   final int? selecionado;
   final ValueChanged<int?> aoSelecionar;
+
+  /// Quantos exercícios cada opção mostraria (chave nula = "Todos"), exibido
+  /// na folha (PBI-49). Nulo = sem contagem, como no catálogo.
+  final Map<int?, int>? contagens;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -188,7 +193,8 @@ class FiltroMembro extends ConsumerWidget {
     final escolhido = await showModalBottomSheet<_EscolhaMembro>(
       context: context,
       showDragHandle: true,
-      builder: (_) => _FolhaFiltroMembro(membros: membros, selecionado: selecionado),
+      builder: (_) => _FolhaFiltroMembro(
+          membros: membros, selecionado: selecionado, contagens: contagens),
     );
     // null = fechou sem escolher (arrastou/toque fora): mantém o filtro atual.
     if (escolhido != null) aoSelecionar(escolhido.id);
@@ -206,10 +212,15 @@ class _EscolhaMembro {
 /// opção por linha (54 px), a atual em destaque com check. Escolher fecha e
 /// devolve a opção. Grupo de seleção única para a semântica.
 class _FolhaFiltroMembro extends StatelessWidget {
-  const _FolhaFiltroMembro({required this.membros, required this.selecionado});
+  const _FolhaFiltroMembro({
+    required this.membros,
+    required this.selecionado,
+    this.contagens,
+  });
 
   final List<Membro> membros;
   final int? selecionado;
+  final Map<int?, int>? contagens;
 
   @override
   Widget build(BuildContext context) {
@@ -235,12 +246,14 @@ class _FolhaFiltroMembro extends StatelessWidget {
                   _OpcaoFiltro(
                     nome: 'Todos',
                     selecionada: selecionado == null,
+                    contagem: contagens?[null],
                     aoTocar: () => Navigator.pop(context, const _EscolhaMembro(null)),
                   ),
                   for (final m in membros)
                     _OpcaoFiltro(
                       nome: m.nome,
                       selecionada: m.id == selecionado,
+                      contagem: contagens == null ? null : (contagens![m.id] ?? 0),
                       aoTocar: () => Navigator.pop(context, _EscolhaMembro(m.id)),
                     ),
                 ],
@@ -259,11 +272,13 @@ class _OpcaoFiltro extends StatelessWidget {
     required this.nome,
     required this.selecionada,
     required this.aoTocar,
+    this.contagem,
   });
 
   final String nome;
   final bool selecionada;
   final VoidCallback aoTocar;
+  final int? contagem;
 
   @override
   Widget build(BuildContext context) {
@@ -288,9 +303,19 @@ class _OpcaoFiltro extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selecionada)
-                Icon(LucideIcons.check,
-                    size: AppSizes.iconeSm, color: cores.primaryText),
+              if (contagem != null) ...[
+                Text('$contagem',
+                    style: AppText.caption.copyWith(color: cores.textSecondary)),
+                const SizedBox(width: AppSpacing.x12),
+              ],
+              // Espaço fixo do check, para a contagem não pular de lugar.
+              SizedBox(
+                width: AppSizes.iconeSm,
+                child: selecionada
+                    ? Icon(LucideIcons.check,
+                        size: AppSizes.iconeSm, color: cores.primaryText)
+                    : null,
+              ),
             ],
           ),
         ),
