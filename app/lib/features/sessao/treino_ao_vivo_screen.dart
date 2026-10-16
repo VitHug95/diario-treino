@@ -170,19 +170,22 @@ class TreinoAoVivoScreen extends ConsumerWidget {
   }
 
   Future<void> _adicionarForaDaFicha(BuildContext context, WidgetRef ref) async {
-    final escolhido = await Navigator.of(context).push<ExercicioResumo>(
+    final nomeTreino = ref.read(treinoAoVivoControllerProvider)?.treinoNome;
+    final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
       MaterialPageRoute(
-        builder: (_) => const SelecionarExercicioScreen(retornarCompleto: true),
+        builder: (_) => SelecionarExercicioScreen(destino: nomeTreino),
       ),
     );
-    if (escolhido == null) return;
+    if (escolhidos == null || escolhidos.isEmpty) return;
 
     // Só usa `ref` (não `context`) depois do await, então não há risco de
-    // BuildContext atravessando gap assíncrono.
+    // BuildContext atravessando gap assíncrono. Cada um entra com série em
+    // branco (PBI-17), na ordem escolhida (PBI-49).
     final porCodigo = await ref.read(metricasPorCodigoProvider.future);
-    ref.read(treinoAoVivoControllerProvider.notifier).adicionarExercicio(
-          ExercicioEdicao.foraDaFichaDoCatalogo(escolhido, porCodigo),
-        );
+    final controller = ref.read(treinoAoVivoControllerProvider.notifier);
+    for (final e in escolhidos) {
+      controller.adicionarExercicio(ExercicioEdicao.foraDaFichaDoCatalogo(e, porCodigo));
+    }
   }
 }
 

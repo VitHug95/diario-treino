@@ -339,14 +339,21 @@ class _FormularioState extends ConsumerState<_Formulario> {
     if (escolhida != null) setState(() => _data = escolhida);
   }
 
+  /// Seletor com vários exercícios (PBI-49): entram na ordem escolhida.
   Future<void> _adicionarForaDaFicha() async {
-    final escolhido = await Navigator.of(context).push<ExercicioResumo>(
+    final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
       MaterialPageRoute(
-        builder: (_) => const SelecionarExercicioScreen(retornarCompleto: true),
+        builder: (_) => SelecionarExercicioScreen(destino: widget.treinoNome),
       ),
     );
-    if (escolhido == null || !mounted) return;
+    if (escolhidos == null || !mounted) return;
+    for (final e in escolhidos) {
+      await _adicionarEscolhido(e);
+      if (!mounted) return;
+    }
+  }
 
+  Future<void> _adicionarEscolhido(ExercicioResumo escolhido) async {
     // Treino livre: traz a última execução como referência (PBI-19). Se falhar
     // (ex.: offline), cai no modo "série em branco" para não travar o registro.
     if (_treinoLivre) {

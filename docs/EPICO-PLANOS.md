@@ -281,7 +281,13 @@ _Front (avulsa) · Telas 8 e 21_
 - O seletor devolve a lista dos escolhidos, na ordem tocada. Falha parcial: as que entraram ficam e o app avisa qual não entrou.
 - Criar exercício novo volta ao seletor com ele já marcado.
 
-> **Muda o comportamento do E2E.** Só entra depois do E2E (PBI-26) fechar, ou junto da atualização do Robot. **Sujeita à aprovação do PO.** Versão barata se a seleção múltipla não for aprovada: remover "Fechar", trocar o "+" por seta, unificar o botão de criar e acrescentar o quadrado do membro.
+> **Muda o comportamento do E2E.** Aprovada pelo PO (15/10) e liberada para entrar **sem esperar o E2E**: o passo do Robot que escolhe o exercício passa a ser "tocar no exercício" + "ADICIONAR N EXERCÍCIOS" e é ajustado depois.
+
+**Notas de implementação:**
+- O seletor sempre devolve `List<ExercicioResumo>` (na ordem tocada); sumiu o modo "só id". Ficha, registro e treino ao vivo percorrem a lista.
+- O filtro de membro passou a ser local no seletor (a busca vem toda do servidor) para a folha mostrar a contagem de cada opção. O catálogo continua igual.
+- O rodapé segue o estilo do botão principal, em caixa alta: "ADICIONAR N EXERCÍCIOS" / "ESCOLHA OS EXERCÍCIOS".
+- Quadrado do membro com as duas primeiras letras (ex.: "PE" para Peito).
 
 ### Critérios de aceite
 

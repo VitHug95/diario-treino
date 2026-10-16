@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:diario_treino/core/localizacao/material_pt.dart';
+import 'package:diario_treino/features/catalogo/catalogo_repository.dart';
+import 'package:diario_treino/features/catalogo/exercicio_resumo.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
 import 'package:diario_treino/features/fichas/fichas_screen.dart';
 import 'package:diario_treino/features/fichas/plano_models.dart';
@@ -296,6 +298,44 @@ void main() {
     expect(repo.ordem, ['te2', 'te1']);
   });
 
+  testWidgets('PBI-49: adiciona vários na ordem; falha parcial avisa qual não entrou',
+      (tester) async {
+    final repo = _RepoAdiciona(falha: 'Crucifixo');
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        planoAtivoProvider.overrideWith((ref) async => _plano([_ficha('A', 1)])),
+        sessoesRecentesProvider.overrideWith((ref) async => const []),
+        fichaDetalheProvider.overrideWith((ref, id) async => _detalhe(id, const [])),
+        fichasRepositoryProvider.overrideWithValue(repo),
+        catalogoProvider.overrideWith((ref) async => [
+              _resumo('Supino reto'),
+              _resumo('Crucifixo'),
+              _resumo('Remada'),
+            ]),
+        membrosProvider.overrideWith((ref) async => []),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.claro,
+        localizationsDelegates: LocalizacoesPt.delegates,
+        home: const _TelaPlano(fichaId: 'f1'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Adicionar exercício à ficha'));
+    await tester.pumpAndSettle();
+    expect(find.text('A'), findsWidgets); // destino acima do título
+    await tester.tap(find.text('Remada'));
+    await tester.tap(find.text('Crucifixo'));
+    await tester.tap(find.text('Supino reto'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ADICIONAR 3 EXERCÍCIOS'));
+    await tester.pumpAndSettle();
+
+    expect(repo.tentados, ['Remada', 'Crucifixo', 'Supino reto']);
+    expect(find.text('Não foi possível adicionar: Crucifixo. Tente de novo.'), findsOneWidget);
+  });
+
   test('Resumo da ficha: contagem e última vez', () {
     expect(resumoFicha(qtdExercicios: 4, ultimaVez: DateTime(2026, 9, 7)),
         '4 exercícios · último em 07/09');
@@ -318,3 +358,36 @@ class _RepoReordena extends FichasRepository {
     ordem = treinoExercicioIds;
   }
 }
+
+/// Repositório que registra a ordem dos exercícios adicionados e falha em um.
+class _RepoAdiciona extends FichasRepository {
+  _RepoAdiciona({required this.falha}) : super(Dio());
+
+  final String falha;
+  final tentados = <String>[];
+
+  @override
+  Future<void> adicionarExercicio({
+    required String treinoId,
+    required String exercicioId,
+  }) async {
+    tentados.add(exercicioId);
+    if (exercicioId == falha) throw const FichasException('falhou');
+  }
+}
+
+ExercicioResumo _resumo(String nome) => ExercicioResumo(
+      id: nome,
+      nome: nome,
+      grupoMuscular: null,
+      membroId: 1,
+      membroNome: 'Peito',
+      musculoId: null,
+      musculoNome: null,
+      modalidade: 'FORCA',
+      intensidadeMetricaCodigo: 'CARGA_KG',
+      intensidadeMetricaNome: 'Carga',
+      volumeMetricaCodigo: 'REPETICOES',
+      volumeMetricaNome: 'Repetições',
+      proprio: false,
+    );
