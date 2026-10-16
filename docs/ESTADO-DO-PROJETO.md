@@ -27,20 +27,27 @@ inicial e carga do catálogo).
 | Camada | Serviço | Endereço | Observações |
 |---|---|---|---|
 | API | Fly.io | `https://diario-treino-api.fly.dev` | container Docker, região `gru`, HTTPS, health em `/health` |
-| Front web | Netlify | `https://diario-treino.netlify.app` | build do Flutter 3.29.3, deploy automático do GitHub |
+| Front web | Cloudflare (Workers Static Assets) | `https://diario-treino.vitorhugo-an.workers.dev` | build do Flutter 3.29.3 no CI, publicado com `wrangler deploy` |
 | Banco | Neon (Postgres) | — | connection string só em segredo do Fly |
-| Auth | Firebase | projeto `diario-treino-c21b6` | domínio do Netlify autorizado |
+| Auth | Firebase | projeto `diario-treino-c21b6` | domínio do Cloudflare autorizado |
+
+> **Histórico:** até 15/10/2026 o front ficava no Netlify (`diario-treino.netlify.app`).
+> O plano Free pausou os deploys de produção ao fim dos créditos do mês e o site
+> ficou servindo um build antigo; o front migrou para o Cloudflare. Detalhes no
+> ADR-09 do MAS e em `docs/POST-MORTEM-deploy-release2.md`.
 
 **Validado em produção:**
 - `/health` e `/health/ready` respondendo 200 (conexão com o Neon confirmada).
 - Migrations aplicadas automaticamente no startup da API em produção.
-- CORS liberado só para o domínio do Netlify (`Cors__OrigensPermitidas__0`).
+- CORS liberado só para o domínio do Cloudflare (`Cors__OrigensPermitidas__0`).
 - Fluxo real testado no navegador: login → criar ficha → registrar treino.
 
 **Arquivos de deploy:**
 - `backend/Dockerfile` (multi-stage .NET 10; publish sem `--no-restore`).
 - `backend/fly.toml` (porta 8080, `auto_stop_machines`, health `/health`).
-- `netlify.toml` na raiz + `app/netlify.toml` (instalam o Flutter e buildam o web).
+- `app/wrangler.toml` (Worker `diario-treino`, serve `build/web` como SPA).
+- `.github/workflows/ci.yml`: jobs `deploy-api` (Fly) e `deploy-web` (Cloudflare),
+  só em merge na `main` e depois do CI passar. Ver `docs/DEPLOY-AUTOMATICO.md`.
 - `backend/src/DiarioTreino.Api/Infraestrutura/MigracoesStartup.cs`.
 
 **Segredos no Fly:** `ConnectionStrings__DiarioTreino`, `Firebase__ProjectId`,
@@ -48,7 +55,7 @@ inicial e carga do catálogo).
 
 **Pendências conhecidas da PBI-04 (não bloqueiam o uso):**
 - ~~Deploy automático da API no CI~~ — FEITO: job `deploy-api` no `ci.yml` publica a API no Fly a cada merge na `main` (após o CI passar). Falta só criar o secret `FLY_API_TOKEN` no GitHub uma vez (ver `docs/DEPLOY-AUTOMATICO.md`).
-- Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` / `*.netlify.app`).
+- Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` / `*.workers.dev`).
 - Backup do banco (PBI-05) ainda não feito.
 - Ruído de log cosmético na API (`libgssapi_krb5.so.2`) — não afeta a conexão.
 - Resetar a senha do role do Neon (foi digitada em texto no chat durante o setup).
@@ -248,8 +255,10 @@ outro usuário responde **404** (regra do `IControleAcesso`).
   testes unitários e de integração; e no front: `flutter analyze`, `flutter test`,
   `flutter build web`.
 - O CI publica a API no Fly automaticamente a cada merge na `main` (job
-  `deploy-api`, requer o secret `FLY_API_TOKEN` — ver `docs/DEPLOY-AUTOMATICO.md`);
-  o front tem deploy automático pelo Netlify ao mergear na `main`.
+  `deploy-api`, requer o secret `FLY_API_TOKEN` — ver `docs/DEPLOY-AUTOMATICO.md`)
+  e o front no Cloudflare (job `deploy-web`, `wrangler deploy`, secrets
+  `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`). Para conferir se o front saiu,
+  veja o job "Deploy Web (Cloudflare)" na aba Actions; não há cache para limpar.
 
 ---
 
@@ -269,8 +278,8 @@ outro usuário responde **404** (regra do `IControleAcesso`).
 
 O MVP de registro de treino está **publicado e funcionando** (login → tela inicial
 com rotação de fichas → registrar/editar/excluir sessão → progresso com gráfico de
-evolução, observação no ponto e lista de sessões), com API no Fly, front no Netlify
-e banco no Neon, e deploy automático no CI. O catálogo tem 89 exercícios globais.
+evolução, observação no ponto e lista de sessões), com API no Fly, front no
+Cloudflare e banco no Neon, e deploy automático no CI. O catálogo tem 89 exercícios globais.
 Faltam, do incremento 1: primeiro acesso (PBI-09), treino livre (PBI-19),
 perfil/conta (PBI-25), tema completo (PBI-24), E2E Robot (PBI-26), backup (PBI-05) e
 filtro por membro (PBI-31). O incremento 2 (cardio) não começou.
@@ -317,8 +326,10 @@ Correção planejada (só front: `registrar_sessao_screen.dart` e `sessao_edicao
 2. **PBI-23 parte A** — "próximo da sequência" real + "data da última vez" de cada ficha (agora dá, com o histórico de sessões).
 3. **PBI-31** — classificar exercícios por membro (F+A+B, em 4 etapas conforme o ADR-10/MER).
 
-### Observação de infra (quando for conveniente)
-O Netlify reaproveita cache de build agressivamente (`if [ ! -d "$HOME/flutter" ]` no `netlify.toml`), o que já fez o site servir versão antiga após merge. Workaround atual: "Clear cache and deploy site" no painel. Vale ajustar o build para ser confiável sem limpeza manual.
+### Observação de infra (resolvida)
+~~O Netlify reaproveitava cache de build e servia versão antiga após merge.~~
+Resolvido com a migração do front para o Cloudflare (15/10/2026): o build roda no
+CI e o `wrangler deploy` publica o `build/web` novo a cada merge.
 
 ---
 
@@ -336,7 +347,7 @@ O Netlify reaproveita cache de build agressivamente (`if [ ! -d "$HOME/flutter" 
   referência de outra semana para `diasDaSemana` e confirmando que os checks da
   semana anterior não aparecem. A lógica já tem teste com data fixa; só não há o
   caso "troca de semana". Rápido de adicionar.
-- **Cache do Netlify** (ver observação de infra acima).
+- ~~Cache do Netlify~~ — resolvido com a migração para o Cloudflare.
 - **E2E completo (PBI-26)**: hoje há um teste de fluxo via `flutter test`
   (`app/test/fluxo_registro_test.dart`); o Robot + Browser contra a stack real
   continua como meta, depende de decidir o modo de teste de autenticação.
