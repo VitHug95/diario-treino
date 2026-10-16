@@ -39,14 +39,19 @@ class InicioScreen extends ConsumerWidget {
     final sessoesAsync = ref.watch(sessoesRecentesProvider);
     final emAndamento = ref.watch(treinoEmAndamentoProvider);
 
-    // Primeiro acesso (PBI-09): sem nenhuma ficha E sem nenhuma sessão, mostra
-    // a tela 6 no lugar da inicial. Exige os dois carregados para não piscar a
-    // tela de boas-vindas durante o carregamento ou um erro de rede.
+    // Primeiro acesso (tela 6) no lugar da inicial quando:
+    // - não há plano em uso (PBI-47: todos os planos excluídos), mesmo que já
+    //   existam sessões; ou
+    // - há plano em uso, mas sem fichas e sem nenhuma sessão (PBI-09).
+    // Exige os dados carregados para não piscar a tela de boas-vindas durante o
+    // carregamento ou um erro de rede.
     final plano = planoAsync.value;
     final sessoes = sessoesAsync.value;
+    final semPlanoEmUso = planoAsync.hasValue && plano == null;
     final semFichas = plano == null || plano.treinos.isEmpty;
     final semSessoes = sessoes != null && sessoes.isEmpty;
-    if (planoAsync.hasValue && sessoesAsync.hasValue && semFichas && semSessoes) {
+    if (semPlanoEmUso ||
+        (planoAsync.hasValue && sessoesAsync.hasValue && semFichas && semSessoes)) {
       return const PrimeiroAcessoScreen();
     }
 
@@ -143,13 +148,20 @@ class _Conteudo extends StatelessWidget {
 
     final ordenadas = [...fichas]..sort((a, b) => a.ordem.compareTo(b.ordem));
 
+    // O plano vem de GET /planos/ativo, que devolve o plano EM USO (PBI-44).
+    // A sequência só olha as fichas dele (PBI-47); o nome vai no título.
+    final planoNome = plano!.nome;
+
     return sessoes.when(
       // Histórico carregado: recomendação, semana e "última vez" reais.
-      data: (lista) => _ComHistorico(fichas: ordenadas, sessoes: lista),
+      data: (lista) =>
+          _ComHistorico(fichas: ordenadas, sessoes: lista, planoNome: planoNome),
       // Carregando: mostra as fichas para registrar, sem sugestão prematura.
-      loading: () => _SemHistorico(fichas: ordenadas, carregando: true, aoTentar: aoTentarSessoes),
+      loading: () => _SemHistorico(
+          fichas: ordenadas, carregando: true, aoTentar: aoTentarSessoes, planoNome: planoNome),
       // Erro: não engole; mostra as fichas e um aviso para recarregar.
-      error: (_, __) => _SemHistorico(fichas: ordenadas, carregando: false, aoTentar: aoTentarSessoes),
+      error: (_, __) => _SemHistorico(
+          fichas: ordenadas, carregando: false, aoTentar: aoTentarSessoes, planoNome: planoNome),
     );
   }
 }
@@ -157,13 +169,21 @@ class _Conteudo extends StatelessWidget {
 /// Estado completo: histórico disponível. Recomenda a próxima ficha, mostra a
 /// faixa semanal e a "última vez" de cada ficha.
 class _ComHistorico extends ConsumerWidget {
-  const _ComHistorico({required this.fichas, required this.sessoes});
+  const _ComHistorico({
+    required this.fichas,
+    required this.sessoes,
+    required this.planoNome,
+  });
 
   final List<TreinoResumo> fichas;
   final List<SessaoResumo> sessoes;
+  final String planoNome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Sessões de fichas de outros planos e treino livre não mudam a sequência
+    // (proximaFicha só olha as fichas deste plano). A faixa semanal usa todas:
+    // dia treinado é do atleta, não do plano.
     final recomendada = InicioLogica.proximaFicha(fichas, sessoes) ?? fichas.first;
     final ultimaVez = InicioLogica.ultimaVezPorFicha(sessoes);
     final dias = InicioLogica.diasDaSemana(DateTime.now(), sessoes);
@@ -175,7 +195,7 @@ class _ComHistorico extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x20),
         _CartaoDestaque(ficha: recomendada),
         const SizedBox(height: AppSpacing.x24),
-        Text('SUAS FICHAS', style: AppText.overline),
+        _TituloFichas(planoNome: planoNome),
         const SizedBox(height: AppSpacing.x12),
         for (final ficha in fichas) ...[
           _CartaoFicha(ficha: ficha, ultimaVez: ultimaVez[ficha.id]),
@@ -194,11 +214,13 @@ class _SemHistorico extends StatelessWidget {
     required this.fichas,
     required this.carregando,
     required this.aoTentar,
+    required this.planoNome,
   });
 
   final List<TreinoResumo> fichas;
   final bool carregando;
   final VoidCallback aoTentar;
+  final String planoNome;
 
   @override
   Widget build(BuildContext context) {
@@ -221,12 +243,38 @@ class _SemHistorico extends StatelessWidget {
               ],
             ),
           ),
-        Text('SUAS FICHAS', style: AppText.overline),
+        _TituloFichas(planoNome: planoNome),
         const SizedBox(height: AppSpacing.x12),
         for (final ficha in fichas) ...[
           _CartaoFicha(ficha: ficha, ultimaVez: null),
           const SizedBox(height: AppSpacing.entreItens),
         ],
+      ],
+    );
+  }
+}
+
+/// Título da lista de fichas com o nome do plano em uso ao lado (PBI-47):
+/// "SUAS FICHAS · HIPERTROFIA". Dois textos, para o rótulo "SUAS FICHAS"
+/// continuar achável pelos testes e pelo Robot.
+class _TituloFichas extends StatelessWidget {
+  const _TituloFichas({required this.planoNome});
+
+  final String planoNome;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Row(
+      children: [
+        Text('SUAS FICHAS', style: AppText.overline),
+        Flexible(
+          child: Text(
+            ' · ${planoNome.toUpperCase()}',
+            overflow: TextOverflow.ellipsis,
+            style: AppText.overline.copyWith(color: cores.textSecondary),
+          ),
+        ),
       ],
     );
   }

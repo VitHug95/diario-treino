@@ -19,6 +19,43 @@ SessaoResumo _sessao(String? treinoId, DateTime data) => SessaoResumo(
 void main() {
   final fichas = [_ficha('A', 1), _ficha('B', 2), _ficha('C', 3)];
 
+  group('PBI-47: sequência segue só o plano em uso', () {
+    // Fichas do plano em uso: A, B, C. "V1" é ficha de outro plano (viagem).
+    test('sessão de ficha de outro plano não muda a sequência', () {
+      final s = [
+        _sessao('A', DateTime(2026, 10, 10)),
+        _sessao('V1', DateTime(2026, 10, 12)), // outro plano, mais recente
+      ];
+      // A última DO PLANO EM USO foi A → sugere B.
+      expect(InicioLogica.proximaFicha(fichas, s)!.id, 'B');
+    });
+
+    test('treino livre (sem ficha) não muda a sequência', () {
+      final s = [
+        _sessao('B', DateTime(2026, 10, 10)),
+        _sessao(null, DateTime(2026, 10, 12)), // treino livre, mais recente
+      ];
+      expect(InicioLogica.proximaFicha(fichas, s)!.id, 'C');
+    });
+
+    test('só sessões de outro plano e treino livre: começa pela primeira', () {
+      final s = [
+        _sessao('V1', DateTime(2026, 10, 11)),
+        _sessao(null, DateTime(2026, 10, 12)),
+      ];
+      expect(InicioLogica.proximaFicha(fichas, s)!.id, 'A');
+    });
+
+    test('faixa semanal marca o dia treinado em qualquer plano', () {
+      // Segunda 12/10/2026; treino de outro plano no domingo anterior não
+      // entra, o de terça (13/10) entra.
+      final s = [_sessao('V1', DateTime(2026, 10, 13))];
+      final dias = InicioLogica.diasDaSemana(DateTime(2026, 10, 14), s);
+      expect(dias[1].treinou, isTrue); // terça
+      expect(dias[0].treinou, isFalse); // segunda
+    });
+  });
+
   group('proximaFicha (rotação)', () {
     test('sem histórico sugere a primeira', () {
       expect(InicioLogica.proximaFicha(fichas, const [])!.id, 'A');
