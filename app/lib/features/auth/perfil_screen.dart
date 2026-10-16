@@ -33,7 +33,7 @@ class PerfilScreen extends ConsumerWidget {
             perfilAsync.when(
               loading: () => const _CartaoDados.carregando(),
               error: (_, __) => _CartaoErro(
-                aoTentar: () => ref.invalidate(perfilProvider),
+                aoTentar: () => ref.refresh(perfilProvider),
               ),
               data: (perfil) =>
                   _CartaoDados(nome: perfil.nome, email: perfil.email),

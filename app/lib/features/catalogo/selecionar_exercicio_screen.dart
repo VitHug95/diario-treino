@@ -94,7 +94,7 @@ class _SelecionarExercicioScreenState
     );
     if (id == null || id.isEmpty || !mounted) return;
 
-    ref.invalidate(catalogoProvider);
+    // Criar já atualizou o catálogo (PBI-70).
     final exercicio = await ref.read(catalogoRepositoryProvider).buscarPorId(id);
     if (!mounted) return;
     if (exercicio != null) {
@@ -181,7 +181,7 @@ class _SelecionarExercicioScreenState
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, __) => Center(
                 child: FilledButton(
-                  onPressed: () => ref.invalidate(catalogoProvider),
+                  onPressed: () => ref.refresh(catalogoProvider),
                   child: const Text('Tentar de novo'),
                 ),
               ),

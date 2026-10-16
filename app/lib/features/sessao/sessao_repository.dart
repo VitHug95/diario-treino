@@ -304,3 +304,16 @@ final sessoesDoPeriodoProvider =
       .subtract(Duration(days: periodo.dias));
   return ref.watch(sessaoRepositoryProvider).listarSessoes(de: de);
 });
+
+/// A ficha já tem sessões registradas? Decide o texto da confirmação de
+/// excluir (PBI-58): com sessões, ela só sai do plano; sem, é apagada. Nulo
+/// quando não deu para saber (sem rede): a tela usa o texto genérico.
+final fichaTemSessoesProvider =
+    FutureProvider.autoDispose.family<bool?, String>((ref, fichaId) async {
+  try {
+    final sessoes = await ref.read(sessaoRepositoryProvider).listarSessoes();
+    return sessoes.any((s) => s.treinoId == fichaId);
+  } catch (_) {
+    return null;
+  }
+});

@@ -238,8 +238,11 @@ lib/
 | Login | firebase_auth |
 | Gráficos | fl_chart |
 | Tema | `ThemeMode` (sistema, claro, escuro) persistido com shared_preferences |
+| Escritas e atualização das telas | comandos por funcionalidade (`*_comandos.dart`) e mapa único de invalidação (`core/dados/invalidacao.dart`), PBI-70 |
 
 Organização por funcionalidade (feature-first): cada pasta de `features` tem suas telas, estado e chamadas, o que casa uma PBI com uma pasta.
+
+**Quem muda o dado avisa quem lê (PBI-70).** As telas leem por providers e gravam por comandos (`fichasComandosProvider`, `sessaoComandosProvider`, `catalogoComandosProvider`). O comando chama o repositório, que só faz HTTP, e depois `invalidarDerivados`, o único lugar que invalida providers: plano e ficha atualizam a lista, o plano em uso, o detalhe, a ficha aberta e o rascunho do registro; sessão atualiza também a semana, o histórico e o progresso. Telas não chamam `invalidate`; "Tentar de novo" usa `ref.refresh` da própria leitura. Um teste de arquitetura garante a regra.
 
 No navegador de computador, o conteúdo fica limitado a 600px de largura e centralizado. O app é desenhado para celular e não deve esticar em telas largas.
 

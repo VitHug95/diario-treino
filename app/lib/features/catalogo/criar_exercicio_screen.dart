@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/dados/invalidacao.dart';
 import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'catalogo_comandos.dart';
 import 'catalogo_repository.dart';
 import 'membro.dart';
 import 'metrica.dart';
@@ -61,7 +63,7 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
 
     setState(() => _salvando = true);
     try {
-      final id = await ref.read(catalogoRepositoryProvider).criarExercicio(
+      final id = await ref.read(catalogoComandosProvider).criarExercicio(
             nome: _nome.text,
             membroId: _membroId!,
             musculoId: _musculoId,
@@ -69,9 +71,8 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
             intensidadeMetricaId: _intensidadeId!,
             volumeMetricaId: _volumeId!,
           );
-      // Atualiza a lista do catálogo e volta devolvendo o id criado (o seletor
+      // O comando atualiza o catálogo. Volta devolvendo o id criado (o seletor
       // usa o id para reabrir o exercício já selecionado; o catálogo ignora).
-      ref.invalidate(catalogoProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Exercício criado.')),
@@ -111,10 +112,8 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
           if (erro) {
             return EstadoErro(
               mensagem: 'Não foi possível carregar os dados do cadastro.',
-              aoTentar: () {
-                ref.invalidate(metricasProvider);
-                ref.invalidate(membrosProvider);
-              },
+              aoTentar: () =>
+                  tentarDeNovo(ref, [metricasProvider, membrosProvider]),
             );
           }
 

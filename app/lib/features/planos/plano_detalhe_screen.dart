@@ -15,6 +15,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../fichas/dialogo_ficha.dart';
+import '../fichas/fichas_comandos.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../inicio/inicio_logica.dart';
@@ -53,8 +54,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
 
   Future<void> _definirEmUso(PlanoDetalhe plano) async {
     try {
-      await ref.read(fichasRepositoryProvider).definirEmUso(plano.id);
-      atualizarPlanos(ref);
+      await ref.read(fichasComandosProvider).definirEmUso(plano.id);
       if (mounted) setState(() => _definidoAgora = true);
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
@@ -68,9 +68,8 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
     final dados = await dialogoFicha(context);
     if (dados == null) return;
     try {
-      final fichaId = await ref.read(fichasRepositoryProvider).adicionarFicha(
+      final fichaId = await ref.read(fichasComandosProvider).adicionarFicha(
           planoId: plano.id, nome: dados.nome, descricao: dados.descricao);
-      atualizarPlanos(ref);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
@@ -89,8 +88,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
   Future<void> _duplicar(PlanoDetalhe plano) async {
     if (plano.somenteLeitura && !await confirmarCopiaPlano(context)) return;
     try {
-      final id = await ref.read(fichasRepositoryProvider).duplicarPlano(plano.id);
-      atualizarPlanos(ref);
+      final id = await ref.read(fichasComandosProvider).duplicarPlano(plano.id);
       // Abre a cópia no lugar deste plano: a seta volta para a lista.
       if (mounted) {
         context.pushReplacement(
@@ -106,8 +104,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
         titulo: 'Renomear plano', inicial: plano.nome);
     if (nome == null) return;
     try {
-      await ref.read(fichasRepositoryProvider).renomearPlano(planoId: plano.id, nome: nome);
-      atualizarPlanos(ref);
+      await ref.read(fichasComandosProvider).renomearPlano(planoId: plano.id, nome: nome);
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
     }
@@ -122,8 +119,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
     );
     if (!confirmou) return;
     try {
-      await ref.read(fichasRepositoryProvider).excluirPlano(plano.id);
-      atualizarPlanos(ref);
+      await ref.read(fichasComandosProvider).excluirPlano(plano.id);
       if (mounted) context.go(Rotas.fichas);
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
@@ -148,7 +144,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
                 child: EstadoErro(
                   mensagem: 'Não foi possível carregar o plano.',
                   aoTentar: () =>
-                      ref.invalidate(planoDetalheProvider(widget.planoId)),
+                      ref.refresh(planoDetalheProvider(widget.planoId)),
                 ),
               ),
             ],

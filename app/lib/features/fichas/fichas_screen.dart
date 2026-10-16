@@ -18,6 +18,7 @@ import '../inicio/inicio_logica.dart';
 import '../sessao/sessao_repository.dart';
 import 'dialogo_ficha.dart';
 import 'editar_alvos_screen.dart';
+import 'fichas_comandos.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
 
@@ -51,19 +52,9 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
       ? planoAtivoProvider
       : planoPorIdProvider(widget.planoId!);
 
-  /// Mudou ficha: atualiza este plano, a lista (contagens), o detalhe e a
-  /// Início.
-  void _invalidarPlanos() {
-    ref.invalidate(_plano);
-    ref.invalidate(planoAtivoProvider);
-    ref.invalidate(planosProvider);
-    ref.invalidate(planoDetalheProvider);
-  }
-
-  Future<void> _recarregar() async {
-    _invalidarPlanos();
-    await ref.read(_plano.future);
-  }
+  /// Espera o plano recarregado. Quem grava ([fichasComandosProvider]) já
+  /// avisou o plano, a lista, o detalhe e a Início (PBI-70).
+  Future<void> _esperarPlano() => ref.read(_plano.future);
 
   /// Volta ao detalhe do plano de origem. Aberta direto (sem tela anterior),
   /// troca para o detalhe.
@@ -99,13 +90,13 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     final dados = await dialogoFicha(context);
     if (dados == null) return;
 
-    final repo = ref.read(fichasRepositoryProvider);
+    final comandos = ref.read(fichasComandosProvider);
     try {
       // Sem plano ainda: garante um antes de adicionar a primeira ficha.
-      final planoId = plano?.id ?? await repo.garantirPlano();
-      await repo.adicionarFicha(
+      final planoId = plano?.id ?? await comandos.garantirPlano();
+      await comandos.adicionarFicha(
           planoId: planoId, nome: dados.nome, descricao: dados.descricao);
-      await _recarregar();
+      await _esperarPlano();
     } on FichasException catch (e) {
       _erro(e.mensagem);
     }
@@ -115,9 +106,9 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     final dados = await dialogoFicha(context, inicial: ficha);
     if (dados == null) return;
     try {
-      await ref.read(fichasRepositoryProvider).editarFicha(
+      await ref.read(fichasComandosProvider).editarFicha(
           treinoId: ficha.id, nome: dados.nome, descricao: dados.descricao);
-      await _recarregar();
+      await _esperarPlano();
     } on FichasException catch (e) {
       _erro(e.mensagem);
     }
@@ -134,13 +125,13 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     );
     if (!confirmar) return;
 
+    // Confirmar volta ao plano (PBI-58). Marca a saída antes de gravar, porque
+    // o comando já avisa o plano: sem a ficha, não pode mostrar "Essa ficha
+    // não existe mais".
+    _saindo = true;
     try {
-      await ref.read(fichasRepositoryProvider).excluirFicha(ficha.id);
+      await ref.read(fichasComandosProvider).excluirFicha(ficha.id);
       if (!mounted) return;
-      // Confirmar volta ao plano (PBI-58). Marca a saída antes de recarregar,
-      // para o plano sem a ficha não mostrar "Essa ficha não existe mais".
-      _saindo = true;
-      _invalidarPlanos();
       _voltarAoPlano();
     } on FichasException catch (e) {
       _erro(e.mensagem);
@@ -164,7 +155,7 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
         appBar: AppBar(),
         body: EstadoErro(
           mensagem: 'Não foi possível carregar a ficha.',
-          aoTentar: () => _recarregar(),
+          aoTentar: () => ref.refresh(_plano),
         ),
       ),
       data: (plano) {
@@ -331,10 +322,10 @@ class _ListaExerciciosFicha extends ConsumerWidget {
 
   final String treinoId;
 
-  Future<void> _recarregar(WidgetRef ref) async {
-    ref.invalidate(fichaDetalheProvider(treinoId));
-    await ref.read(fichaDetalheProvider(treinoId).future);
-  }
+  /// Espera a ficha recarregada. Quem grava ([fichasComandosProvider]) já
+  /// avisou a ficha, o plano e o rascunho do registro (PBI-70).
+  Future<void> _esperarFicha(WidgetRef ref) =>
+      ref.read(fichaDetalheProvider(treinoId).future);
 
   /// Seletor com vários exercícios (PBI-49): adiciona na ordem escolhida. Se
   /// algum falhar, os outros ficam e o aviso diz quais não entraram.
@@ -344,16 +335,13 @@ class _ListaExerciciosFicha extends ConsumerWidget {
     );
     if (escolhidos == null || escolhidos.isEmpty) return;
 
-    final repo = ref.read(fichasRepositoryProvider);
-    final falharam = <String>[];
-    for (final e in escolhidos) {
-      try {
-        await repo.adicionarExercicio(treinoId: treinoId, exercicioId: e.id);
-      } on FichasException {
-        falharam.add(e.nome);
-      }
-    }
-    await _recarregar(ref);
+    final idsFalharam = await ref.read(fichasComandosProvider).adicionarExercicios(
+        treinoId: treinoId, exercicioIds: escolhidos.map((e) => e.id).toList());
+    await _esperarFicha(ref);
+    final falharam = [
+      for (final e in escolhidos)
+        if (idsFalharam.contains(e.id)) e.nome,
+    ];
     if (falharam.isNotEmpty && context.mounted) {
       _erro(context, 'Não foi possível adicionar: ${falharam.join(', ')}. Tente de novo.');
     }
@@ -362,23 +350,22 @@ class _ListaExerciciosFicha extends ConsumerWidget {
   Future<void> _remover(
       BuildContext context, WidgetRef ref, TreinoExercicioResumo te) async {
     try {
-      await ref.read(fichasRepositoryProvider).removerExercicio(
+      await ref.read(fichasComandosProvider).removerExercicio(
           treinoId: treinoId, treinoExercicioId: te.id);
-      await _recarregar(ref);
+      await _esperarFicha(ref);
     } on FichasException catch (e) {
       if (context.mounted) _erro(context, e.mensagem);
     }
   }
 
+  /// A tela de alvos grava pelo comando, que já atualiza a ficha.
   Future<void> _editarAlvos(
       BuildContext context, WidgetRef ref, TreinoExercicioResumo te) async {
-    final resultado = await Navigator.of(context).push<ResultadoAlvos>(
+    await Navigator.of(context).push<ResultadoAlvos>(
       MaterialPageRoute(
         builder: (_) => EditarAlvosScreen(treinoId: treinoId, exercicio: te),
       ),
     );
-    // Salvou ou removeu: recarrega a ficha para refletir os alvos atualizados.
-    if (resultado != null) await _recarregar(ref);
   }
 
   Future<void> _reordenar(
@@ -388,12 +375,12 @@ class _ListaExerciciosFicha extends ConsumerWidget {
     final movido = lista.removeAt(de);
     lista.insert(para, movido);
     try {
-      await ref.read(fichasRepositoryProvider).reordenarExercicios(
+      await ref.read(fichasComandosProvider).reordenarExercicios(
           treinoId: treinoId, treinoExercicioIds: lista.map((e) => e.id).toList());
-      await _recarregar(ref);
     } on FichasException {
-      await _recarregar(ref); // recarrega para refletir o estado real
+      // O comando recarrega mesmo com erro: a lista volta ao estado real.
     }
+    await _esperarFicha(ref);
   }
 
   void _erro(BuildContext context, String msg) {
@@ -411,7 +398,7 @@ class _ListaExerciciosFicha extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => Center(
         child: FilledButton(
-          onPressed: () => ref.invalidate(fichaDetalheProvider(treinoId)),
+          onPressed: () => ref.refresh(fichaDetalheProvider(treinoId)),
           child: const Text('Tentar de novo'),
         ),
       ),
@@ -622,19 +609,8 @@ class _SemExercicios extends StatelessWidget {
 }
 
 // _EstadoVazio e _ErroCarregar extraídos para shared/ (PBI-51).
-
-/// A ficha já tem sessões registradas? Decide o texto da confirmação de
-/// excluir (PBI-58): com sessões, ela só sai do plano; sem, é apagada. Nulo
-/// quando não deu para saber (sem rede): a tela usa o texto genérico.
-final fichaTemSessoesProvider =
-    FutureProvider.autoDispose.family<bool?, String>((ref, fichaId) async {
-  try {
-    final sessoes = await ref.read(sessaoRepositoryProvider).listarSessoes();
-    return sessoes.any((s) => s.treinoId == fichaId);
-  } catch (_) {
-    return null;
-  }
-});
+// fichaTemSessoesProvider foi para sessao_repository.dart (PBI-70), junto das
+// outras leituras de sessão que o mapa de invalidação atualiza.
 
 /// Texto da confirmação de "Excluir ficha", conforme a ficha tenha sessões.
 String textoExcluirFicha(String nome, {required bool? temSessoes}) {

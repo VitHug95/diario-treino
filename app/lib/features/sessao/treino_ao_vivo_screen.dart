@@ -1091,7 +1091,7 @@ class _AbaHistorico extends ConsumerWidget {
           child: MensagemGrafico(
             icone: LucideIcons.cloudOff,
             texto: 'Não foi possível carregar o histórico.',
-            aoTentar: () => ref.invalidate(historicoExercicioProvider),
+            aoTentar: () => ref.refresh(historicoExercicioProvider(exercicioId)),
           ),
         ),
       ),
@@ -1215,7 +1215,7 @@ class _AbaEvolucao extends ConsumerWidget {
             child: MensagemGrafico(
               icone: LucideIcons.cloudOff,
               texto: 'Não foi possível carregar a evolução.',
-              aoTentar: () => ref.invalidate(progressoPorExercicioProvider),
+              aoTentar: () => ref.refresh(progressoPorExercicioProvider(exercicioId)),
             ),
           ),
           data: (p) {

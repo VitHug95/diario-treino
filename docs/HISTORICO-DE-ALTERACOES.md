@@ -1,7 +1,7 @@
 # Histórico de alterações — Diário de Treino
 
 Registro de tudo que entrou na `main`, PR por PR, do início do projeto (02/10/2026) até
-a PBI-67 (PR #86, 16/10/2026). Fonte: histórico Git. O detalhe de cada PBI (história,
+a PBI-67 (PR #86) e este documento (PR #87), 16/10/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
 critérios de aceite) está no [BACKLOG](BACKLOG.md) e, para as PBIs 57 a 67, em
 [AJUSTES-LAYOUT](AJUSTES-LAYOUT.md).
 
@@ -111,6 +111,7 @@ fechados sem merge.
 | #84 | PBI-66 | Setas do exercício mantêm a aba (Histórico/Evolução). |
 | #85 | PBI-64, 65 | Salvar leva à Início com o aviso "Treino salvo" e "Ver treino"; botão "Concluir exercício" e "Concluído N/M" no Resumo. |
 | #86 | PBI-67 | Treino em andamento aparece na Início e no plano logo ao iniciar; um treino por vez. |
+| #87 | docs | Este histórico de alterações. |
 
 ---
 

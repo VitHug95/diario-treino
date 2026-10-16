@@ -12,6 +12,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/catalogo_repository.dart';
 import '../catalogo/metrica.dart';
+import 'fichas_comandos.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
 
@@ -141,7 +142,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
 
     setState(() => _salvando = true);
     try {
-      await ref.read(fichasRepositoryProvider).definirAlvos(
+      await ref.read(fichasComandosProvider).definirAlvos(
             treinoId: widget.treinoId,
             treinoExercicioId: widget.exercicio.id,
             series: _series,
@@ -177,7 +178,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
 
     setState(() => _salvando = true);
     try {
-      await ref.read(fichasRepositoryProvider).removerExercicio(
+      await ref.read(fichasComandosProvider).removerExercicio(
             treinoId: widget.treinoId,
             treinoExercicioId: widget.exercicio.id,
           );
@@ -206,7 +207,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => EstadoErro(
           mensagem: 'Não foi possível carregar as métricas.',
-          aoTentar: () => ref.invalidate(metricasProvider),
+          aoTentar: () => ref.refresh(metricasProvider),
         ),
         data: (metricas) {
           _aplicarSugestao(metricas);

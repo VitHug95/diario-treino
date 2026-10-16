@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../fichas/fichas_repository.dart';
 
 /// Peças compartilhadas pela lista (tela 18) e pelo detalhe do plano (tela 19).
 
@@ -11,15 +8,6 @@ String textoExcluirPlano({required bool emUso}) =>
     'O plano e as fichas dele serão apagados. As sessões que você já registrou '
     'e os gráficos continuam.'
     '${emUso ? ' Como ele está em uso, o uso passa para o último plano que você usou.' : ''}';
-
-/// Depois de mexer em planos, atualiza a lista, os detalhes e a Início (que
-/// segue o plano em uso).
-void atualizarPlanos(WidgetRef ref) {
-  ref.invalidate(planosProvider);
-  ref.invalidate(planoDetalheProvider);
-  ref.invalidate(planoPorIdProvider);
-  ref.invalidate(planoAtivoProvider);
-}
 
 /// Mostra uma mensagem curta no rodapé.
 void avisarPlano(BuildContext context, String msg) {

@@ -9,6 +9,7 @@ import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../fichas/fichas_comandos.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../inicio/primeiro_acesso_screen.dart';
@@ -31,7 +32,7 @@ class PlanosScreen extends ConsumerWidget {
       error: (_, __) => Scaffold(
         body: EstadoErro(
           mensagem: 'Não foi possível carregar os planos.',
-          aoTentar: () => ref.invalidate(planosProvider),
+          aoTentar: () => ref.refresh(planosProvider),
         ),
       ),
       data: (planos) {
@@ -54,7 +55,7 @@ class _ListaPlanos extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(planosProvider),
+          onRefresh: () => ref.refresh(planosProvider.future),
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
@@ -273,16 +274,13 @@ void _abrirPlano(BuildContext context, String planoId) {
   context.push('${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(planoId)}');
 }
 
-void _atualizar(WidgetRef ref) => atualizarPlanos(ref);
-
 void _avisar(BuildContext context, String msg) => avisarPlano(context, msg);
 
 Future<void> _novoPlano(BuildContext context, WidgetRef ref) async {
   final nome = await dialogoNomePlano(context, titulo: 'Novo plano');
   if (nome == null || !context.mounted) return;
   try {
-    final id = await ref.read(fichasRepositoryProvider).criarPlano(nome);
-    _atualizar(ref);
+    final id = await ref.read(fichasComandosProvider).criarPlano(nome);
     if (context.mounted) _abrirPlano(context, id);
   } on FichasException catch (e) {
     if (context.mounted) _avisar(context, e.mensagem);
@@ -353,28 +351,24 @@ Future<void> _abrirMenu(
   );
   if (acao == null || !context.mounted) return;
 
-  final repo = ref.read(fichasRepositoryProvider);
+  final repo = ref.read(fichasComandosProvider);
   try {
     switch (acao) {
       case _AcaoPlano.definirEmUso:
         await repo.definirEmUso(plano.id);
-        _atualizar(ref);
         if (context.mounted) _avisar(context, '"${plano.nome}" agora está em uso.');
       case _AcaoPlano.duplicar:
         await repo.duplicarPlano(plano.id);
-        _atualizar(ref);
         if (context.mounted) _avisar(context, 'Cópia criada, fora de uso.');
       case _AcaoPlano.copiar:
         if (!await confirmarCopiaPlano(context)) return;
         await repo.duplicarPlano(plano.id);
-        _atualizar(ref);
         if (context.mounted) _avisar(context, 'Cópia criada. Agora ela é sua para editar.');
       case _AcaoPlano.renomear:
         final nome = await dialogoNomePlano(context,
             titulo: 'Renomear plano', inicial: plano.nome);
         if (nome == null) return;
         await repo.renomearPlano(planoId: plano.id, nome: nome);
-        _atualizar(ref);
       case _AcaoPlano.excluir:
         final confirmou = await confirmarPerigo(
           context,
@@ -384,7 +378,6 @@ Future<void> _abrirMenu(
         );
         if (!confirmou) return;
         await repo.excluirPlano(plano.id);
-        _atualizar(ref);
     }
   } on FichasException catch (e) {
     if (context.mounted) _avisar(context, e.mensagem);
