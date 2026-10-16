@@ -893,7 +893,7 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
 | PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
-| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | aprovada pelo PO (15/10); entra com a atualização do Robot |
+| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | a fazer: liberada pelo PO sem esperar o E2E (o passo do Robot é ajustado depois) |
 
 ### Ajustes de layout (PBI-57 a PBI-63)
 
@@ -904,8 +904,8 @@ Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
 |---|---|---|---|
 | PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | ✅ na `main` (PR #77) |
 | PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | ✅ na `main` (PR #76) |
-| PBI-59 | Início nova: semana e caixas | 23 | em revisão (branch `feat/pbi-59-inicio-nova`), sem o atalho "Iniciar treino" (decisão do PO em aberto) |
-| PBI-60 | Caixa de novidades na Início | 23 | em refinamento (resposta do PO) |
+| PBI-59 | Início nova: semana e caixas | 23 | ✅ na `main` (PR #79), sem o atalho "Iniciar treino" (decisão do PO em aberto) |
+| PBI-60 | Dicas de treino na Início (era "caixa de novidades") | 23 | em revisão (branch `feat/pbi-60-dicas`) |
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
 

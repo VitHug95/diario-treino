@@ -5,6 +5,7 @@ import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/auth_service.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
 import 'package:diario_treino/features/fichas/plano_models.dart';
+import 'package:diario_treino/features/inicio/dicas.dart';
 import 'package:diario_treino/features/inicio/inicio_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
@@ -258,6 +259,15 @@ void main() {
     await tester.tap(find.text('ÚLTIMO TREINO'));
     await tester.pumpAndSettle();
     expect(find.text('Detalhe s2'), findsOneWidget);
+  });
+
+  testWidgets('PBI-60: cartão com a dica de treino do acesso', (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB, tema: AppTheme.escuro));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DICA DE TREINO'), findsOneWidget);
+    expect(find.text(dicasDeTreino.first), findsOneWidget);
+    expect(find.bySemanticsLabel('Dica de treino: ${dicasDeTreino.first}'), findsOneWidget);
   });
 
   testWidgets('PBI-59: sem sessões, não há cartão de último treino', (tester) async {

@@ -42,7 +42,8 @@ Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23 e 24
 - PBI-58: "excluir treino" era só o plano, ou plano e ficha?
 - PBI-63: ao tirar a seta, some o "Continuar depois". O treino segue salvo e a Início mostra "Continuar treino". Serve assim, ou o PO quer um botão "Minimizar"?
 - PBI-61: no plano do professor o atleta também pode iniciar treino pelo play. Confirma?
-- PBI-60: quem escreve as novidades e com que frequência? Recomendo a opção A.
+- ~~PBI-60: quem escreve as novidades e com que frequência? Recomendo a opção A.~~ Respondida: opção A, com dicas de treino que trocam a cada acesso (ver PBI-60).
+- ~~PBI-49: espera o E2E?~~ Respondida: pode entrar sem esperar o E2E; o passo do Robot que escolhe o exercício é ajustado depois.
 
 ## Definição de pronto (vale para todas)
 
@@ -178,11 +179,9 @@ _Front · Qualquer sprint · Tela 23_
 
 ## PBI-60 · Caixa de novidades na Início
 
-_Front (+ API na opção B) · Depois da PBI-59 · em refinamento_
+_Front · Depois da PBI-59 · refinada (opção A, dicas de treino)_
 
-**História:** Como atleta, quero ver na Início avisos e dicas do app, para saber o que mudou e aprender algo sem sair dele.
-
-**Não está pronta para entrar em sprint:** falta o PO responder quem escreve o conteúdo e com que frequência.
+**História:** Como atleta, quero ver na Início uma dica de treino que muda a cada acesso, para aprender algo simples sem sair do app.
 
 | Opção | Como funciona | Limite |
 |---|---|---|
@@ -190,11 +189,29 @@ _Front (+ API na opção B) · Depois da PBI-59 · em refinamento_
 | B · Tabela e API | Tabela `aviso` e `GET /avisos`, cadastro por SQL no começo. | Migration, endpoint e testes só para mostrar texto. |
 | C · Painel de edição | PO ou professor escrevem pelo app. | Fica para o épico do educador. |
 
-Recomendação: opção A.
+**Decisão do PO (resposta à pergunta da PBI-60):** opção A, com **dicas de treino**
+em vez de novidades do app. Uma série de mensagens curtas ("Se hidrate durante o
+treino", "Antes de iniciar séries com cargas altas, aqueça."), mostradas num
+cartão e trocadas a cada vez que o atleta acessa o app. Sem links, datas de
+validade nem etiquetas: a versão com novidades do app (critérios antigos) fica
+para depois, se for pedida.
 
-### Critérios de aceite
+### Escopo (revisado)
 
-1. Duas novidades vigentes aparecem, a mais recente primeiro, com etiqueta em texto. 2. Sem novidade vigente, a área não aparece. 3. Expirada não aparece. 4. Link abre fora do app. 5. Falha não quebra a Início. 6. Etiqueta lida com o título; caixa com link é botão com rótulo.
+- Lista de dicas no front (`app/lib/features/inicio/dicas.dart`), versionada.
+- Um cartão "DICA DE TREINO" na Início, abaixo do último treino.
+- A cada acesso ao app, a próxima dica da lista (volta ao começo no fim). A
+  posição fica salva no aparelho (`shared_preferences`); trocar de aba ou voltar
+  à Início no mesmo acesso não troca a dica.
+- Dicas gerais de treino, sem orientação médica.
+
+### Critérios de aceite (revisados)
+
+1. A Início mostra um cartão com uma dica. 2. Abrir o app de novo mostra a dica
+seguinte; depois da última, volta à primeira. 3. No mesmo acesso, a dica não
+muda. 4. Sem dicas na lista, o cartão não aparece. 5. Falha ao ler ou salvar a
+posição não quebra a Início (mostra a primeira). 6. O cartão é lido como
+"Dica de treino: {texto}" e funciona nos dois temas.
 
 ---
 

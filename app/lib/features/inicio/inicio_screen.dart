@@ -20,6 +20,7 @@ import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
 import '../sessao/treino_em_andamento.dart';
+import 'dicas.dart';
 import 'inicio_logica.dart';
 import 'primeiro_acesso_screen.dart';
 
@@ -117,7 +118,6 @@ class InicioScreen extends ConsumerWidget {
                   aoTentarSessoes: () => ref.invalidate(sessoesRecentesProvider),
                 ),
               ),
-              // Área "Novidades" (PBI-60) entra aqui, oculta até lá.
             ],
           ),
         ),
@@ -160,11 +160,70 @@ class _Conteudo extends StatelessWidget {
           const SizedBox(height: AppSpacing.entreCards),
           _CartaoUltimoTreino(sessao: ultima),
         ],
+        // Dica de treino do acesso (PBI-60).
+        const _CartaoDica(),
         if (fichas.isEmpty) ...[
           const SizedBox(height: AppSpacing.x20),
           const _SemFichas(),
         ],
       ],
+    );
+  }
+}
+
+/// Cartão "Dica de treino" (PBI-60): uma dica por acesso ao app, que troca no
+/// acesso seguinte. Sem dicas, não aparece.
+class _CartaoDica extends ConsumerWidget {
+  const _CartaoDica();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dica = ref.watch(dicaDoAcessoProvider);
+    if (dica == null) return const SizedBox.shrink();
+    final cores = AppColors.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.entreCards),
+      child: Semantics(
+        container: true,
+        label: 'Dica de treino: $dica',
+        excludeSemantics: true,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(color: cores.lineDefault),
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          padding: const EdgeInsets.all(AppSpacing.paddingCard),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: AppSizes.touchMin,
+                height: AppSizes.touchMin,
+                decoration: BoxDecoration(
+                  color: cores.primaryTint,
+                  borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                ),
+                child: Icon(LucideIcons.lightbulb,
+                    size: AppSizes.iconeSm, color: cores.primaryOnTint),
+              ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('DICA DE TREINO',
+                        style: AppText.overline.copyWith(color: cores.textSecondary)),
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(dica, style: AppText.body.copyWith(color: cores.textStrong)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
