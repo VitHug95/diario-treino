@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
 import 'package:diario_treino/features/fichas/plano_models.dart';
 import 'package:diario_treino/features/planos/acoes_plano.dart';
@@ -7,7 +9,9 @@ import 'package:diario_treino/features/sessao/sessao_repository.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 TreinoResumo _ficha(String id, String nome, int ordem, {String? desc}) =>
     TreinoResumo(id: id, nome: nome, descricao: desc, ordem: ordem);
@@ -44,6 +48,79 @@ TreinoExercicioResumo _ex(int ordem) => TreinoExercicioResumo(
       alvo: null,
     );
 
+/// A ficha A tem 4 exercícios, a "fv" nenhum; as outras, 5.
+int _qtdExercicios(String treinoId) => switch (treinoId) {
+      'fa' => 4,
+      'fv' => 0,
+      _ => 5,
+    };
+
+/// Overrides comuns às telas de teste.
+List<Override> _overrides(PlanoDetalhe plano, {FichasRepository? repo}) => [
+      planoDetalheProvider.overrideWith((ref, id) async => plano),
+      fichaDetalheProvider.overrideWith((ref, treinoId) async => TreinoDetalhe(
+            id: treinoId,
+            nome: treinoId,
+            descricao: null,
+            ordem: 1,
+            exercicios: [
+              for (var i = 1; i <= _qtdExercicios(treinoId); i++) _ex(i),
+            ],
+          )),
+      sessoesRecentesProvider.overrideWith((ref) async => const []),
+      if (repo != null) fichasRepositoryProvider.overrideWithValue(repo),
+    ];
+
+/// Com rotas de verdade (go_router), para conferir para onde o play e o corpo
+/// da linha levam. As telas de destino só mostram o que receberam.
+Widget _telaComRotas(PlanoDetalhe plano, {FichasRepository? repo}) {
+  final router = GoRouter(
+    initialLocation: Rotas.planoDetalhe,
+    routes: [
+      GoRoute(
+        path: Rotas.planoDetalhe,
+        builder: (_, __) => const PlanoDetalheScreen(planoId: 'p1'),
+      ),
+      GoRoute(
+        path: Rotas.fichaDoPlano,
+        builder: (_, s) => Scaffold(
+            body: Text('Editar ${s.uri.queryParameters['ficha']}')),
+      ),
+      GoRoute(
+        path: Rotas.registrarSessao,
+        builder: (_, s) {
+          final args = s.extra! as RegistrarSessaoArgs;
+          return Scaffold(
+            body: Text('Registro ${args.treinoId} '
+                '${args.registroPosterior ? 'já feito' : 'agora'}'),
+          );
+        },
+      ),
+    ],
+  );
+  return ProviderScope(
+    overrides: _overrides(plano, repo: repo),
+    child: MaterialApp.router(theme: AppTheme.claro, routerConfig: router),
+  );
+}
+
+/// Repositório que só cria a ficha (devolve o id "fn").
+class _RepoCriaFicha extends FichasRepository {
+  _RepoCriaFicha() : super(Dio());
+
+  String? criada;
+
+  @override
+  Future<String> adicionarFicha({
+    required String planoId,
+    required String nome,
+    String? descricao,
+  }) async {
+    criada = nome;
+    return 'fn';
+  }
+}
+
 Widget _tela(PlanoDetalhe plano, {ThemeData? tema}) => ProviderScope(
       overrides: [
         planoDetalheProvider.overrideWith((ref, id) async => plano),
@@ -54,7 +131,7 @@ Widget _tela(PlanoDetalhe plano, {ThemeData? tema}) => ProviderScope(
               descricao: null,
               ordem: 1,
               exercicios: [
-                for (var i = 1; i <= (treinoId == 'fa' ? 4 : 5); i++) _ex(i),
+                for (var i = 1; i <= _qtdExercicios(treinoId); i++) _ex(i),
               ],
             )),
         // Só a ficha A tem sessão registrada (27/09).
@@ -168,6 +245,107 @@ void main() {
     expect(find.byTooltip('Renomear plano'), findsNothing);
     expect(find.byTooltip('Excluir plano'), findsNothing);
     expect(find.text('Copiar para editar'), findsOneWidget);
+  });
+
+  testWidgets('PBI-61: play abre o sheet de treinar; Cancelar fecha',
+      (tester) async {
+    await tester.pumpWidget(_telaComRotas(_plano()));
+    await tester.pumpAndSettle();
+
+    final play = find.byTooltip('Treinar B');
+    expect(play, findsOneWidget);
+    expect(tester.getSize(play), const Size(44, 44));
+
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+
+    expect(find.text('FICHA 2 · HIPERTROFIA'), findsOneWidget);
+    expect(find.text('INICIAR TREINO AGORA'), findsOneWidget);
+    expect(find.text('Registrar treino já feito'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.text('INICIAR TREINO AGORA'), findsNothing);
+    expect(find.text('HIPERTROFIA'), findsOneWidget);
+  });
+
+  testWidgets('PBI-61: "Iniciar treino agora" abre o treino da ficha',
+      (tester) async {
+    await tester.pumpWidget(_telaComRotas(_plano()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Treinar A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('INICIAR TREINO AGORA'));
+    await tester.pumpAndSettle();
+
+    // Testes rodam com TREINO_AO_VIVO=false: cai no registro em andamento.
+    expect(find.text('Registro fa agora'), findsOneWidget);
+  });
+
+  testWidgets('PBI-61: "Registrar treino já feito" abre o registro manual',
+      (tester) async {
+    await tester.pumpWidget(_telaComRotas(_plano()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Treinar C'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar treino já feito'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registro fc já feito'), findsOneWidget);
+  });
+
+  testWidgets('PBI-61: corpo da linha abre a edição sem iniciar treino',
+      (tester) async {
+    await tester.pumpWidget(_telaComRotas(_plano()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Costas e bíceps'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar fb'), findsOneWidget);
+    expect(find.text('INICIAR TREINO AGORA'), findsNothing);
+  });
+
+  testWidgets('PBI-61: ficha vazia deixa o play desabilitado, com o rótulo',
+      (tester) async {
+    await tester.pumpWidget(_telaComRotas(_plano(fichas: [
+      _ficha('fa', 'A', 1),
+      _ficha('fv', 'B', 2),
+    ])));
+    await tester.pumpAndSettle();
+
+    final play = find.byTooltip('B: adicione exercícios para treinar');
+    expect(play, findsOneWidget);
+    expect(find.byTooltip('Treinar B'), findsNothing);
+
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+    expect(find.text('INICIAR TREINO AGORA'), findsNothing);
+  });
+
+  testWidgets('PBI-61: criar ficha fica no plano com o aviso "Adicionar exercícios"',
+      (tester) async {
+    final repo = _RepoCriaFicha();
+    await tester.pumpWidget(_telaComRotas(_plano(), repo: repo));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Nova ficha'));
+    await tester.tap(find.text('Nova ficha'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Nome'), 'D');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    // Continua no plano; a ficha não abre sozinha.
+    expect(repo.criada, 'D');
+    expect(find.text('HIPERTROFIA'), findsOneWidget);
+    expect(find.text('Ficha “D” criada'), findsOneWidget);
+
+    await tester.tap(find.text('Adicionar exercícios'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar fn'), findsOneWidget);
   });
 
   testWidgets('Excluir plano em uso explica que o uso passa adiante',

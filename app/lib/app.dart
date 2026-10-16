@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/localizacao/material_pt.dart';
 import 'core/rotas/app_router.dart';
 import 'core/tema/tema_controller.dart';
 import 'theme/app_theme.dart';
@@ -22,6 +23,9 @@ class DiarioTreinoApp extends ConsumerWidget {
       darkTheme: AppTheme.escuro,
       themeMode: modo,
       routerConfig: router,
+      // Ações de mover da lista reordenável em português (PBI-62).
+      // O MaterialApp completa a lista com os padrões (widgets, Cupertino).
+      localizationsDelegates: LocalizacoesPt.delegates,
       // O app é desenhado para celular (MAS, seção 10). Em telas largas (web no
       // computador), limita o conteúdo a 600px e centraliza, para não esticar.
       builder: (context, child) => _LarguraMaxima(child: child),

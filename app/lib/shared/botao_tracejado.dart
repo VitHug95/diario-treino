@@ -37,9 +37,15 @@ class BotaoTracejado extends StatelessWidget {
                   Icon(LucideIcons.plus,
                       size: AppSizes.iconeSm, color: cores.textStrong),
                   const SizedBox(width: AppSpacing.x8),
-                  Text(rotulo,
-                      style: AppText.bodyS.copyWith(
-                          fontWeight: FontWeight.w600, color: cores.textStrong)),
+                  // Flexible: em 360 px com fonte grande, corta em vez de
+                  // estourar a linha.
+                  Flexible(
+                    child: Text(rotulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyS.copyWith(
+                            fontWeight: FontWeight.w600, color: cores.textStrong)),
+                  ),
                 ],
               ),
             ),

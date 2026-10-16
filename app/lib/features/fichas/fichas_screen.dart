@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
@@ -14,26 +13,27 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
-import '../sessao/iniciar_treino_ao_vivo.dart';
+import '../inicio/inicio_logica.dart';
 import '../sessao/sessao_repository.dart';
 import 'dialogo_ficha.dart';
 import 'editar_alvos_screen.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
 
-/// Tela 5 do protótipo (FICHAS): abas por ficha, nome editável, nova ficha e
-/// arquivar. A lista de exercícios de cada ficha chega no PBI-13.
+/// Tela 22 (PBI-57): edição de UMA ficha, a que foi aberta pelo detalhe do
+/// plano. Sem as outras fichas, sem "Nova ficha" e sem botões de treinar:
+/// criar ficha e treinar acontecem no plano (PBI-61).
 ///
-/// [fichaInicialId] (PBI-50): id da ficha a abrir selecionada. Vem do cartão da
-/// tela Início via `/fichas?ficha=<id>` — abrir a ficha nunca inicia o treino.
-/// Id inexistente ou nulo cai na primeira ficha.
+/// [fichaInicialId]: id da ficha aberta (`?ficha=<id>`). Abrir a ficha nunca
+/// inicia o treino (PBI-50). Id que não existe mais volta ao plano com o aviso
+/// "Essa ficha não existe mais". Sem id, abre a primeira ficha do plano.
 class FichasScreen extends ConsumerStatefulWidget {
   const FichasScreen({super.key, this.fichaInicialId, this.planoId});
 
   final String? fichaInicialId;
 
-  /// Plano aberto a partir da lista de planos (PBI-45). Nulo = plano em uso,
-  /// como antes (Início e Primeiro acesso continuam abrindo assim).
+  /// Plano de origem. Nulo = plano em uso (Início e Primeiro acesso abrem
+  /// assim; sem plano, o estado vazio "CRIAR FICHA" monta o primeiro).
   final String? planoId;
 
   @override
@@ -41,38 +41,60 @@ class FichasScreen extends ConsumerStatefulWidget {
 }
 
 class _FichasScreenState extends ConsumerState<FichasScreen> {
-  int _selecionada = 0;
-
-  /// Garante que a resolução do [fichaInicialId] para o índice aconteça uma vez
-  /// só, quando o plano terminar de carregar (e não a cada rebuild).
-  bool _fichaInicialResolvida = false;
-
-  /// Resolve o índice da ficha pedida pelo parâmetro de rota. Id inexistente
-  /// (ficha removida, link antigo) cai na primeira ficha, sem erro.
-  void _resolverFichaInicial(List<TreinoResumo> fichas) {
-    if (_fichaInicialResolvida) return;
-    _fichaInicialResolvida = true;
-    final id = widget.fichaInicialId;
-    if (id == null || fichas.isEmpty) return;
-    final i = fichas.indexWhere((f) => f.id == id);
-    if (i > 0) _selecionada = i;
-  }
+  /// Já saindo da tela (ficha excluída ou inexistente): não reage de novo
+  /// quando o plano recarrega sem a ficha.
+  bool _saindo = false;
 
   /// Fonte das fichas: o plano escolhido na lista ou, sem id, o plano em uso.
   FutureProvider<PlanoAtivo?> get _plano => widget.planoId == null
       ? planoAtivoProvider
       : planoPorIdProvider(widget.planoId!);
 
-  Future<void> _recarregar() async {
-    // Mudou ficha: atualiza este plano, a lista (contagens) e a Início.
+  /// Mudou ficha: atualiza este plano, a lista (contagens), o detalhe e a
+  /// Início.
+  void _invalidarPlanos() {
     ref.invalidate(_plano);
     ref.invalidate(planoAtivoProvider);
     ref.invalidate(planosProvider);
     ref.invalidate(planoDetalheProvider);
+  }
+
+  Future<void> _recarregar() async {
+    _invalidarPlanos();
     await ref.read(_plano.future);
   }
 
-  Future<void> _novaFicha(PlanoAtivo? plano) async {
+  /// Volta ao detalhe do plano de origem. Aberta direto (sem tela anterior),
+  /// troca para o detalhe.
+  void _voltarAoPlano() {
+    // Navigator (e não o GoRouter) para funcionar também fora do roteador.
+    final navegador = Navigator.of(context);
+    if (navegador.canPop()) {
+      navegador.pop();
+    } else {
+      final id = widget.planoId;
+      context.go(id == null
+          ? Rotas.planoDetalhe
+          : '${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(id)}');
+    }
+  }
+
+  /// Ficha pedida não está no plano (excluída, link antigo): avisa e volta.
+  void _fichaNaoExiste() {
+    if (_saindo) return;
+    _saindo = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(const SnackBar(content: Text('Essa ficha não existe mais')));
+      _voltarAoPlano();
+    });
+  }
+
+  /// Primeira ficha, pelo estado vazio "CRIAR FICHA" (plano em uso, ainda sem
+  /// fichas). Fica nesta tela para já adicionar exercícios.
+  Future<void> _criarPrimeiraFicha(PlanoAtivo? plano) async {
     final dados = await dialogoFicha(context);
     if (dados == null) return;
 
@@ -83,11 +105,6 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
       await repo.adicionarFicha(
           planoId: planoId, nome: dados.nome, descricao: dados.descricao);
       await _recarregar();
-      // Seleciona a última (a recém-criada).
-      final atual = ref.read(_plano).value;
-      if (atual != null && atual.treinos.isNotEmpty) {
-        setState(() => _selecionada = atual.treinos.length - 1);
-      }
     } on FichasException catch (e) {
       _erro(e.mensagem);
     }
@@ -118,16 +135,12 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
 
     try {
       await ref.read(fichasRepositoryProvider).excluirFicha(ficha.id);
-      await _recarregar();
       if (!mounted) return;
-      // Confirmar volta ao plano (PBI-58). Aberta direto (sem tela anterior),
-      // fica e mostra a primeira ficha.
-      final navegador = Navigator.of(context);
-      if (navegador.canPop()) {
-        navegador.pop();
-      } else {
-        setState(() => _selecionada = 0);
-      }
+      // Confirmar volta ao plano (PBI-58). Marca a saída antes de recarregar,
+      // para o plano sem a ficha não mostrar "Essa ficha não existe mais".
+      _saindo = true;
+      _invalidarPlanos();
+      _voltarAoPlano();
     } on FichasException catch (e) {
       _erro(e.mensagem);
     }
@@ -144,213 +157,171 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
   Widget build(BuildContext context) {
     final planoAsync = ref.watch(_plano);
 
-    // "Nova ficha" na AppBar só quando já existe ao menos uma ficha. Sem
-    // fichas, o único caminho é o botão "CRIAR FICHA" do estado vazio (PBI-52).
-    final temFichas = (planoAsync.value?.treinos ?? const []).isNotEmpty;
-
-    // Aberta pela lista de planos, o título é o nome do plano (PBI-45).
-    final titulo = widget.planoId == null
-        ? 'Fichas'
-        : (planoAsync.value?.nome ?? 'Plano');
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(titulo),
-        actions: [
-          if (temFichas) ...[
-            TextButton.icon(
-              onPressed: () => _novaFicha(planoAsync.value),
-              icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-              label: const Text('Nova ficha'),
-            ),
-            const SizedBox(width: AppSpacing.x8),
-          ],
-        ],
-      ),
-      body: planoAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => EstadoErro(
-          mensagem: 'Não foi possível carregar as fichas.',
+    return planoAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, __) => Scaffold(
+        appBar: AppBar(),
+        body: EstadoErro(
+          mensagem: 'Não foi possível carregar a ficha.',
           aoTentar: () => _recarregar(),
         ),
-        data: (plano) {
-          final fichas = plano?.treinos ?? const <TreinoResumo>[];
-          if (fichas.isEmpty) {
-            return EstadoVazio(
+      ),
+      data: (plano) {
+        final fichas = plano?.treinos ?? const <TreinoResumo>[];
+        final id = widget.fichaInicialId;
+
+        // Sem fichas e sem ficha pedida: o único caminho é criar a primeira
+        // (PBI-52; caminho do Primeiro acesso e do Robot).
+        if (fichas.isEmpty && id == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Fichas')),
+            body: EstadoVazio(
               icone: LucideIcons.clipboardList,
               titulo: 'Nenhuma ficha ainda',
               texto: 'Crie o Treino A para começar a montar sua rotina.',
               acao: FilledButton(
-                onPressed: () => _novaFicha(plano),
+                onPressed: () => _criarPrimeiraFicha(plano),
                 child: const Text('CRIAR FICHA'),
               ),
-            );
-          }
-          _resolverFichaInicial(fichas);
-          final indice = _selecionada.clamp(0, fichas.length - 1);
-          return _ConteudoFichas(
-            fichas: fichas,
-            selecionada: indice,
-            aoSelecionar: (i) => setState(() => _selecionada = i),
-            aoRenomear: () => _renomear(fichas[indice]),
-            aoExcluir: () => _excluir(fichas[indice]),
+            ),
           );
-        },
-      ),
+        }
+
+        final ficha = id == null
+            ? fichas.first
+            : fichas.where((f) => f.id == id).firstOrNull;
+        if (ficha == null || plano == null) {
+          _fichaNaoExiste();
+          return const Scaffold(body: SizedBox.shrink());
+        }
+
+        return Scaffold(
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CabecalhoFicha(
+                plano: plano,
+                ficha: ficha,
+                aoVoltar: _voltarAoPlano,
+                aoRenomear: () => _renomear(ficha),
+                aoExcluir: () => _excluir(ficha),
+              ),
+              Expanded(child: _ListaExerciciosFicha(treinoId: ficha.id)),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-/// Conteúdo quando há fichas: abas segmentadas + detalhe da ficha selecionada.
-class _ConteudoFichas extends ConsumerWidget {
-  const _ConteudoFichas({
-    required this.fichas,
-    required this.selecionada,
-    required this.aoSelecionar,
+/// Cabeçalho escuro da tela 22: seta para o plano, nome do plano, nome da
+/// ficha (cabeçalho de semântica), resumo e lápis/lixeira (PBI-58).
+class _CabecalhoFicha extends ConsumerWidget {
+  const _CabecalhoFicha({
+    required this.plano,
+    required this.ficha,
+    required this.aoVoltar,
     required this.aoRenomear,
     required this.aoExcluir,
   });
 
-  final List<TreinoResumo> fichas;
-  final int selecionada;
-  final ValueChanged<int> aoSelecionar;
+  final PlanoAtivo plano;
+  final TreinoResumo ficha;
+  final VoidCallback aoVoltar;
   final VoidCallback aoRenomear;
   final VoidCallback aoExcluir;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
-    final ficha = fichas[selecionada];
+    final qtd = ref.watch(fichaDetalheProvider(ficha.id)).maybeWhen(
+          data: (d) => d.exercicios.length,
+          orElse: () => null,
+        );
+    // "Último em" vem das sessões recentes, como no detalhe do plano.
+    final ultima = ref.watch(sessoesRecentesProvider).maybeWhen(
+          data: (s) => InicioLogica.ultimaVezPorFicha(s)[ficha.id],
+          orElse: () => null,
+        );
+    final resumo = resumoFicha(qtdExercicios: qtd, ultimaVez: ultima);
+    final descricao = ficha.descricao?.trim() ?? '';
 
-    // Habilita iniciar/registrar só quando a ficha tem exercícios (PBI-52).
-    // Enquanto o detalhe carrega ou falha, trata como "sem exercícios" para não
-    // deixar iniciar um treino vazio.
-    final detalhe = ref.watch(fichaDetalheProvider(ficha.id));
-    final temExercicios = detalhe.maybeWhen(
-      data: (d) => d.exercicios.isNotEmpty,
-      orElse: () => false,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Abas por ficha (dinâmicas, N fichas).
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(AppSpacing.x16),
-          child: Row(
+    return Container(
+      color: cores.bgHeader,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.x8, AppSpacing.x8, AppSpacing.margemCabecalho, AppSpacing.x20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (var i = 0; i < fichas.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.x8),
-                  child: ChoiceChip(
-                    label: Text(_rotuloAba(fichas[i])),
-                    selected: i == selecionada,
-                    showCheckmark: false,
-                    onSelected: (_) => aoSelecionar(i),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: aoVoltar,
+                    icon: Icon(LucideIcons.arrowLeft,
+                        size: AppSizes.iconeMd, color: cores.textOnHeader),
+                    tooltip: 'Voltar para ${plano.nome}',
+                    constraints: const BoxConstraints(
+                      minWidth: AppSizes.touchMin,
+                      minHeight: AppSizes.touchMin,
+                    ),
                   ),
-                ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-          child: Row(
-            children: [
-              Expanded(
+                  const Spacer(),
+                  AcoesRenomearExcluir(
+                    rotuloRenomear: 'Renomear ficha',
+                    rotuloExcluir: 'Excluir ficha',
+                    aoRenomear: aoRenomear,
+                    aoExcluir: aoExcluir,
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.x12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('NOME DA FICHA',
-                        style: AppText.overline.copyWith(color: cores.textSecondary)),
+                    Text(plano.nome.toUpperCase(),
+                        style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
                     const SizedBox(height: AppSpacing.x4),
-                    Text(ficha.nome, style: AppText.displayS),
-                    if (ficha.descricao != null && ficha.descricao!.isNotEmpty) ...[
+                    Semantics(
+                      header: true,
+                      child: Text(ficha.nome.toUpperCase(),
+                          style: AppText.displayM.copyWith(color: cores.textOnHeader)),
+                    ),
+                    if (descricao.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x4),
-                      Text(ficha.descricao!,
-                          style: AppText.body.copyWith(color: cores.textSecondary)),
+                      Text(descricao,
+                          style: AppText.body.copyWith(color: cores.textOnHeaderLabel)),
                     ],
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(resumo,
+                        style: AppText.caption.copyWith(color: cores.textOnHeaderMuted)),
                   ],
                 ),
               ),
-              // Lápis e lixeira no lugar do menu "⋯" (PBI-58). O menu só tinha
-              // renomear e excluir, então sai inteiro.
-              AcoesRenomearExcluir(
-                rotuloRenomear: 'Renomear ficha',
-                rotuloExcluir: 'Excluir ficha',
-                aoRenomear: aoRenomear,
-                aoExcluir: aoExcluir,
-                sobreCabecalhoEscuro: false,
-              ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.x12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                height: AppSizes.botaoPrincipal,
-                child: FilledButton.icon(
-                  // Sem exercícios: desabilitado (não dá para iniciar vazio).
-                  onPressed: !temExercicios
-                      ? null
-                      : () {
-                          // Flag TV-3: inicia o treino ao vivo (tela 14) série
-                          // por série; desligada, mantém o registro de uma vez.
-                          if (treinoAoVivoHabilitado) {
-                            iniciarTreinoAoVivoDaFicha(
-                              context,
-                              ref,
-                              treinoId: ficha.id,
-                              treinoNome: ficha.nome,
-                            );
-                          } else {
-                            context.push(
-                              Rotas.registrarSessao,
-                              extra: RegistrarSessaoArgs(
-                                  treinoId: ficha.id, treinoNome: ficha.nome),
-                            );
-                          }
-                        },
-                  icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
-                  label: const Text('INICIAR TREINO AGORA'),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.entreItens),
-              // Ação secundária sem borda: registrar um treino já feito.
-              TextButton.icon(
-                onPressed: !temExercicios
-                    ? null
-                    : () => context.push(
-                          Rotas.registrarSessao,
-                          extra: RegistrarSessaoArgs(
-                              treinoId: ficha.id,
-                              treinoNome: ficha.nome,
-                              registroPosterior: true),
-                        ),
-                icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
-                label: const Text('Registrar treino já feito'),
-              ),
-              // Ficha vazia: explica por que os botões estão desabilitados.
-              if (!temExercicios) ...[
-                const SizedBox(height: AppSpacing.x4),
-                Text('Adicione exercícios para iniciar.',
-                    textAlign: TextAlign.center,
-                    style: AppText.caption.copyWith(color: cores.textSecondary)),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        Expanded(child: _ListaExerciciosFicha(treinoId: ficha.id)),
-      ],
+      ),
     );
   }
+}
 
-  String _rotuloAba(TreinoResumo f) => f.nome.length <= 12 ? f.nome : f.nome.substring(0, 12);
+/// "N exercícios · último em dd/mm" ou "· nunca feito". Sem a contagem
+/// (carregando), só a parte da data.
+String resumoFicha({required int? qtdExercicios, required DateTime? ultimaVez}) {
+  final partes = <String>[
+    if (qtdExercicios != null)
+      '$qtdExercicios ${qtdExercicios == 1 ? 'exercício' : 'exercícios'}',
+    ultimaVez == null
+        ? 'nunca feito'
+        : 'último em ${ultimaVez.day.toString().padLeft(2, '0')}/'
+            '${ultimaVez.month.toString().padLeft(2, '0')}',
+  ];
+  return partes.join(' · ');
 }
 
 /// Exercícios da ficha: reordenar arrastando, remover e adicionar do catálogo.
@@ -442,7 +413,12 @@ class _ListaExerciciosFicha extends ConsumerWidget {
               child: itens.isEmpty
                   ? _SemExercicios(cores: cores)
                   : ReorderableListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                      // Sem a alça automática do web/desktop: era o "=" extra
+                      // ao lado da lixeira (PBI-62). A alça é a do cartão. As
+                      // ações "Mover para cima/baixo" vêm da própria lista
+                      // (textos em core/localizacao/material_pt.dart).
+                      buildDefaultDragHandles: false,
+                      padding: const EdgeInsets.all(AppSpacing.x16),
                       itemCount: itens.length,
                       onReorder: (de, para) => _reordenar(ref, itens, de, para),
                       itemBuilder: (context, i) {
@@ -507,18 +483,25 @@ class _CardExercicioFicha extends StatelessWidget {
               border: Border.all(color: cores.lineDefault),
               borderRadius: BorderRadius.circular(AppRadius.card),
             ),
-            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            // Pouco padding à esquerda: a alça de 36 px já dá o respiro.
+            padding: const EdgeInsets.fromLTRB(AppSpacing.x4, AppSpacing.paddingCardCompacto,
+                AppSpacing.paddingCardCompacto, AppSpacing.paddingCardCompacto),
             child: Row(
               children: [
+                // Alça de mover: 36 × 44, grip de seis pontos (PBI-62).
                 ReorderableDragStartListener(
                   index: indice,
                   child: Semantics(
-                    label: 'Arrastar para reordenar',
-                    child: Icon(LucideIcons.gripVertical,
-                        color: cores.iconMuted, size: AppSizes.iconeSm),
+                    label: 'Arrastar para reordenar ${exercicio.nome}',
+                    child: SizedBox(
+                      width: 36,
+                      height: AppSizes.touchMin,
+                      child: Icon(LucideIcons.gripVertical,
+                          color: cores.iconMuted, size: AppSizes.iconeSm),
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.x12),
+                const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,11 +515,24 @@ class _CardExercicioFicha extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: aoRemover,
-                  icon: Icon(LucideIcons.trash2,
-                      size: AppSizes.iconeSm, color: cores.danger),
-                  tooltip: 'Remover da ficha',
+                const SizedBox(width: AppSpacing.x8),
+                // Remover: 44 × 44, fundo vermelho suave, só a lixeira.
+                SizedBox(
+                  width: AppSizes.touchMin,
+                  height: AppSizes.touchMin,
+                  child: IconButton(
+                    onPressed: aoRemover,
+                    tooltip: 'Remover ${exercicio.nome} da ficha',
+                    icon: Icon(LucideIcons.trash2,
+                        size: AppSizes.iconeSm, color: cores.danger),
+                    style: IconButton.styleFrom(
+                      backgroundColor: cores.dangerSoft,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -604,12 +600,10 @@ class _SemExercicios extends StatelessWidget {
           children: [
             Icon(LucideIcons.listChecks, size: 40, color: cores.iconMuted),
             const SizedBox(height: AppSpacing.x12),
+            // Só o título: a ação é o "Adicionar exercício à ficha" abaixo
+            // (PBI-57, sem textos sobre iniciar treino).
             Text('Ficha sem exercícios',
                 style: AppText.title, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x8),
-            Text('Adicione exercícios do catálogo abaixo.',
-                style: AppText.body.copyWith(color: cores.textSecondary),
-                textAlign: TextAlign.center),
           ],
         ),
       ),

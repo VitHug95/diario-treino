@@ -115,15 +115,23 @@ class FichasRepository {
 
   // ---- Fichas ----
 
-  Future<void> adicionarFicha({
+  /// Cria a ficha no plano e devolve o id dela (PBI-61: o aviso "Adicionar
+  /// exercícios" abre a ficha recém-criada).
+  Future<String> adicionarFicha({
     required String planoId,
     required String nome,
     String? descricao,
-  }) =>
-      _executar(() => _dio.post<Map<String, dynamic>>(
-            '/planos/$planoId/treinos',
-            data: {'nome': nome, 'descricao': descricao},
-          ));
+  }) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>(
+        '/planos/$planoId/treinos',
+        data: {'nome': nome, 'descricao': descricao},
+      );
+      return resposta.data!['id'] as String;
+    } on DioException catch (e) {
+      throw FichasException(_traduzir(e));
+    }
+  }
 
   /// Cria uma ficha a partir dos exercícios de um treino livre (PBI-19,
   /// "Salvar também como ficha"). Garante o plano no servidor.

@@ -10,7 +10,7 @@ import 'treino_em_andamento.dart';
 
 /// Pontes que ligam a flag `treinoAoVivoHabilitado` às telas existentes: abrem o
 /// treino ao vivo (tela 14, TV-3) em vez do formulário de registro. Ficam aqui
-/// (e não nas telas) para o fichas_screen e o inicio_screen compartilharem a
+/// (e não nas telas) para o detalhe do plano (PBI-61) e o inicio_screen compartilharem a
 /// mesma montagem do estado vivo.
 
 /// Inicia um treino ao vivo a partir de uma ficha. Se já houver um treino em
