@@ -893,7 +893,22 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
 | PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
-| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | depois do E2E, sujeita ao PO |
+| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | aprovada pelo PO (15/10); entra com a atualização do Robot |
+
+### Ajustes de layout (PBI-57 a PBI-63)
+
+Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
+46, 47, 49, 50, 52 e 53 em [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md).
+
+| PBI | Título | Telas | Status |
+|---|---|---|---|
+| PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | a fazer (depois da 58) |
+| PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | em andamento |
+| PBI-59 | Início nova: semana e caixas | 23 | a fazer |
+| PBI-60 | Caixa de novidades na Início | 23 | em refinamento (resposta do PO) |
+| PBI-61 | Treinar a partir do plano | 19 | a fazer (depois da 57) |
+| PBI-62 | Cartão de exercício: mover e excluir | 22 | a fazer (junto da 57) |
+| PBI-63 | Finalizar treino sem seta de voltar | 24 | a fazer (independente) |
 
 ---
 

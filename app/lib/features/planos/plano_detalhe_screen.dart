@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
@@ -199,7 +200,12 @@ class _Conteudo extends ConsumerWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        _Cabecalho(plano: plano, aoVoltar: aoVoltar),
+        _Cabecalho(
+          plano: plano,
+          aoVoltar: aoVoltar,
+          aoRenomear: aoRenomear,
+          aoExcluir: aoExcluir,
+        ),
         Padding(
           padding: const EdgeInsets.all(AppSpacing.margemTela),
           child: Column(
@@ -233,6 +239,8 @@ class _Conteudo extends ConsumerWidget {
                 _AvisoEmUso(cores: cores),
               if (!plano.emUso || definidoAgora)
                 const SizedBox(height: AppSpacing.entreItens),
+              // Rodapé só com Duplicar (PBI-58): renomear e excluir ficam no
+              // cabeçalho, como ícones.
               SizedBox(
                 height: AppSizes.botaoSecundario,
                 child: OutlinedButton.icon(
@@ -241,26 +249,6 @@ class _Conteudo extends ConsumerWidget {
                   label: Text(plano.somenteLeitura ? 'Copiar para editar' : 'Duplicar plano'),
                 ),
               ),
-              if (!plano.somenteLeitura) ...[
-                const SizedBox(height: AppSpacing.x4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: aoRenomear,
-                        child: const Text('Renomear'),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextButton(
-                        onPressed: aoExcluir,
-                        style: TextButton.styleFrom(foregroundColor: cores.danger),
-                        child: const Text('Excluir plano'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -269,12 +257,20 @@ class _Conteudo extends ConsumerWidget {
   }
 }
 
-/// Cabeçalho escuro da tela 19: voltar, "Plano em uso", nome e resumo.
+/// Cabeçalho escuro da tela 19: voltar, lápis e lixeira (PBI-58), "Plano em
+/// uso", nome e resumo. Plano do professor não mostra lápis nem lixeira.
 class _Cabecalho extends StatelessWidget {
-  const _Cabecalho({required this.plano, required this.aoVoltar});
+  const _Cabecalho({
+    required this.plano,
+    required this.aoVoltar,
+    required this.aoRenomear,
+    required this.aoExcluir,
+  });
 
   final PlanoDetalhe plano;
   final VoidCallback aoVoltar;
+  final VoidCallback aoRenomear;
+  final VoidCallback aoExcluir;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +292,19 @@ class _Cabecalho extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _BotaoVoltar(aoTocar: aoVoltar, cor: cores.textOnHeader),
+              Row(
+                children: [
+                  _BotaoVoltar(aoTocar: aoVoltar, cor: cores.textOnHeader),
+                  const Spacer(),
+                  if (!plano.somenteLeitura)
+                    AcoesRenomearExcluir(
+                      rotuloRenomear: 'Renomear plano',
+                      rotuloExcluir: 'Excluir plano',
+                      aoRenomear: aoRenomear,
+                      aoExcluir: aoExcluir,
+                    ),
+                ],
+              ),
               Padding(
                 padding: const EdgeInsets.only(left: AppSpacing.x12),
                 child: Column(

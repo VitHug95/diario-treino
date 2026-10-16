@@ -32,10 +32,13 @@ Widget _tela({
   required Future<PlanoAtivo?> Function(Ref ref) plano,
   TreinoDetalhe Function(String treinoId)? detalhe,
   String? fichaInicialId,
+  bool? temSessoes,
 }) =>
     ProviderScope(
       overrides: [
         planoAtivoProvider.overrideWith(plano),
+        // Sem rede nos testes: diz direto se a ficha tem sessões.
+        fichaTemSessoesProvider.overrideWith((ref, id) async => temSessoes),
         if (detalhe != null)
           fichaDetalheProvider.overrideWith((ref, treinoId) async => detalhe(treinoId)),
       ],
@@ -121,28 +124,33 @@ void main() {
     expect(find.text('Exercício de f1'), findsOneWidget);
   });
 
-  testWidgets('Menu "⋯" > Excluir ficha pede confirmação explicando o histórico',
+  testWidgets('PBI-58: lixeira no topo pede confirmação (ficha com sessões)',
       (tester) async {
     await tester.pumpWidget(_tela(
       plano: (ref) async => _plano([_ficha('A', 1)]),
       detalhe: (id) => _detalhe(id, const []),
+      temSessoes: true,
     ));
     await tester.pumpAndSettle();
 
-    // Abre a folha de ações pela "⋯" (PBI-52) e escolhe "Excluir ficha".
-    await tester.tap(find.byTooltip('Mais ações da ficha'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Excluir ficha'));
+    // Lápis e lixeira no lugar do menu "⋯".
+    expect(find.byTooltip('Mais ações da ficha'), findsNothing);
+    expect(find.byTooltip('Renomear ficha'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Excluir ficha'));
     await tester.pumpAndSettle();
 
     expect(find.text('Excluir ficha?'), findsOneWidget);
-    expect(
-      find.textContaining(
-          'Os treinos já registrados com esta ficha continuam no seu histórico'),
-      findsOneWidget,
-    );
-    // Botão de confirmar com o rótulo da ação.
+    expect(find.textContaining('ela sai do plano mas o histórico e o gráfico continuam'),
+        findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Excluir ficha'), findsOneWidget);
+  });
+
+  test('PBI-58: texto de excluir ficha conforme as sessões', () {
+    expect(textoExcluirFicha('A', temSessoes: true), contains('sai do plano'));
+    expect(textoExcluirFicha('A', temSessoes: false), contains('serão apagados'));
+    expect(textoExcluirFicha('A', temSessoes: null),
+        contains('continuam no seu histórico'));
   });
 
   testWidgets('PBI-52: ficha com exercícios habilita iniciar e registrar',

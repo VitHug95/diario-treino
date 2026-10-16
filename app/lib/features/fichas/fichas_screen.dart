@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
+import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
@@ -14,6 +15,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../sessao/iniciar_treino_ao_vivo.dart';
+import '../sessao/sessao_repository.dart';
 import 'dialogo_ficha.dart';
 import 'editar_alvos_screen.dart';
 import 'fichas_repository.dart';
@@ -104,19 +106,28 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
   }
 
   Future<void> _excluir(TreinoResumo ficha) async {
+    final temSessoes = await ref.read(fichaTemSessoesProvider(ficha.id).future);
+    if (!mounted) return;
     final confirmar = await confirmarPerigo(
       context,
       titulo: 'Excluir ficha?',
-      texto: 'A ficha "${ficha.nome}" sai da lista. '
-          'Os treinos já registrados com esta ficha continuam no seu histórico.',
+      texto: textoExcluirFicha(ficha.nome, temSessoes: temSessoes),
       rotuloConfirmar: 'Excluir ficha',
     );
     if (!confirmar) return;
 
     try {
       await ref.read(fichasRepositoryProvider).excluirFicha(ficha.id);
-      setState(() => _selecionada = 0);
       await _recarregar();
+      if (!mounted) return;
+      // Confirmar volta ao plano (PBI-58). Aberta direto (sem tela anterior),
+      // fica e mostra a primeira ficha.
+      final navegador = Navigator.of(context);
+      if (navegador.canPop()) {
+        navegador.pop();
+      } else {
+        setState(() => _selecionada = 0);
+      }
     } on FichasException catch (e) {
       _erro(e.mensagem);
     }
@@ -262,22 +273,14 @@ class _ConteudoFichas extends ConsumerWidget {
                   ],
                 ),
               ),
-              Semantics(
-                label: 'Mais ações da ficha',
-                button: true,
-                child: IconButton(
-                  onPressed: () => _abrirAcoesFicha(
-                    context,
-                    aoRenomear: aoRenomear,
-                    aoExcluir: aoExcluir,
-                  ),
-                  icon: const Icon(LucideIcons.moreHorizontal, size: AppSizes.iconeMd),
-                  tooltip: 'Mais ações da ficha',
-                  constraints: const BoxConstraints(
-                    minWidth: AppSizes.touchMin,
-                    minHeight: AppSizes.touchMin,
-                  ),
-                ),
+              // Lápis e lixeira no lugar do menu "⋯" (PBI-58). O menu só tinha
+              // renomear e excluir, então sai inteiro.
+              AcoesRenomearExcluir(
+                rotuloRenomear: 'Renomear ficha',
+                rotuloExcluir: 'Excluir ficha',
+                aoRenomear: aoRenomear,
+                aoExcluir: aoExcluir,
+                sobreCabecalhoEscuro: false,
               ),
             ],
           ),
@@ -616,48 +619,29 @@ class _SemExercicios extends StatelessWidget {
 
 // _EstadoVazio e _ErroCarregar extraídos para shared/ (PBI-51).
 
-/// Folha de baixo com as ações da ficha: renomear e excluir (PBI-52). Cada
-/// linha tem 54 px de altura, para alvo de toque confortável.
-Future<void> _abrirAcoesFicha(
-  BuildContext context, {
-  required VoidCallback aoRenomear,
-  required VoidCallback aoExcluir,
-}) async {
-  final cores = AppColors.of(context);
-  final acao = await showModalBottomSheet<String>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 54,
-            child: ListTile(
-              leading: const Icon(LucideIcons.pencil, size: AppSizes.iconeSm),
-              title: Text('Renomear ficha', style: AppText.body),
-              onTap: () => Navigator.pop(ctx, 'renomear'),
-            ),
-          ),
-          SizedBox(
-            height: 54,
-            child: ListTile(
-              leading: Icon(LucideIcons.trash2,
-                  size: AppSizes.iconeSm, color: cores.danger),
-              title: Text('Excluir ficha',
-                  style: AppText.body.copyWith(color: cores.danger)),
-              onTap: () => Navigator.pop(ctx, 'excluir'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  if (acao == 'renomear') {
-    aoRenomear();
-  } else if (acao == 'excluir') {
-    aoExcluir();
+/// A ficha já tem sessões registradas? Decide o texto da confirmação de
+/// excluir (PBI-58): com sessões, ela só sai do plano; sem, é apagada. Nulo
+/// quando não deu para saber (sem rede): a tela usa o texto genérico.
+final fichaTemSessoesProvider =
+    FutureProvider.autoDispose.family<bool?, String>((ref, fichaId) async {
+  try {
+    final sessoes = await ref.read(sessaoRepositoryProvider).listarSessoes();
+    return sessoes.any((s) => s.treinoId == fichaId);
+  } catch (_) {
+    return null;
   }
+});
+
+/// Texto da confirmação de "Excluir ficha", conforme a ficha tenha sessões.
+String textoExcluirFicha(String nome, {required bool? temSessoes}) {
+  return switch (temSessoes) {
+    true => 'Essa ficha já tem sessões registradas, então ela sai do plano '
+        'mas o histórico e o gráfico continuam.',
+    false => 'A ficha "$nome" e os exercícios dela serão apagados. '
+        'Ela ainda não tem treinos registrados.',
+    null => 'A ficha "$nome" sai da lista. '
+        'Os treinos já registrados com esta ficha continuam no seu histórico.',
+  };
 }
 
 // Botão tracejado e diálogo de ficha extraídos para shared/botao_tracejado.dart

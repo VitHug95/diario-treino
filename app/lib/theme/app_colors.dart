@@ -35,6 +35,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.danger,
     required this.dangerFill,
     required this.dangerOn,
+    required this.dangerOnHeader,
     required this.iconMuted,
   });
 
@@ -68,6 +69,11 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Texto/ícone sobre o fundo [dangerFill] (botão de perigo cheio). Branco nos
   /// dois temas, porque [dangerFill] é escuro em ambos (contraste ≥ 4,5:1).
   final Color dangerOn;
+
+  /// Ícone de excluir sobre o cabeçalho escuro (`bgHeader`), PBI-58. Mesmo
+  /// vermelho claro nos dois temas, porque o [danger] do tema claro não tem
+  /// contraste sobre o cabeçalho.
+  final Color dangerOnHeader;
   final Color iconMuted;
 
   static const AppColors claro = AppColors(
@@ -98,6 +104,7 @@ class AppColors extends ThemeExtension<AppColors> {
     danger: CoresClaro.danger,
     dangerFill: CoresClaro.dangerFill,
     dangerOn: CoresClaro.dangerOn,
+    dangerOnHeader: CoresClaro.dangerOnHeader,
     iconMuted: CoresClaro.iconMuted,
   );
 
@@ -129,6 +136,7 @@ class AppColors extends ThemeExtension<AppColors> {
     danger: CoresEscuro.danger,
     dangerFill: CoresEscuro.dangerFill,
     dangerOn: CoresEscuro.dangerOn,
+    dangerOnHeader: CoresEscuro.dangerOnHeader,
     iconMuted: CoresEscuro.iconMuted,
   );
 
@@ -170,6 +178,7 @@ class AppColors extends ThemeExtension<AppColors> {
       danger: Color.lerp(danger, other.danger, t)!,
       dangerFill: Color.lerp(dangerFill, other.dangerFill, t)!,
       dangerOn: Color.lerp(dangerOn, other.dangerOn, t)!,
+      dangerOnHeader: Color.lerp(dangerOnHeader, other.dangerOnHeader, t)!,
       iconMuted: Color.lerp(iconMuted, other.iconMuted, t)!,
     );
   }

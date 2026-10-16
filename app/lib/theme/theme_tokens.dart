@@ -36,6 +36,9 @@ abstract final class CoresClaro {
   static const danger = Color(0xFFB42318);
   static const dangerFill = Color(0xFFB42318);
   static const dangerOn = Color(0xFFFFFFFF);
+  // Lixeira sobre o cabeçalho escuro (PBI-58): o danger do tema claro não tem
+  // contraste sobre bgHeader, então os dois temas usam o mesmo vermelho claro.
+  static const dangerOnHeader = Color(0xFFFF8A80);
   static const iconMuted = Color(0xFF9A9DA4);
 }
 
@@ -72,6 +75,7 @@ abstract final class CoresEscuro {
   static const danger = Color(0xFFFF7A6E);
   static const dangerFill = Color(0xFFC8372B);
   static const dangerOn = Color(0xFFFFFFFF);
+  static const dangerOnHeader = Color(0xFFFF8A80);
   static const iconMuted = Color(0xFF6E727B);
 }
 
