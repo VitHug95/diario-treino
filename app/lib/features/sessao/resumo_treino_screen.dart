@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogo_pos_registro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -179,37 +180,16 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
   }
 
   Future<void> _confirmar(String sessaoId) async {
-    final acao = await showDialog<_AcaoPosRegistro>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Treino registrado'),
-        content:
-            const Text('Seu treino foi salvo. O que você quer fazer agora?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.inicio),
-            child: const Text('Ir para o Início'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.verTreino),
-            child: const Text('Ver o treino'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.progresso),
-            child: const Text('Ver progresso'),
-          ),
-        ],
-      ),
-    );
+    final acao = await dialogoPosRegistro(context);
     if (!mounted) return;
     switch (acao) {
-      case _AcaoPosRegistro.verTreino:
+      case AcaoPosRegistro.verTreino:
         context.go(Rotas.inicio);
         context.push(Rotas.detalheSessao,
             extra: DetalheSessaoArgs(sessaoId: sessaoId));
-      case _AcaoPosRegistro.progresso:
+      case AcaoPosRegistro.progresso:
         context.go(Rotas.progresso);
-      case _AcaoPosRegistro.inicio:
+      case AcaoPosRegistro.inicio:
       case null:
         context.go(Rotas.inicio);
     }
@@ -266,8 +246,6 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
     );
   }
 }
-
-enum _AcaoPosRegistro { inicio, progresso, verTreino }
 
 /// Cartão de destaque com o volume total do treino.
 class _CardVolume extends StatelessWidget {

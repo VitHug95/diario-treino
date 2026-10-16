@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
 import '../../shared/dialogos_perigo.dart';
+import '../../shared/estado_erro.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -89,7 +90,10 @@ class DetalheSessaoScreen extends ConsumerWidget {
       ),
       body: detalhe.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _Erro(aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId))),
+        error: (_, __) => EstadoErro(
+          mensagem: 'Não foi possível carregar o treino.',
+          aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId)),
+        ),
         data: (dados) => _Conteudo(detalhe: dados),
       ),
     );
@@ -299,24 +303,4 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _Erro extends StatelessWidget {
-  const _Erro({required this.aoTentar});
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Não foi possível carregar o treino.', style: AppText.title),
-          const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _Erro extraído para shared/estado_erro.dart (PBI-51).

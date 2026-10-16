@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../theme/app_colors.dart';
+import '../../shared/estado_vazio.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import 'catalogo_repository.dart';
@@ -133,9 +134,19 @@ class _SelecionarExercicioScreenState
                 ),
               ),
               data: (itens) => itens.isEmpty
-                  ? _EstadoVazio(
-                      busca: filtro.busca,
-                      aoCriar: _criarExercicio,
+                  ? EstadoVazio(
+                      icone: LucideIcons.dumbbell,
+                      titulo: 'Nenhum exercício encontrado',
+                      texto: 'Não achou o que procura? Crie um exercício novo.',
+                      acao: FilledButton.icon(
+                        onPressed: _criarExercicio,
+                        icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+                        label: Text(
+                          filtro.busca.trim().isEmpty
+                              ? 'Criar exercício novo'
+                              : 'Criar "${filtro.busca.trim()}"',
+                        ),
+                      ),
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -169,46 +180,8 @@ class _SelecionarExercicioScreenState
 }
 
 /// Estado vazio da busca: sugere criar o exercício que não foi encontrado,
-/// aproveitando o texto digitado para dar contexto ("Criar '{busca}'").
-class _EstadoVazio extends StatelessWidget {
-  const _EstadoVazio({required this.busca, required this.aoCriar});
-
-  final String busca;
-  final VoidCallback aoCriar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    final buscaLimpa = busca.trim();
-    final rotulo =
-        buscaLimpa.isEmpty ? 'Criar exercício novo' : 'Criar "$buscaLimpa"';
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.dumbbell, size: 48, color: cores.iconMuted),
-            const SizedBox(height: AppSpacing.x12),
-            Text('Nenhum exercício encontrado',
-                style: AppText.title, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x8),
-            Text('Não achou o que procura? Crie um exercício novo.',
-                style: AppText.body.copyWith(color: cores.textSecondary),
-                textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x16),
-            FilledButton.icon(
-              onPressed: aoCriar,
-              icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-              label: Text(rotulo),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// _EstadoVazio extraído para shared/estado_vazio.dart (PBI-51); o rótulo
+// dinâmico "Criar '{busca}'" é montado no uso, via o parâmetro `acao`.
 
 class _ItemSelecionavel extends StatelessWidget {
   const _ItemSelecionavel({

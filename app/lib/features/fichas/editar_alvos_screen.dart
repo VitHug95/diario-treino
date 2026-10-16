@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../shared/dialogos_perigo.dart';
+import '../../shared/estado_erro.dart';
+import '../../shared/tags/seletor_tag_serie.dart';
+import '../../shared/tags/tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
-import '../../shared/tags/seletor_tag_serie.dart';
-import '../../shared/tags/tag_serie.dart';
 import '../catalogo/catalogo_repository.dart';
 import '../catalogo/metrica.dart';
 import 'fichas_repository.dart';
@@ -164,21 +166,14 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
   }
 
   Future<void> _remover() async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remover da ficha?'),
-        content: Text(
-            '"${widget.exercicio.nome}" sai desta ficha. O histórico de treinos dele continua guardado.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true), child: const Text('Remover')),
-        ],
-      ),
+    final confirmar = await confirmarPerigo(
+      context,
+      titulo: 'Remover da ficha?',
+      texto:
+          '"${widget.exercicio.nome}" sai desta ficha. O histórico de treinos dele continua guardado.',
+      rotuloConfirmar: 'Remover',
     );
-    if (confirmar != true) return;
+    if (!confirmar) return;
 
     setState(() => _salvando = true);
     try {
@@ -209,7 +204,8 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
       appBar: AppBar(title: const Text('Alvos do exercício')),
       body: metricasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ErroMetricas(
+        error: (_, __) => EstadoErro(
+          mensagem: 'Não foi possível carregar as métricas.',
           aoTentar: () => ref.invalidate(metricasProvider),
         ),
         data: (metricas) {
@@ -660,21 +656,4 @@ String montarResumo({
   return '$frase.';
 }
 
-class _ErroMetricas extends StatelessWidget {
-  const _ErroMetricas({required this.aoTentar});
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Não foi possível carregar as métricas.'),
-          const SizedBox(height: AppSpacing.x12),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _ErroMetricas extraído para shared/estado_erro.dart (PBI-51).

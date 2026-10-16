@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/estado_erro.dart';
+import '../../shared/estado_vazio.dart';
 import '../../shared/progresso/grafico_exercicio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -58,11 +60,17 @@ class ProgressoScreen extends ConsumerWidget {
                   padding: EdgeInsets.only(top: AppSpacing.x28),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (_, __) => _Erro(
+                error: (_, __) => EstadoErro(
+                  mensagem: 'Não foi possível carregar as sessões.',
                   aoTentar: () => ref.invalidate(sessoesDoPeriodoProvider),
                 ),
                 data: (sessoes) => sessoes.isEmpty
-                    ? const _Vazio()
+                    ? const EstadoVazio(
+                        icone: LucideIcons.calendarOff,
+                        titulo: 'Nenhum treino neste período',
+                        texto:
+                            'Registre um treino para começar a acompanhar sua evolução.',
+                      )
                     : Column(
                         children: [
                           for (final s in sessoes) ...[
@@ -350,49 +358,4 @@ class _SeloObs extends StatelessWidget {
   }
 }
 
-class _Vazio extends StatelessWidget {
-  const _Vazio();
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.x28),
-      child: Column(
-        children: [
-          Icon(LucideIcons.calendarOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Nenhum treino neste período',
-              style: AppText.title, textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.x8),
-          Text('Registre um treino para começar a acompanhar sua evolução.',
-              style: AppText.body.copyWith(color: cores.textSecondary),
-              textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-}
-
-class _Erro extends StatelessWidget {
-  const _Erro({required this.aoTentar});
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.x24),
-      child: Column(
-        children: [
-          Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Não foi possível carregar as sessões.',
-              style: AppText.title, textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _Vazio e _Erro extraídos para shared/estado_vazio.dart e estado_erro.dart (PBI-51).

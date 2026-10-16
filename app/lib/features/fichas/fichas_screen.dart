@@ -6,6 +6,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/dialogos_perigo.dart';
+import '../../shared/estado_erro.dart';
+import '../../shared/estado_vazio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -130,11 +132,22 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
       ),
       body: planoAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ErroCarregar(aoTentar: _recarregar),
+        error: (_, __) => EstadoErro(
+          mensagem: 'Não foi possível carregar as fichas.',
+          aoTentar: () => _recarregar(),
+        ),
         data: (plano) {
           final fichas = plano?.treinos ?? const <TreinoResumo>[];
           if (fichas.isEmpty) {
-            return _EstadoVazio(aoCriar: () => _novaFicha(plano));
+            return EstadoVazio(
+              icone: LucideIcons.clipboardList,
+              titulo: 'Nenhuma ficha ainda',
+              texto: 'Crie o Treino A para começar a montar sua rotina.',
+              acao: FilledButton(
+                onPressed: () => _novaFicha(plano),
+                child: const Text('CRIAR FICHA'),
+              ),
+            );
           }
           _resolverFichaInicial(fichas);
           final indice = _selecionada.clamp(0, fichas.length - 1);
@@ -552,56 +565,7 @@ class _SemExercicios extends StatelessWidget {
   }
 }
 
-class _EstadoVazio extends StatelessWidget {
-  const _EstadoVazio({required this.aoCriar});
-  final VoidCallback aoCriar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.clipboardList, size: 48, color: cores.iconMuted),
-            const SizedBox(height: AppSpacing.x12),
-            Text('Nenhuma ficha ainda', style: AppText.title),
-            const SizedBox(height: AppSpacing.x8),
-            Text('Crie o Treino A para começar a montar sua rotina.',
-                style: AppText.body.copyWith(color: cores.textSecondary),
-                textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x16),
-            FilledButton(onPressed: aoCriar, child: const Text('CRIAR FICHA')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErroCarregar extends StatelessWidget {
-  const _ErroCarregar({required this.aoTentar});
-  final Future<void> Function() aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Não foi possível carregar as fichas.', style: AppText.title),
-          const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: () => aoTentar(), child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _EstadoVazio e _ErroCarregar extraídos para shared/ (PBI-51).
 
 /// Resultado do diálogo de criar/editar ficha.
 class _DadosFicha {
