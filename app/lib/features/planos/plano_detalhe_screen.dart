@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
@@ -16,6 +17,7 @@ import '../fichas/dialogo_ficha.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../inicio/inicio_logica.dart';
+import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_repository.dart';
 import 'acoes_plano.dart';
 
@@ -56,13 +58,26 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
     }
   }
 
+  /// Cria a ficha e fica no plano (PBI-61): a ficha aparece na lista e o aviso
+  /// oferece "Adicionar exercícios", que abre a ficha nova. Criar não abre a
+  /// ficha sozinho, para criar e treinar serem momentos separados.
   Future<void> _novaFicha(PlanoDetalhe plano) async {
     final dados = await dialogoFicha(context);
     if (dados == null) return;
     try {
-      await ref.read(fichasRepositoryProvider).adicionarFicha(
+      final fichaId = await ref.read(fichasRepositoryProvider).adicionarFicha(
           planoId: plano.id, nome: dados.nome, descricao: dados.descricao);
       atualizarPlanos(ref);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(
+          content: Text('Ficha “${dados.nome}” criada'),
+          action: SnackBarAction(
+            label: 'Adicionar exercícios',
+            onPressed: () => context.push(rotaDaFicha(plano.id, fichaId)),
+          ),
+        ));
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
     }
@@ -220,6 +235,7 @@ class _Conteudo extends ConsumerWidget {
                   posicao: i + 1,
                   ultimaVez: ultimaVez[plano.treinos[i].id],
                   planoId: plano.id,
+                  planoNome: plano.nome,
                 ),
                 const SizedBox(height: AppSpacing.entreItens),
               ],
@@ -370,20 +386,28 @@ class _BotaoVoltar extends StatelessWidget {
   }
 }
 
+/// Rota da tela de edição de uma ficha do plano (tela 22).
+String rotaDaFicha(String planoId, String fichaId) => '${Rotas.fichaDoPlano}'
+    '?plano=${Uri.encodeQueryComponent(planoId)}'
+    '&ficha=${Uri.encodeQueryComponent(fichaId)}';
+
 /// Uma ficha do plano: quadrado (nome curto ou posição), nome, "N exercícios ·
-/// último em dd/mm" e a seta. Toque abre a ficha (tela 13).
+/// último em dd/mm" e o play (PBI-61). O corpo abre a ficha para editar (tela
+/// 22); o play abre o sheet de treinar. Ficha vazia: play desabilitado.
 class _LinhaFicha extends ConsumerWidget {
   const _LinhaFicha({
     required this.ficha,
     required this.posicao,
     required this.ultimaVez,
     required this.planoId,
+    required this.planoNome,
   });
 
   final TreinoResumo ficha;
   final int posicao;
   final DateTime? ultimaVez;
   final String planoId;
+  final String planoNome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -399,47 +423,73 @@ class _LinhaFicha extends ConsumerWidget {
       ultimaVez == null ? 'nunca feito' : 'último em ${_dataCurta(ultimaVez!)}',
     ];
     final resumo = partes.join(' · ');
+    // Enquanto a contagem carrega, trata como vazia: não deixa treinar sem
+    // saber se há exercícios.
+    final podeTreinar = (qtd ?? 0) > 0;
+    final raio = BorderRadius.circular(AppRadius.card);
 
-    return Semantics(
-      button: true,
-      label: 'Abrir ficha ${ficha.nome}, $resumo',
-      excludeSemantics: true,
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          onTap: () => context.push(
-            '${Rotas.fichaDoPlano}'
-            '?plano=${Uri.encodeQueryComponent(planoId)}'
-            '&ficha=${Uri.encodeQueryComponent(ficha.id)}',
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: cores.lineDefault),
-              borderRadius: BorderRadius.circular(AppRadius.card),
-            ),
-            padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
-            child: Row(
-              children: [
-                QuadradoFicha(texto: rotuloQuadradoFicha(ficha.nome, posicao)),
-                const SizedBox(width: AppSpacing.x12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_titulo(ficha), style: AppText.title),
-                      const SizedBox(height: AppSpacing.x4),
-                      Text(resumo,
-                          style: AppText.caption.copyWith(color: cores.textSecondary)),
-                    ],
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: raio,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: cores.lineDefault),
+          borderRadius: raio,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'Abrir ficha ${ficha.nome}, $resumo',
+                excludeSemantics: true,
+                child: InkWell(
+                  borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(AppRadius.card)),
+                  onTap: () => context.push(rotaDaFicha(planoId, ficha.id)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
+                    child: Row(
+                      children: [
+                        QuadradoFicha(texto: rotuloQuadradoFicha(ficha.nome, posicao)),
+                        const SizedBox(width: AppSpacing.x12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_titulo(ficha), style: AppText.title),
+                              const SizedBox(height: AppSpacing.x4),
+                              Text(resumo,
+                                  style: AppText.caption
+                                      .copyWith(color: cores.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Icon(LucideIcons.chevronRight,
-                    color: cores.iconMuted, size: AppSizes.iconeMd),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.paddingCardCompacto),
+              child: SizedBox(
+                width: AppSizes.touchMin,
+                height: AppSizes.touchMin,
+                child: IconButton.filled(
+                  onPressed: podeTreinar
+                      ? () => abrirTreinarFicha(context, ref,
+                          ficha: ficha, posicao: posicao, planoNome: planoNome)
+                      : null,
+                  tooltip: podeTreinar
+                      ? 'Treinar ${ficha.nome}'
+                      : '${ficha.nome}: adicione exercícios para treinar',
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -505,6 +555,119 @@ class _AvisoEmUso extends StatelessWidget {
           Text('Este plano está em uso',
               style: AppText.titleS.copyWith(color: cores.primaryOnTint)),
         ],
+      ),
+    );
+  }
+}
+
+enum _EscolhaTreinar { agora, jaFeito }
+
+/// Play da ficha (PBI-61): abre o sheet de treinar e segue a escolha. O sheet
+/// só devolve a escolha; a navegação sai daqui, com o contexto do plano, e o
+/// foco volta ao play quando o sheet fecha.
+Future<void> abrirTreinarFicha(
+  BuildContext context,
+  WidgetRef ref, {
+  required TreinoResumo ficha,
+  required int posicao,
+  required String planoNome,
+}) async {
+  final escolha = await showModalBottomSheet<_EscolhaTreinar>(
+    context: context,
+    // Por cima da navegação inferior.
+    useRootNavigator: true,
+    showDragHandle: true,
+    builder: (_) => _SheetTreinar(
+      ficha: ficha,
+      posicao: posicao,
+      planoNome: planoNome,
+    ),
+  );
+  if (escolha == null || !context.mounted) return;
+
+  switch (escolha) {
+    case _EscolhaTreinar.agora:
+      // Flag TV-3: treino ao vivo (que retoma o treino em andamento da mesma
+      // ficha em vez de abrir um segundo); desligada, o registro de uma vez.
+      if (treinoAoVivoHabilitado) {
+        await iniciarTreinoAoVivoDaFicha(context, ref,
+            treinoId: ficha.id, treinoNome: ficha.nome);
+      } else {
+        context.push(Rotas.registrarSessao,
+            extra: RegistrarSessaoArgs(treinoId: ficha.id, treinoNome: ficha.nome));
+      }
+    case _EscolhaTreinar.jaFeito:
+      context.push(Rotas.registrarSessao,
+          extra: RegistrarSessaoArgs(
+              treinoId: ficha.id, treinoNome: ficha.nome, registroPosterior: true));
+  }
+}
+
+/// Sheet de treinar: "Ficha N · {plano}", o nome da ficha, "Iniciar treino
+/// agora" (primário), "Registrar treino já feito" (secundário) e Cancelar.
+class _SheetTreinar extends StatelessWidget {
+  const _SheetTreinar({
+    required this.ficha,
+    required this.posicao,
+    required this.planoNome,
+  });
+
+  final TreinoResumo ficha;
+  final int posicao;
+  final String planoNome;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final descricao = ficha.descricao?.trim() ?? '';
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.margemTela, 0,
+            AppSpacing.margemTela, AppSpacing.margemTela),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('FICHA $posicao · ${planoNome.toUpperCase()}',
+                style: AppText.overline.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x4),
+            Semantics(
+              header: true,
+              child: Text(ficha.nome.toUpperCase(), style: AppText.displayS),
+            ),
+            if (descricao.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x4),
+              Text(descricao, style: AppText.body.copyWith(color: cores.textSecondary)),
+            ],
+            const SizedBox(height: AppSpacing.x20),
+            SizedBox(
+              height: AppSizes.botaoPrincipal,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(_EscolhaTreinar.agora),
+                icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
+                label: const Text('INICIAR TREINO AGORA'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.entreItens),
+            SizedBox(
+              height: AppSizes.botaoSecundario,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pop(_EscolhaTreinar.jaFeito),
+                icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
+                label: const Text('Registrar treino já feito'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.entreItens),
+            SizedBox(
+              height: AppSizes.touchMin,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
