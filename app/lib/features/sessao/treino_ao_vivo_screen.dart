@@ -39,20 +39,17 @@ class TreinoAoVivoScreen extends ConsumerWidget {
       );
     }
 
-    // PBI-63: sai só por Finalizar ou Descartar. O voltar do sistema não sai,
-    // só lembra o caminho. O treino segue salvo no aparelho e a Início mostra
-    // "Continuar treino".
+    // PBI-63 (rodada 3): a seta e o voltar do sistema só levam à Início, sem
+    // diálogo, sem salvar e sem descartar. O treino segue em andamento, salvo
+    // no aparelho, e a Início mostra "Continuar treino". Encerrar é só pelos
+    // botões da barra.
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(const SnackBar(
-              content: Text('Para sair, finalize ou descarte o treino.')));
+        _irParaInicio(context);
       },
       child: Scaffold(
-        // Sem seta de voltar (PBI-63): a saída fica na barra fixa.
         bottomNavigationBar: _BarraSaida(
           aoFinalizar: () => _finalizar(context),
           aoDescartar: () => _descartar(context, ref),
@@ -65,6 +62,7 @@ class TreinoAoVivoScreen extends ConsumerWidget {
               inicio: estado.inicio,
               feitas: estado.seriesFeitas,
               total: estado.totalSeries,
+              aoVoltar: () => _irParaInicio(context),
             ),
             Expanded(
               child: ListView(
@@ -83,8 +81,9 @@ class TreinoAoVivoScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.x12),
                   Text(
-                    'Tudo fica salvo no aparelho. Para sair do treino, '
-                    'finalize ou descarte pelos botões abaixo.',
+                    'Pode voltar para a Início sem perder nada: o treino '
+                    'continua em andamento e fica salvo no aparelho. Para '
+                    'encerrar, use os botões abaixo.',
                     style: AppText.caption
                         .copyWith(color: AppColors.of(context).textSecondary),
                   ),
@@ -118,8 +117,12 @@ class TreinoAoVivoScreen extends ConsumerWidget {
     _sair(context);
   }
 
-  /// Sai da tela do treino. Navigator.pop ignora o PopScope (que só barra o
-  /// voltar do sistema).
+  /// Seta e voltar do sistema (PBI-63): vai à Início e deixa o treino como
+  /// está. Nada é salvo nem apagado; o cronômetro segue pelo `inicio`.
+  static void _irParaInicio(BuildContext context) => context.go(Rotas.inicio);
+
+  /// Sai da tela do treino depois de descartar. Navigator.pop ignora o
+  /// PopScope (que só barra o voltar do sistema).
   static void _sair(BuildContext context) {
     final navegador = Navigator.of(context);
     if (navegador.canPop()) {
@@ -204,20 +207,23 @@ class _BarraSaida extends StatelessWidget {
   }
 }
 
-/// Cabeçalho escuro da tela 24 (rodada 2): "TREINO EM ANDAMENTO", o nome da
-/// ficha, o cronômetro, "Começou às hh:mm" e as séries feitas. Sem seta.
+/// Cabeçalho escuro da tela 24: seta (só volta à Início), "TREINO EM
+/// ANDAMENTO", o nome da ficha, o cronômetro, "Começou às hh:mm" e as séries
+/// feitas.
 class _Cabecalho extends StatelessWidget {
   const _Cabecalho({
     required this.nome,
     required this.inicio,
     required this.feitas,
     required this.total,
+    required this.aoVoltar,
   });
 
   final String nome;
   final DateTime inicio;
   final int feitas;
   final int total;
+  final VoidCallback aoVoltar;
 
   @override
   Widget build(BuildContext context) {
@@ -229,18 +235,38 @@ class _Cabecalho extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.margemCabecalho, AppSpacing.x16,
+          padding: const EdgeInsets.fromLTRB(AppSpacing.x8, AppSpacing.x8,
               AppSpacing.margemCabecalho, AppSpacing.x20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TREINO EM ANDAMENTO',
-                  style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
-              const SizedBox(height: AppSpacing.x4),
-              Semantics(
-                header: true,
-                child: Text(nome.toUpperCase(),
-                    style: AppText.displayM.copyWith(color: cores.textOnHeader)),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: aoVoltar,
+                    icon: Icon(LucideIcons.arrowLeft,
+                        size: AppSizes.iconeMd, color: cores.textOnHeader),
+                    tooltip: 'Voltar para a Início. O treino continua em andamento',
+                    constraints: const BoxConstraints(
+                        minWidth: AppSizes.touchMin, minHeight: AppSizes.touchMin),
+                  ),
+                  const SizedBox(width: AppSpacing.x4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('TREINO EM ANDAMENTO',
+                            style: AppText.overline
+                                .copyWith(color: cores.textOnHeaderMuted)),
+                        Semantics(
+                          header: true,
+                          child: Text(nome.toUpperCase(),
+                              style: AppText.displayM.copyWith(color: cores.textOnHeader)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.x12),
               Row(

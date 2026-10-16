@@ -65,12 +65,17 @@ Future<ProviderContainer> _container(List<SerieEdicao> series) async {
   return c;
 }
 
-/// Tela 24 empilhada sobre o "plano", com o resumo mostrando o que recebeu.
+/// Tela 24 empilhada sobre o "plano" (que fica sobre a Início), como quando o
+/// treino começa pelo play da PBI-61.
 Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
   final router = GoRouter(
     routes: [
       GoRoute(
-        path: '/',
+        path: Rotas.inicio,
+        builder: (_, __) => const Scaffold(body: Text('Tela inicial')),
+      ),
+      GoRoute(
+        path: Rotas.planoDetalhe,
         builder: (_, __) => const Scaffold(body: Text('Tela do plano')),
       ),
       GoRoute(
@@ -102,18 +107,24 @@ Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
     container: c,
     child: MaterialApp.router(theme: AppTheme.claro, routerConfig: router),
   ));
+  router.push(Rotas.planoDetalhe);
+  await tester.pumpAndSettle();
   router.push(Rotas.treinoAoVivo);
   await tester.pumpAndSettle();
 }
 
+const _rotuloSeta = 'Voltar para a Início. O treino continua em andamento';
+
 void main() {
-  testWidgets('PBI-63: sem seta de voltar; barra com Finalizar e Descartar de 48 px',
+  testWidgets('PBI-63: seta com rótulo; barra com Finalizar e Descartar de 48 px',
       (tester) async {
     final c = await _container([_serie(feita: false)]);
     await _abrir(tester, c);
 
-    expect(find.byType(BackButton), findsNothing);
-    expect(find.byTooltip('Back'), findsNothing);
+    final seta = find.byTooltip(_rotuloSeta);
+    expect(seta, findsOneWidget);
+    expect(tester.getSize(seta).height, greaterThanOrEqualTo(44));
+    expect(find.textContaining('Pode voltar para a Início sem perder nada'), findsOneWidget);
 
     final finalizar = find.text('FINALIZAR TREINO');
     final descartar = find.text('Descartar treino');
@@ -126,15 +137,33 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-63: voltar do sistema avisa e fica no treino', (tester) async {
+  testWidgets('PBI-63: a seta vai à Início sem diálogo e o treino continua',
+      (tester) async {
+    final c = await _container([_serie(feita: true), _serie(feita: false)]);
+    await _abrir(tester, c);
+
+    await tester.tap(find.byTooltip(_rotuloSeta));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Tela inicial'), findsOneWidget);
+    // Nada salvo nem descartado: o treino e as séries marcadas continuam.
+    final estado = c.read(treinoAoVivoControllerProvider);
+    expect(estado, isNotNull);
+    expect(estado!.seriesFeitas, 1);
+    expect(estado.inicio, DateTime(2026, 10, 15, 19, 0));
+    c.dispose();
+  });
+
+  testWidgets('PBI-63: voltar do sistema faz o mesmo que a seta', (tester) async {
     final c = await _container([_serie(feita: false)]);
     await _abrir(tester, c);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
-    expect(find.text('Para sair, finalize ou descarte o treino.'), findsOneWidget);
-    expect(find.text('FINALIZAR TREINO'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Tela inicial'), findsOneWidget);
     expect(c.read(treinoAoVivoControllerProvider), isNotNull);
     c.dispose();
   });
