@@ -11,7 +11,7 @@ Respostas do PO de 16/10 já dentro. Layouts das telas 19, 23, 25, 27, 28 e 29 n
 | PBI-68 | Início e Planos sem plano: cada aba com a sua tela | ✅ na `main` (PR #89) |
 | PBI-69 | Criar plano e primeira ficha em um caminho só | ✅ na `main` (PR #89) |
 | PBI-71 | Registrar treino sempre à mão na Início | ✅ na `main` (PR #90) |
-| PBI-72 | Manter na ficha o exercício adicionado no treino? | em revisão (branch `feat/pbi-72-manter-na-ficha`) |
+| PBI-72 | Manter na ficha o exercício adicionado no treino? | ✅ na `main` (PR #91) |
 
 ## O que o PO decidiu e onde entrou
 

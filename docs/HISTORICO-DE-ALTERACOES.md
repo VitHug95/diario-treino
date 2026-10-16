@@ -1,7 +1,7 @@
 # Histórico de alterações — Diário de Treino
 
 Registro de tudo que entrou na `main`, PR por PR, do início do projeto (02/10/2026) até
-a PBI-67 (PR #86) e este documento (PR #87), 16/10/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
+a PBI-72 (PR #91), 16/10/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
 critérios de aceite) está no [BACKLOG](BACKLOG.md) e, para as PBIs 57 a 67, em
 [AJUSTES-LAYOUT](AJUSTES-LAYOUT.md).
 
@@ -120,6 +120,7 @@ fechados sem merge.
 | #88 | PBI-70 | Telas atualizam pela origem da mudança: escritas por comandos e mapa único de invalidação; teste de arquitetura. Registra as PBIs 67 a 72. |
 | #89 | PBI-68, 69 | Bem-vindo só na Início e só para conta nova; Planos vazio com tela própria; "Crie seu plano" para quem já treinou; caminho único de criar plano até o detalhe vazio com "Nova ficha". |
 | #90 | PBI-71 | "Registrar treino" fixo na Início: sheet "Qual treino?" com as fichas que têm exercícios e "Sem ficha"; sem plano, direto ao treino livre. |
+| #91 | PBI-72 | "Manter na ficha?": `POST /sessoes` com `manterNaFicha` grava sessão e ficha na mesma transação (séries salvas e alvo da última); 400/403/404 sem gravar nada; `GET /treinos/{id}` com `somenteLeitura`; diálogo no Resumo e no registro, etiqueta "Fora da ficha". |
 
 ---
 
@@ -142,6 +143,10 @@ fechados sem merge.
 - Front no Netlify até 15/10; desde o PR #62, no Cloudflare Workers (`wrangler deploy` no CI). Motivo em `POST-MORTEM-deploy-release2.md`.
 - Banco no Neon; migrations aplicadas no startup da API.
 - CI: build .NET sem warnings, testes unitários e de integração (Testcontainers), `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false` e build web.
+
+## Estado atual
+
+O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md).
 
 ## O que ainda falta
 
