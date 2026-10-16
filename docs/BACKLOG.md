@@ -881,6 +881,20 @@ PBI-38, PBI-20.
 merge. Branch `feat/treino-ao-vivo-r2`. `flutter analyze` 0; 115 widget verdes;
 31 unit backend verdes; integração do histórico no CI (Testcontainers).
 
+### Épico Planos: vários por atleta (PBI-44 a PBI-49)
+
+Detalhamento completo (contexto, escopo, critérios de aceite, decisões do PO e
+riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
+
+| PBI | Título | Toca em | Release | Status |
+|---|---|---|---|---|
+| PBI-44 | Vários planos por atleta: banco e API | Banco + API | R1 | ✅ na `main` (PR #67) |
+| PBI-45 | Lista de planos (tela 18) | Front | R1 | em andamento |
+| PBI-46 | Detalhe do plano (tela 19) | Front | R1 | a fazer |
+| PBI-47 | Início segue o plano em uso | Front | R1 | a fazer |
+| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | com o épico do educador |
+| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | depois do E2E, sujeita ao PO |
+
 ---
 
 ## 9. Épicos futuros (ainda não refinados)
