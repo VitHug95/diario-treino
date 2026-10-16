@@ -118,16 +118,22 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
   Widget build(BuildContext context) {
     final planoAsync = ref.watch(planoAtivoProvider);
 
+    // "Nova ficha" na AppBar só quando já existe ao menos uma ficha. Sem
+    // fichas, o único caminho é o botão "CRIAR FICHA" do estado vazio (PBI-52).
+    final temFichas = (planoAsync.value?.treinos ?? const []).isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fichas'),
         actions: [
-          TextButton.icon(
-            onPressed: () => _novaFicha(planoAsync.value),
-            icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-            label: const Text('Nova ficha'),
-          ),
-          const SizedBox(width: AppSpacing.x8),
+          if (temFichas) ...[
+            TextButton.icon(
+              onPressed: () => _novaFicha(planoAsync.value),
+              icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+              label: const Text('Nova ficha'),
+            ),
+            const SizedBox(width: AppSpacing.x8),
+          ],
         ],
       ),
       body: planoAsync.when(
@@ -185,6 +191,15 @@ class _ConteudoFichas extends ConsumerWidget {
     final cores = AppColors.of(context);
     final ficha = fichas[selecionada];
 
+    // Habilita iniciar/registrar só quando a ficha tem exercícios (PBI-52).
+    // Enquanto o detalhe carrega ou falha, trata como "sem exercícios" para não
+    // deixar iniciar um treino vazio.
+    final detalhe = ref.watch(fichaDetalheProvider(ficha.id));
+    final temExercicios = detalhe.maybeWhen(
+      data: (d) => d.exercicios.isNotEmpty,
+      orElse: () => false,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,16 +242,22 @@ class _ConteudoFichas extends ConsumerWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: aoRenomear,
-                icon: const Icon(LucideIcons.pencil, size: AppSizes.iconeSm),
-                tooltip: 'Renomear ficha',
-              ),
-              IconButton(
-                onPressed: aoExcluir,
-                icon: Icon(LucideIcons.trash2,
-                    size: AppSizes.iconeSm, color: cores.danger),
-                tooltip: 'Excluir ficha',
+              Semantics(
+                label: 'Mais ações da ficha',
+                button: true,
+                child: IconButton(
+                  onPressed: () => _abrirAcoesFicha(
+                    context,
+                    aoRenomear: aoRenomear,
+                    aoExcluir: aoExcluir,
+                  ),
+                  icon: const Icon(LucideIcons.moreHorizontal, size: AppSizes.iconeMd),
+                  tooltip: 'Mais ações da ficha',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSizes.touchMin,
+                    minHeight: AppSizes.touchMin,
+                  ),
+                ),
               ),
             ],
           ),
@@ -245,49 +266,58 @@ class _ConteudoFichas extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: double.infinity,
                 height: AppSizes.botaoPrincipal,
                 child: FilledButton.icon(
-                  onPressed: () {
-                    // Flag TV-3: inicia o treino ao vivo (tela 14) série por
-                    // série; desligada, mantém o registro de uma vez (PBI-15).
-                    if (treinoAoVivoHabilitado) {
-                      iniciarTreinoAoVivoDaFicha(
-                        context,
-                        ref,
-                        treinoId: ficha.id,
-                        treinoNome: ficha.nome,
-                      );
-                    } else {
-                      context.push(
-                        Rotas.registrarSessao,
-                        extra: RegistrarSessaoArgs(
-                            treinoId: ficha.id, treinoNome: ficha.nome),
-                      );
-                    }
-                  },
+                  // Sem exercícios: desabilitado (não dá para iniciar vazio).
+                  onPressed: !temExercicios
+                      ? null
+                      : () {
+                          // Flag TV-3: inicia o treino ao vivo (tela 14) série
+                          // por série; desligada, mantém o registro de uma vez.
+                          if (treinoAoVivoHabilitado) {
+                            iniciarTreinoAoVivoDaFicha(
+                              context,
+                              ref,
+                              treinoId: ficha.id,
+                              treinoNome: ficha.nome,
+                            );
+                          } else {
+                            context.push(
+                              Rotas.registrarSessao,
+                              extra: RegistrarSessaoArgs(
+                                  treinoId: ficha.id, treinoNome: ficha.nome),
+                            );
+                          }
+                        },
                   icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
                   label: const Text('INICIAR TREINO AGORA'),
                 ),
               ),
               const SizedBox(height: AppSpacing.entreItens),
-              SizedBox(
-                width: double.infinity,
-                height: AppSizes.botaoSecundario,
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(
-                    Rotas.registrarSessao,
-                    extra: RegistrarSessaoArgs(
-                        treinoId: ficha.id,
-                        treinoNome: ficha.nome,
-                        registroPosterior: true),
-                  ),
-                  icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
-                  label: const Text('Registrar treino já feito'),
-                ),
+              // Ação secundária sem borda: registrar um treino já feito.
+              TextButton.icon(
+                onPressed: !temExercicios
+                    ? null
+                    : () => context.push(
+                          Rotas.registrarSessao,
+                          extra: RegistrarSessaoArgs(
+                              treinoId: ficha.id,
+                              treinoNome: ficha.nome,
+                              registroPosterior: true),
+                        ),
+                icon: const Icon(LucideIcons.clipboardCheck, size: AppSizes.iconeSm),
+                label: const Text('Registrar treino já feito'),
               ),
+              // Ficha vazia: explica por que os botões estão desabilitados.
+              if (!temExercicios) ...[
+                const SizedBox(height: AppSpacing.x4),
+                Text('Adicione exercícios para iniciar.',
+                    textAlign: TextAlign.center,
+                    style: AppText.caption.copyWith(color: cores.textSecondary)),
+              ],
             ],
           ),
         ),
@@ -406,10 +436,9 @@ class _ListaExerciciosFicha extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              child: OutlinedButton.icon(
-                onPressed: () => _adicionar(context, ref),
-                icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-                label: const Text('Adicionar exercício à ficha'),
+              child: _BotaoAdicionarTracejado(
+                rotulo: 'Adicionar exercício à ficha',
+                aoTocar: () => _adicionar(context, ref),
               ),
             ),
           ],
@@ -566,6 +595,125 @@ class _SemExercicios extends StatelessWidget {
 }
 
 // _EstadoVazio e _ErroCarregar extraídos para shared/ (PBI-51).
+
+/// Folha de baixo com as ações da ficha: renomear e excluir (PBI-52). Cada
+/// linha tem 54 px de altura, para alvo de toque confortável.
+Future<void> _abrirAcoesFicha(
+  BuildContext context, {
+  required VoidCallback aoRenomear,
+  required VoidCallback aoExcluir,
+}) async {
+  final cores = AppColors.of(context);
+  final acao = await showModalBottomSheet<String>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 54,
+            child: ListTile(
+              leading: const Icon(LucideIcons.pencil, size: AppSizes.iconeSm),
+              title: Text('Renomear ficha', style: AppText.body),
+              onTap: () => Navigator.pop(ctx, 'renomear'),
+            ),
+          ),
+          SizedBox(
+            height: 54,
+            child: ListTile(
+              leading: Icon(LucideIcons.trash2,
+                  size: AppSizes.iconeSm, color: cores.danger),
+              title: Text('Excluir ficha',
+                  style: AppText.body.copyWith(color: cores.danger)),
+              onTap: () => Navigator.pop(ctx, 'excluir'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (acao == 'renomear') {
+    aoRenomear();
+  } else if (acao == 'excluir') {
+    aoExcluir();
+  }
+}
+
+/// Botão de "adicionar" com borda tracejada (design system): transparente,
+/// borda `lineDashed` 1,5 px, altura 44, raio 10, texto `body-s` 600.
+class _BotaoAdicionarTracejado extends StatelessWidget {
+  const _BotaoAdicionarTracejado({required this.rotulo, required this.aoTocar});
+
+  final String rotulo;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return SizedBox(
+      width: double.infinity,
+      height: AppSizes.touchMin,
+      child: CustomPaint(
+        painter: _BordaTracejada(cor: cores.lineDashed, raio: AppRadius.campoSerie),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: aoTocar,
+            borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.plus,
+                    size: AppSizes.iconeSm, color: cores.textStrong),
+                const SizedBox(width: AppSpacing.x8),
+                Text(rotulo,
+                    style: AppText.bodyS.copyWith(
+                        fontWeight: FontWeight.w600, color: cores.textStrong)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pinta uma borda arredondada tracejada. Usada pelo botão "adicionar".
+class _BordaTracejada extends CustomPainter {
+  _BordaTracejada({required this.cor, required this.raio});
+
+  final Color cor;
+  final double raio;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(raio),
+    );
+    final caminho = Path()..addRRect(rrect);
+    final tracejado = Path();
+    const traco = 6.0;
+    const vao = 4.0;
+    for (final metrica in caminho.computeMetrics()) {
+      var distancia = 0.0;
+      while (distancia < metrica.length) {
+        final fim = (distancia + traco).clamp(0.0, metrica.length);
+        tracejado.addPath(metrica.extractPath(distancia, fim), Offset.zero);
+        distancia += traco + vao;
+      }
+    }
+    final tinta = Paint()
+      ..color = cor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(tracejado, tinta);
+  }
+
+  @override
+  bool shouldRepaint(_BordaTracejada old) => old.cor != cor || old.raio != raio;
+}
 
 /// Resultado do diálogo de criar/editar ficha.
 class _DadosFicha {
