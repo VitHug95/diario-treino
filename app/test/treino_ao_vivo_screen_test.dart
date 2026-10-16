@@ -1,7 +1,9 @@
 import 'package:diario_treino/core/relogio.dart';
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
+import 'package:diario_treino/features/progresso/progresso_repository.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
+import 'package:diario_treino/features/sessao/sessao_repository.dart';
 import 'package:diario_treino/features/sessao/treino_ao_vivo_controller.dart';
 import 'package:diario_treino/features/sessao/treino_ao_vivo_screen.dart';
 import 'package:diario_treino/theme/app_theme.dart';
@@ -46,13 +48,17 @@ ExercicioEdicao _ex(String nome, List<SerieEdicao> series) => ExercicioEdicao(
     );
 
 /// Container com um treino ao vivo em andamento com as [series] de um
-/// exercício só.
-Future<ProviderContainer> _container(List<SerieEdicao> series) async {
+/// exercício (ou os [exercicios] dados). Histórico e Evolução sem rede: falham
+/// e mostram a mensagem de erro, o que basta para trocar de aba.
+Future<ProviderContainer> _container(List<SerieEdicao> series,
+    {List<ExercicioEdicao>? exercicios}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final c = ProviderContainer(overrides: [
     sharedPreferencesProvider.overrideWithValue(prefs),
     relogioProvider.overrideWithValue(_RelogioFixo(DateTime(2026, 10, 15, 20, 0))),
+    historicoExercicioProvider.overrideWith((ref, id) => Future.error('sem rede')),
+    progressoPorExercicioProvider.overrideWith((ref, id) => Future.error('sem rede')),
   ]);
   c.read(treinoAoVivoControllerProvider.notifier).iniciar(
         treinoId: 'A',
@@ -60,10 +66,21 @@ Future<ProviderContainer> _container(List<SerieEdicao> series) async {
         treinoLivre: false,
         data: DateTime(2026, 10, 15),
         inicio: DateTime(2026, 10, 15, 19, 0),
-        exercicios: [_ex('Supino', series)],
+        exercicios: exercicios ?? [_ex('Supino', series)],
       );
   return c;
 }
+
+/// Três exercícios, para andar com as setas.
+List<ExercicioEdicao> _tres() => [
+      _ex('Supino', [_serie(feita: false)]),
+      _ex('Remada', [_serie(feita: false)]),
+      _ex('Agachamento', [_serie(feita: false)]),
+    ];
+
+/// Índice da aba selecionada na tela do exercício.
+int _abaAtual(WidgetTester tester) =>
+    tester.widget<TabBar>(find.byType(TabBar)).controller!.index;
 
 /// Tela 24 empilhada sobre o "plano" (que fica sobre a Início), como quando o
 /// treino começa pelo play da PBI-61.
@@ -81,6 +98,10 @@ Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
       GoRoute(
         path: Rotas.treinoAoVivo,
         builder: (_, __) => const TreinoAoVivoScreen(),
+      ),
+      GoRoute(
+        path: Rotas.exercicioAoVivo,
+        builder: (_, s) => ExercicioAoVivoScreen(indice: (s.extra as int?) ?? 0),
       ),
       // Resumo de mentira: volta sem nada ou devolve "descartou" (true).
       GoRoute(
@@ -152,6 +173,42 @@ void main() {
     expect(estado, isNotNull);
     expect(estado!.seriesFeitas, 1);
     expect(estado.inicio, DateTime(2026, 10, 15, 19, 0));
+    c.dispose();
+  });
+
+  testWidgets('PBI-66: próximo e anterior mantêm a aba; abrir pelo treino volta a Séries',
+      (tester) async {
+    final c = await _container(const [], exercicios: _tres());
+    await _abrir(tester, c);
+
+    // Abre o exercício 1 pela tela do treino: começa em Séries.
+    await tester.tap(find.text('Supino'));
+    await tester.pumpAndSettle();
+    expect(_abaAtual(tester), 0);
+
+    // Histórico, depois próximo: o exercício 2 abre ainda em Histórico.
+    await tester.tap(find.text('Histórico'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Próximo exercício'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exercício 2 de 3'), findsOneWidget);
+    expect(_abaAtual(tester), 1);
+
+    // Evolução, depois anterior: o exercício 1 abre em Evolução.
+    await tester.tap(find.text('Evolução'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Exercício anterior'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exercício 1 de 3'), findsOneWidget);
+    expect(_abaAtual(tester), 2);
+
+    // Volta à tela do treino e abre outro exercício: nasce em Séries.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Agachamento'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exercício 3 de 3'), findsOneWidget);
+    expect(_abaAtual(tester), 0);
     c.dispose();
   });
 

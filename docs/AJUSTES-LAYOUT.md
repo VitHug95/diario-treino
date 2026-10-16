@@ -1,6 +1,6 @@
-# Ajustes de layout (PBI-57 a PBI-63)
+# Ajustes de layout (PBI-57 a PBI-66)
 
-Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23, 24 e 25 no PDF `Ajustes-de-layout.pdf`.
+Dez pedidos do PO (rodadas 1 a 3), 15/10. Layouts das telas 19, 21, 22, 23, 24, 25 e 26 no PDF `Ajustes-de-layout.pdf`.
 
 ## O que o PO pediu e onde cada pedido cai
 
@@ -13,6 +13,9 @@ Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23, 24 
 | 5. Iniciar treino só pelo plano, nunca "criar e iniciar" na mesma tela | PBI-61 (e PBI-57 revisada: ficha só de edição) | 19 e 22 |
 | 6. Botões de mover e excluir exercício e "Registrar treino já feito" | PBI-62 (mover e excluir) e PBI-61 (registrar já feito vai para o sheet do plano) | 22 e 19 |
 | 7. Finalizar treino confuso; a seta não pode salvar nem descartar | PBI-63 | 24 e 25 |
+| 8. Botões do diálogo "Treino registrado" feios e desnecessários; "Ver o treino" volta para a Início | PBI-64 | 23 |
+| 9. Botão para concluir o exercício e ir ao próximo | PBI-65 | 26 |
+| 10. Seta do próximo exercício, na aba Histórico, volta para Séries | PBI-66 (bug) | 26 |
 
 ## Ajustes em PBIs que já existem
 
@@ -44,6 +47,8 @@ Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23, 24 
 - PBI-61: no plano do professor o atleta também pode iniciar treino pelo play. Confirma?
 - ~~PBI-60: quem escreve as novidades e com que frequência? Recomendo a opção A.~~ Respondida: opção A, com dicas de treino que trocam a cada acesso (ver PBI-60).
 - ~~PBI-49: espera o E2E?~~ Respondida: pode entrar sem esperar o E2E; o passo do Robot que escolhe o exercício é ajustado depois.
+- PBI-64: o aviso "Treino salvo" com "Ver treino" basta, sem tela de comemoração? Recomendo que sim.
+- PBI-65: séries sem marcar ficam de fora ao concluir o exercício, como já é ao finalizar. Serve, ou o PO prefere marcar tudo automaticamente?
 
 ## Definição de pronto (vale para todas)
 
@@ -297,3 +302,60 @@ _Front · R1 (junto do treino ao vivo) · Telas 24 e 25_
 - Botão "Minimizar" separado da seta.
 - Pausar o cronômetro.
 - Mudar o diálogo de saída do treino livre.
+
+---
+
+## PBI-64 · Depois de salvar: Início com aviso, sem diálogo
+
+_Front · R1 (junto da PBI-63) · Tela 23_
+
+**História:** Como atleta, quero que ao salvar um treino o app me leve à Início com um aviso simples, para não ter que escolher entre três botões quando só quero seguir.
+
+**Contexto:** hoje, depois de salvar, aparece o diálogo "Treino registrado" com "Ir para o Início", "Ver o treino" e "Ver progresso". "Ver progresso" já é uma aba; o útil é conferir o que foi salvo. **Bug junto:** "Ver o treino" faz `context.go(Rotas.inicio)` e `context.push(Rotas.detalheSessao)` na mesma chamada (`_confirmar` no Resumo e `_confirmarRegistro` no registro) e o atleta cai na Início. Com o aviso, o `push` só acontece num toque, depois que a Início abriu.
+
+### Escopo
+
+- Ao salvar, vai direto para a **Início** e mostra o aviso "Treino salvo" com a ação "Ver treino", que abre o detalhe da sessão salva (voltar leva à Início). O aviso some sozinho; a semana já mostra o dia marcado.
+- Sai o diálogo "Treino registrado" (`shared/dialogo_pos_registro.dart` e o enum `AcaoPosRegistro`).
+- Vale no Resumo do treino ao vivo e no registro manual / treino já feito. O aviso usa um `ScaffoldMessenger` que sobrevive à troca de rota.
+
+### Critérios de aceite
+
+1. Salvar não abre diálogo e vai à Início. 2. Aparece "Treino salvo" com "Ver treino" e some sozinho. 3. "Ver treino" abre o detalhe do treino salvo; voltar leva à Início. 4. Vale para o Resumo e para o registro de treino já feito. 5. O dia aparece marcado na semana. 6. Aviso lido como status, ação com 44 px, não some enquanto o leitor de tela lê.
+
+**Robot: pode impactar** se algum passo toca em "Ir para o Início" ou "Ver progresso" depois de salvar.
+
+---
+
+## PBI-65 · Concluir exercício e ir para o próximo
+
+_Front · R1 (junto da PBI-63) · Tela 26_
+
+**História:** Como atleta, quero um botão para concluir o exercício e já cair no próximo, para não precisar procurar a seta pequena no cabeçalho entre uma série e outra.
+
+### Escopo
+
+- Botão primário "Concluir exercício" com seta, fixo no rodapé da tela do exercício, acima da barra de descanso, nas três abas.
+- Ao tocar, marca o exercício como concluído e abre o **próximo exercício na aba Séries** (exceção à regra da PBI-66). No último, o rótulo vira "Concluir e ir ao resumo" e leva ao Resumo (PBI-63).
+- Séries sem marcar ficam **de fora** do treino salvo (nada é marcado por baixo dos panos). Com séries sem marcar, uma linha acima do botão avisa "N séries sem marcar ficam de fora.", sem diálogo; com todas marcadas, a linha não aparece.
+- As setas do cabeçalho continuam; um exercício concluído pode ser reaberto. Concluído sem série marcada conta como "Não realizado".
+
+### Critérios de aceite
+
+1. No exercício 3 de 5, "Concluir exercício" abre o 4 em Séries. 2. No 5 de 5, "Concluir e ir ao resumo" leva ao Resumo. 3. "1 série sem marcar fica de fora." aparece com uma série sem marcar e some com todas marcadas. 4. Série sem marcar não entra na sessão salva. 5. Exercício concluído com séries marcadas conta como concluído no Resumo. 6. Concluindo em Histórico, o próximo abre em Séries. 7. Botão de 48 px, rótulo falado "Concluir exercício, ir para o exercício 4", sem sobrepor a barra de descanso.
+
+---
+
+## PBI-66 · Bug: trocar de exercício não deve resetar a aba
+
+_Bug (Front) · Pequeno · Tela 26_
+
+**História:** Como atleta, quero que ao tocar na seta de próximo exercício, estando em Histórico ou Evolução, eu continue na mesma aba, para comparar os exercícios sem voltar para Séries toda vez.
+
+**Causa:** `ExercicioAoVivoScreen` é uma rota por exercício (as setas fazem `pushReplacement`) e criava um `DefaultTabController` novo, que nasce na aba 0.
+
+**Correção (branch `fix/pbi-66-aba-exercicio`):** a aba ativa fica em `abaExercicioAoVivoProvider`; a tela usa um `TabController` próprio com `initialIndex` vindo dele e grava cada troca. Abrir um exercício pela tela do treino zera para Séries.
+
+### Critérios de aceite
+
+1. Em Histórico do exercício 1, próximo abre o 2 em Histórico. 2. Em Evolução do exercício 3, anterior abre o 2 em Evolução. 3. Aberto pela tela do treino, começa em Séries. 4. "Concluir exercício" (PBI-65) abre o próximo em Séries.
