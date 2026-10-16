@@ -121,7 +121,7 @@ void main() {
     expect(find.text('Exercício de f1'), findsOneWidget);
   });
 
-  testWidgets('Excluir ficha pede confirmação explicando o histórico (PBI-36)',
+  testWidgets('Menu "⋯" > Excluir ficha pede confirmação explicando o histórico',
       (tester) async {
     await tester.pumpWidget(_tela(
       plano: (ref) async => _plano([_ficha('A', 1)]),
@@ -129,8 +129,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Aciona "Excluir ficha" (ícone com tooltip).
-    await tester.tap(find.byTooltip('Excluir ficha'));
+    // Abre a folha de ações pela "⋯" (PBI-52) e escolhe "Excluir ficha".
+    await tester.tap(find.byTooltip('Mais ações da ficha'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir ficha'));
     await tester.pumpAndSettle();
 
     expect(find.text('Excluir ficha?'), findsOneWidget);
@@ -141,5 +143,47 @@ void main() {
     );
     // Botão de confirmar com o rótulo da ação.
     expect(find.widgetWithText(FilledButton, 'Excluir ficha'), findsOneWidget);
+  });
+
+  testWidgets('PBI-52: ficha com exercícios habilita iniciar e registrar',
+      (tester) async {
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([_ficha('A', 1)]),
+      detalhe: (id) => _detalhe(id, [_ex('Supino reto', 1)]),
+    ));
+    await tester.pumpAndSettle();
+
+    // Com exercícios, os dois botões aparecem e NÃO há aviso de ficha vazia
+    // (sinal de que iniciar/registrar estão habilitados).
+    expect(find.text('INICIAR TREINO AGORA'), findsOneWidget);
+    expect(find.text('Registrar treino já feito'), findsOneWidget);
+    expect(find.text('Adicione exercícios para iniciar.'), findsNothing);
+  });
+
+  testWidgets('PBI-52: ficha sem exercícios desabilita iniciar/registrar e avisa',
+      (tester) async {
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([_ficha('A', 1)]),
+      detalhe: (id) => _detalhe(id, const []),
+    ));
+    await tester.pumpAndSettle();
+
+    // Ficha vazia: o aviso aparece (sinal de que iniciar/registrar estão
+    // desabilitados) e tocar em "INICIAR TREINO AGORA" não navega para lugar
+    // nenhum (continua na tela de Fichas).
+    expect(find.text('Adicione exercícios para iniciar.'), findsOneWidget);
+    await tester.tap(find.text('INICIAR TREINO AGORA'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fichas'), findsOneWidget);
+    expect(find.text('Adicione exercícios para iniciar.'), findsOneWidget);
+  });
+
+  testWidgets('PBI-52: sem fichas não mostra "Nova ficha" na AppBar',
+      (tester) async {
+    await tester.pumpWidget(_tela(plano: (ref) async => null));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nova ficha'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'CRIAR FICHA'), findsOneWidget);
   });
 }
