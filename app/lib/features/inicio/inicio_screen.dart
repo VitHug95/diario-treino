@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
 import '../../core/tema/tema_controller.dart';
+import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -97,7 +98,8 @@ class InicioScreen extends ConsumerWidget {
                   padding: EdgeInsets.only(top: AppSpacing.x28),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (_, __) => _Erro(
+                error: (_, __) => EstadoErro(
+                  mensagem: 'Não foi possível carregar suas fichas.',
                   aoTentar: () => ref.invalidate(planoAtivoProvider),
                 ),
                 data: (plano) => _Conteudo(
@@ -611,26 +613,4 @@ class _SemFichas extends StatelessWidget {
   }
 }
 
-class _Erro extends StatelessWidget {
-  const _Erro({required this.aoTentar});
-
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.x24),
-      child: Column(
-        children: [
-          Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Não foi possível carregar suas fichas.',
-              style: AppText.title, textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _Erro extraído para shared/estado_erro.dart (PBI-51).

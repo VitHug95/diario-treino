@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/estado_erro.dart';
+import '../../shared/estado_vazio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -85,10 +87,22 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
           Expanded(
             child: resultado.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  _Erro(aoTentarNovamente: () => ref.invalidate(catalogoProvider)),
-              data: (itens) =>
-                  itens.isEmpty ? const _EstadoVazio() : _ListaExercicios(itens: itens),
+              error: (e, _) => EstadoErro(
+                mensagem: 'Não foi possível carregar os exercícios.',
+                aoTentar: () => ref.invalidate(catalogoProvider),
+              ),
+              data: (itens) => itens.isEmpty
+                  ? EstadoVazio(
+                      icone: LucideIcons.dumbbell,
+                      titulo: 'Nenhum exercício encontrado',
+                      texto: 'Que tal criar um exercício novo?',
+                      acao: OutlinedButton.icon(
+                        onPressed: () => context.push(Rotas.criarExercicio),
+                        icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+                        label: const Text('Criar exercício'),
+                      ),
+                    )
+                  : _ListaExercicios(itens: itens),
             ),
           ),
         ],
@@ -382,65 +396,4 @@ class _SeloMeu extends StatelessWidget {
   }
 }
 
-class _EstadoVazio extends StatelessWidget {
-  const _EstadoVazio();
 
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.dumbbell, size: 48, color: cores.iconMuted),
-            const SizedBox(height: AppSpacing.x12),
-            Text('Nenhum exercício encontrado',
-                style: AppText.title, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x8),
-            Text('Que tal criar um exercício novo?',
-                style: AppText.body.copyWith(color: cores.textSecondary),
-                textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x16),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Rotas.criarExercicio),
-              icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-              label: const Text('Criar exercício'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Erro extends StatelessWidget {
-  const _Erro({required this.aoTentarNovamente});
-
-  final VoidCallback aoTentarNovamente;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-            const SizedBox(height: AppSpacing.x12),
-            Text('Não foi possível carregar os exercícios.',
-                style: AppText.title, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.x16),
-            FilledButton(
-              onPressed: aoTentarNovamente,
-              child: const Text('Tentar de novo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

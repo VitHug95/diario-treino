@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/dialogo_pos_registro.dart';
 import '../../shared/dialogos_perigo.dart';
+import '../../shared/estado_erro.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -61,7 +63,8 @@ class RegistrarSessaoScreen extends ConsumerWidget {
         appBar: AppBar(title: Text(titulo)),
         body: detalhe.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => _ErroCarregar(
+          error: (_, __) => EstadoErro(
+            mensagem: 'Não foi possível preparar o registro.',
             aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId!)),
           ),
           data: (dados) => _Formulario(
@@ -109,7 +112,8 @@ class RegistrarSessaoScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(titulo)),
       body: rascunho.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ErroCarregar(
+        error: (_, __) => EstadoErro(
+          mensagem: 'Não foi possível preparar o registro.',
           aoTentar: () => ref.invalidate(rascunhoSessaoProvider(treinoId)),
         ),
         data: (dados) => _Formulario(
@@ -530,35 +534,15 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 
   Future<void> _confirmarRegistro(String sessaoId) async {
-    final acao = await showDialog<_AcaoPosRegistro>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Treino registrado'),
-        content: const Text('Seu treino foi salvo. O que você quer fazer agora?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.inicio),
-            child: const Text('Ir para o Início'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.verTreino),
-            child: const Text('Ver o treino'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, _AcaoPosRegistro.progresso),
-            child: const Text('Ver progresso'),
-          ),
-        ],
-      ),
-    );
+    final acao = await dialogoPosRegistro(context);
     if (!mounted) return;
     switch (acao) {
-      case _AcaoPosRegistro.verTreino:
+      case AcaoPosRegistro.verTreino:
         context.go(Rotas.inicio);
         context.push(Rotas.detalheSessao, extra: DetalheSessaoArgs(sessaoId: sessaoId));
-      case _AcaoPosRegistro.progresso:
+      case AcaoPosRegistro.progresso:
         context.go(Rotas.progresso);
-      case _AcaoPosRegistro.inicio:
+      case AcaoPosRegistro.inicio:
       case null:
         context.go(Rotas.inicio);
     }
@@ -669,8 +653,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
     );
   }
 }
-
-enum _AcaoPosRegistro { inicio, progresso, verTreino }
 
 class _CampoData extends StatelessWidget {
   const _CampoData({required this.data, required this.aoTocar});
@@ -1193,24 +1175,4 @@ class _SemExercicios extends StatelessWidget {
   }
 }
 
-class _ErroCarregar extends StatelessWidget {
-  const _ErroCarregar({required this.aoTentar});
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(LucideIcons.cloudOff, size: 48, color: cores.iconMuted),
-          const SizedBox(height: AppSpacing.x12),
-          Text('Não foi possível preparar o registro.', style: AppText.title),
-          const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _ErroCarregar extraído para shared/estado_erro.dart (PBI-51).

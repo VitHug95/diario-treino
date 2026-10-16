@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -108,10 +109,13 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (erro) {
-            return _ErroCarregar(aoTentar: () {
-              ref.invalidate(metricasProvider);
-              ref.invalidate(membrosProvider);
-            });
+            return EstadoErro(
+              mensagem: 'Não foi possível carregar os dados do cadastro.',
+              aoTentar: () {
+                ref.invalidate(metricasProvider);
+                ref.invalidate(membrosProvider);
+              },
+            );
           }
 
           final metricas = metricasAsync.value!;
@@ -406,22 +410,4 @@ class _SeletorMusculo extends StatelessWidget {
   }
 }
 
-class _ErroCarregar extends StatelessWidget {
-  const _ErroCarregar({required this.aoTentar});
-
-  final VoidCallback aoTentar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Não foi possível carregar os dados do cadastro.'),
-          const SizedBox(height: 12),
-          FilledButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
-        ],
-      ),
-    );
-  }
-}
+// _ErroCarregar extraído para shared/estado_erro.dart (PBI-51).

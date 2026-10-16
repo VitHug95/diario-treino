@@ -46,15 +46,9 @@ class TreinoAoVivoScreen extends ConsumerWidget {
         if (sair && context.mounted) context.pop();
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(estado.treinoNome),
-          actions: [
-            TextButton(
-              onPressed: () => _finalizar(context, ref),
-              child: const Text('Finalizar'),
-            ),
-          ],
-        ),
+        // Finalizar único (PBI-51): só o botão grande no fim ("FINALIZAR
+        // TREINO"); o "Finalizar" da AppBar saiu para não duplicar a ação.
+        appBar: AppBar(title: Text(estado.treinoNome)),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
