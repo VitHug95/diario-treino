@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/rotas/app_router.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
@@ -12,12 +11,12 @@ import '../../theme/theme_tokens.dart';
 import '../fichas/fichas_comandos.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
-import '../inicio/primeiro_acesso_screen.dart';
 import 'acoes_plano.dart';
 
 /// Tela 18 (PBI-45): lista de planos do atleta. O plano em uso vem primeiro,
 /// com borda e a tag "Em uso"; cada cartão tem dois alvos separados (abrir o
-/// plano e o menu de ações). Sem nenhum plano, mostra o Primeiro acesso.
+/// plano e o menu de ações). Sem nenhum plano, mostra o estado vazio próprio
+/// (tela 27, PBI-68): o Bem-vindo fica só na Início.
 class PlanosScreen extends ConsumerWidget {
   const PlanosScreen({super.key});
 
@@ -36,7 +35,7 @@ class PlanosScreen extends ConsumerWidget {
         ),
       ),
       data: (planos) {
-        if (planos.isEmpty) return const PrimeiroAcessoScreen();
+        if (planos.isEmpty) return const _SemPlanos();
         return _ListaPlanos(planos: ordenarPlanos(planos));
       },
     );
@@ -84,7 +83,7 @@ class _ListaPlanos extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.x14),
                       ),
-                      onPressed: () => _novoPlano(context, ref),
+                      onPressed: () => criarPlanoEAbrir(context, ref),
                       icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
                       label: const Text('NOVO PLANO'),
                     ),
@@ -98,9 +97,8 @@ class _ListaPlanos extends ConsumerWidget {
               ],
               const SizedBox(height: AppSpacing.x4),
               Text(
-                'Só um plano fica em uso: é ele que alimenta a sequência A, B, C '
-                'da tela Início. Os outros continuam à mão para iniciar quando '
-                'você quiser.',
+                'Só um plano fica em uso: é ele que alimenta a semana da Início. '
+                'Os outros continuam à mão para iniciar quando você quiser.',
                 style: AppText.caption.copyWith(color: cores.textSecondary),
               ),
             ],
@@ -270,22 +268,10 @@ class _ChipProfessor extends StatelessWidget {
 
 // ---- Navegação e ações ----
 
-void _abrirPlano(BuildContext context, String planoId) {
-  context.push('${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(planoId)}');
-}
+void _abrirPlano(BuildContext context, String planoId) =>
+    context.push(rotaDoPlano(planoId));
 
 void _avisar(BuildContext context, String msg) => avisarPlano(context, msg);
-
-Future<void> _novoPlano(BuildContext context, WidgetRef ref) async {
-  final nome = await dialogoNomePlano(context, titulo: 'Novo plano');
-  if (nome == null || !context.mounted) return;
-  try {
-    final id = await ref.read(fichasComandosProvider).criarPlano(nome);
-    if (context.mounted) _abrirPlano(context, id);
-  } on FichasException catch (e) {
-    if (context.mounted) _avisar(context, e.mensagem);
-  }
-}
 
 enum _AcaoPlano { definirEmUso, duplicar, copiar, renomear, excluir }
 
@@ -414,3 +400,75 @@ class _LinhaMenu extends StatelessWidget {
   }
 }
 
+
+
+/// Aba Planos sem nenhum plano (tela 27, PBI-68): estado vazio próprio, sem
+/// boas-vindas (que ficam só na Início). "Criar plano" abre o "Novo plano"
+/// direto, sem passar por outra tela (PBI-69).
+class _SemPlanos extends ConsumerWidget {
+  const _SemPlanos();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cores = AppColors.of(context);
+
+    final vazio = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            width: AppSizes.botaoPrincipal,
+            height: AppSizes.botaoPrincipal,
+            decoration: BoxDecoration(
+              color: cores.primaryTint,
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            child: ExcludeSemantics(
+              child: Icon(LucideIcons.calendarPlus,
+                  size: AppSizes.iconeMd, color: cores.primaryOnTint),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.x20),
+        Text('MONTE SEU PRIMEIRO PLANO E COMECE A TREINAR',
+            style: AppText.displayS, textAlign: TextAlign.center),
+        const SizedBox(height: AppSpacing.x8),
+        Text(
+          'Um plano reúne suas fichas, como Treino A, B e C. Você cria o '
+          'plano, monta as fichas e inicia o treino por ali.',
+          style: AppText.bodyS.copyWith(color: cores.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.x24),
+        SizedBox(
+          height: AppSizes.botaoPrincipal,
+          child: FilledButton.icon(
+            onPressed: () => criarPlanoEAbrir(context, ref),
+            icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+            label: const Text('CRIAR PLANO'),
+          ),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.margemTela),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('SEUS TREINOS',
+                  style: AppText.overline.copyWith(color: cores.textSecondary)),
+              const SizedBox(height: AppSpacing.x4),
+              Text('PLANOS', style: AppText.displayM),
+              Expanded(
+                child: Center(child: SingleChildScrollView(child: vazio)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

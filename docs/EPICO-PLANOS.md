@@ -15,7 +15,7 @@ Protótipos 18 a 21 no canvas, nos temas claro e escuro.
 ## Premissas assumidas (confirmar com o PO)
 
 - O primeiro plano do atleta nasce em uso.
-- Excluir o plano em uso passa o uso para o plano com a sessão mais recente; sem outro plano, a Início mostra o Primeiro acesso.
+- Excluir o plano em uso passa o uso para o plano com a sessão mais recente; sem outro plano, a Início mostra o card "Crie seu plano" (ou o Primeiro acesso, se não houver sessões; PBI-68).
 - Excluir plano do professor: o atleta só exclui depois que o vínculo acabar (a confirmar).
 - Duplicar e copiar geram "Nome (cópia)", fora de uso, sem sessões, com fichas, exercícios, alvos e tags de rodada.
 - Ordem da lista: em uso primeiro, depois pelo início mais recente.
@@ -143,7 +143,7 @@ A aba **Fichas** passa a se chamar **Planos**. O conteúdo da tela Fichas de hoj
 
 **Novo plano e estados**
 - Botão "Novo plano" no topo. Pede só o nome, no mesmo diálogo de nome que a ficha usa hoje, e abre o detalhe do plano criado.
-- Carregando, erro com "Tentar de novo" e vazio. Sem nenhum plano, a lista mostra o Primeiro acesso (tela 6).
+- Carregando, erro com "Tentar de novo" e vazio. Sem nenhum plano, a aba mostra o estado vazio próprio "Monte seu primeiro plano e comece a treinar" (tela 27, PBI-68), e não o Primeiro acesso.
 
 ### Critérios de aceite
 
@@ -153,7 +153,7 @@ A aba **Fichas** passa a se chamar **Planos**. O conteúdo da tela Fichas de hoj
 4. **Plano do professor:** o cartão mostra o chip com cadeado e o menu não tem Renomear.
 5. **Novo plano:** informar "Treino de viagem" cria o plano e abre o detalhe vazio, com "Nova ficha".
 6. **Excluir:** confirmar tira o plano da lista; se era o em uso, o uso passa para outro (PBI-44).
-7. **Sem plano:** sem planos, a lista mostra o Primeiro acesso.
+7. **Sem plano:** sem planos, a aba mostra a tela 27 com "Criar plano" (revisto na PBI-68).
 8. **Acessibilidade:** cada cartão expõe "abrir" e "menu" como botões separados, com labels e alvo mínimo de 44 px. O Robot encontra cada plano pelo nome.
 
 ### Testes
@@ -225,7 +225,7 @@ _Front · R1 · Telas 2 e 6_
 - "Próximo da sequência" considera só as fichas do plano em uso: a ficha seguinte à última registrada **dentro desse plano**.
 - Sessão de ficha de outro plano não muda a sequência do plano em uso. Treino livre também não.
 - A faixa semanal continua mostrando os dias treinados de qualquer plano.
-- Sem plano em uso (todos excluídos), a Início mostra o Primeiro acesso (tela 6).
+- Sem plano em uso (todos excluídos): com sessões, a Início normal com o card "Crie seu plano"; sem sessões (conta nova), o Primeiro acesso (revisto na PBI-68).
 - O nome do plano aparece junto do título da lista de fichas.
 
 ### Critérios de aceite
@@ -233,7 +233,7 @@ _Front · R1 · Telas 2 e 6_
 1. **Troca de plano:** a Início passa a listar as fichas do novo plano e o "próximo da sequência" dele.
 2. **Sequência preservada:** treino de ficha de outro plano ontem não muda o "próximo da sequência".
 3. **Faixa semanal:** o dia desse treino aparece marcado.
-4. **Sem plano em uso:** a Início mostra o Primeiro acesso.
+4. **Sem plano em uso:** com sessões, a Início mostra a semana e o card "Crie seu plano"; sem sessões, o Primeiro acesso (PBI-68).
 
 ### Testes
 

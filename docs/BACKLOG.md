@@ -176,10 +176,10 @@ por catálogo respeitados (`ux_exercicio_nome_catalogo`).
 **História:** Como atleta novo, quero entender em segundos como o app funciona, para não ficar perdido numa tela vazia.
 
 **Critérios de aceite**
-- Usuário sem plano vê a tela de primeiro acesso (tela 6) em vez da tela inicial.
-- Botão "Montar minhas fichas" leva para as fichas.
-- Botão "Registrar sem ficha" leva para o treino livre.
-- Depois que existe ao menos uma ficha ou sessão, a tela não aparece mais.
+- Conta nova (nenhuma sessão e nenhuma ficha: sem plano, ou plano sem fichas) vê o primeiro acesso (tela 29) **só na Início**. A aba Planos tem estado vazio próprio (PBI-68).
+- Primário: "Criar meu plano" (sem plano) ou "Montar a primeira ficha" (plano vazio, abre o detalhe dele).
+- Secundário: "Registrar treino" leva para o treino livre (era "Registrar sem ficha").
+- Depois que existe ao menos uma ficha ou sessão, a tela não aparece mais. Quem apagou os planos mas já treinou vê a Início normal com o card "Crie seu plano".
 
 **Depende de:** PBI-08. O destino do segundo botão depende de PBI-19.
 **Status:** FEITO. `PrimeiroAcessoScreen` (tela 6) aparece no lugar da inicial
@@ -189,7 +189,8 @@ quando o atleta não tem nenhuma ficha **nem** sessão. O gate é client-side em
 (não pisca durante o carregamento nem em erro de rede). Botão "Montar minhas
 fichas" leva às fichas; "Registrar sem ficha" leva ao treino livre (PBI-19).
 Com ao menos uma ficha ou sessão, a tela inicial normal volta. Teste de widget
-cobre os dois caminhos e o caso "tem sessão, sem ficha".
+cobre os dois caminhos e o caso "tem sessão, sem ficha". **Revisto na PBI-68:**
+textos e botões acima; o gate "sem plano em uso" da PBI-47 saiu.
 
 ### Épico E2: Catálogo de exercícios
 
@@ -967,10 +968,10 @@ Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
 
 | PBI | Título | Telas | Status |
 |---|---|---|---|
-| PBI-70 | Telas atualizam pela origem da mudança | todas | em revisão (branch `fix/pbi-70-invalidacao-pela-origem`) |
+| PBI-70 | Telas atualizam pela origem da mudança | todas | ✅ na `main` (PR #88) |
 | PBI-67 | Treino em andamento visível ao voltar | 19 e 23 | ✅ na `main` (PR #86); o ponto único de aviso veio com a 70 |
-| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | a fazer |
-| PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | a fazer |
+| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | em revisão (branch `feat/pbi-68-69-sem-plano-e-criar-plano`) |
+| PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | em revisão (mesma branch da 68) |
 | PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | a fazer |
 | PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | a fazer (front + API) |
 
@@ -985,6 +986,19 @@ repositório fora dos comandos. Escritas que não avisavam ninguém foram
 corrigidas junto: alvos e exercícios da ficha (plano e rascunho do registro
 ficavam velhos), sessão (aba Progresso e histórico do exercício) e "Salvar
 também como ficha". `fichaTemSessoesProvider` foi para `sessao_repository.dart`.
+
+PBI-68 e 69, notas: o Bem-vindo (`PrimeiroAcessoScreen(plano:)`) só aparece
+na Início para conta nova; a aba Planos vazia tem a tela 27. Criar plano tem um
+caminho só, `criarPlanoEAbrir` (`planos/acoes_plano.dart`): diálogo "Novo
+plano" com "Meu plano" sugerido e `go` para o detalhe, de qualquer aba (a pilha
+fica lista → detalhe, então a seta volta à lista). O detalhe do plano vazio
+mostra "Nenhuma ficha ainda" com "Nova ficha" e esconde o "Duplicar". Saíram o
+"MONTAR MINHAS FICHAS", o "MONTAR FICHAS" do detalhe sem plano e o estado
+vazio "CRIAR FICHA" da tela Fichas, que agora volta ao plano quando não há
+ficha para abrir. O "Montar fichas" da Início (plano vazio com histórico) abre
+o detalhe do plano. **Robot:** "Registrar sem ficha" virou "Registrar treino";
+"MONTAR MINHAS FICHAS" e "CRIAR FICHA" não existem mais (o caminho é "Criar meu
+plano" → "Criar plano" → "Nova ficha" → "Salvar").
 
 ---
 

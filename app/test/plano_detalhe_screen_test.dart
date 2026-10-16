@@ -423,4 +423,43 @@ void main() {
     expect(find.text('Continuar'), findsOneWidget);
     expect(find.byTooltip('Treinar B'), findsNothing);
   });
+
+  for (final escuro in [false, true]) {
+    testWidgets(
+        'PBI-69: plano sem fichas tem um único estado vazio com "Nova ficha" '
+        '(${escuro ? 'escuro' : 'claro'})', (tester) async {
+      await tester.pumpWidget(_tela(_plano(fichas: const []),
+          tema: escuro ? AppTheme.escuro : AppTheme.claro));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
+      expect(find.text('NOVA FICHA'), findsOneWidget);
+      // Sem a lista vazia, o botão tracejado e o "Duplicar" de um plano vazio.
+      expect(find.text('FICHAS'), findsNothing);
+      expect(find.text('Nova ficha'), findsNothing);
+      expect(find.text('Duplicar plano'), findsNothing);
+      // Nada leva à tela Fichas antiga.
+      expect(find.text('MONTAR FICHAS'), findsNothing);
+    });
+  }
+
+  testWidgets('PBI-69: "Nova ficha" no plano vazio cria e fica no plano',
+      (tester) async {
+    final repo = _RepoCriaFicha();
+    await tester.pumpWidget(
+        _telaComRotas(_plano(fichas: const []), repo: repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('NOVA FICHA'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Treino A');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(repo.criada, 'Treino A');
+    // Rota atual continua o detalhe do plano (não abre a ficha sozinha).
+    expect(find.byType(PlanoDetalheScreen), findsOneWidget);
+    expect(find.textContaining('Editar '), findsNothing);
+    expect(find.text('Ficha “Treino A” criada'), findsOneWidget);
+  });
 }

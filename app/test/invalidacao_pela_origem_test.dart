@@ -159,9 +159,9 @@ class _SessoesFake extends SessaoRepository {
 }
 
 Future<void> _abrirApp(WidgetTester tester, _Banco banco) async {
-  // Largura de celular (390) e altura folgada: a fonte de teste (Ahem) é mais
-  // larga que a Barlow e quebra mais linhas.
-  tester.view.physicalSize = const Size(1170, 3600);
+  // 600 de largura (o máximo do app no web) e altura folgada: a fonte de teste
+  // (Ahem) é bem mais larga que a Barlow e estouraria o aviso "Ficha criada".
+  tester.view.physicalSize = const Size(1800, 3600);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues({});
@@ -221,13 +221,32 @@ void main() {
     await _abrirApp(tester, banco);
     expect(find.text('Seu diário de treino'), findsOneWidget);
 
-    await tester.tap(find.text('MONTAR MINHAS FICHAS'));
+    // PBI-69: Bem-vindo → "Novo plano" → detalhe do plano vazio → "Nova ficha".
+    await tester.tap(find.text('CRIAR MEU PLANO'));
     await _assentar(tester);
-    await tester.tap(find.text('CRIAR FICHA'));
+    await tester.tap(_noDialogo('CRIAR PLANO'));
+    await _assentar(tester);
+    expect(find.text('MEU PLANO'), findsOneWidget); // cabeçalho do detalhe
+    expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
+
+    await tester.tap(find.text('NOVA FICHA'));
     await _assentar(tester);
     await tester.enterText(find.byType(TextFormField).first, 'A');
     await tester.tap(_noDialogo('Salvar'));
     await _assentar(tester);
+
+    // Fica no detalhe do plano, com a ficha na lista e o atalho; a ficha não
+    // abre sozinha.
+    expect(find.text('Ficha “A” criada'), findsOneWidget);
+    expect(find.text('Adicionar exercícios'), findsOneWidget);
+    expect(find.text('Nenhuma ficha ainda'), findsNothing);
+    expect(find.byTooltip('A: adicione exercícios para treinar'), findsOneWidget);
+
+    // A seta do detalhe leva à lista, já com o plano criado.
+    await tester.tap(find.byTooltip('Voltar para os planos'));
+    await _assentar(tester);
+    expect(find.text('MEU PLANO'), findsOneWidget);
+    expect(find.text('NOVO PLANO'), findsOneWidget);
 
     // Volta pela aba, com a Início viva desde o começo (mesmo scope).
     await _aba(tester, 'Início');

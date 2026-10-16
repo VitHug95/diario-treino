@@ -6,10 +6,10 @@ Respostas do PO de 16/10 já dentro. Layouts das telas 19, 23, 25, 27, 28 e 29 n
 
 | PBI | Título | Status |
 |---|---|---|
-| PBI-70 | Telas atualizam pela origem da mudança | em revisão (branch `fix/pbi-70-invalidacao-pela-origem`) |
+| PBI-70 | Telas atualizam pela origem da mudança | ✅ na `main` (PR #88) |
 | PBI-67 | Treino em andamento visível ao voltar | ✅ na `main` (PR #86). Entrou antes da 70; o "ponto único" de aviso do rascunho veio com a 70 |
-| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | a fazer (junto da 69) |
-| PBI-69 | Criar plano e primeira ficha em um caminho só | a fazer (junto da 68) |
+| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | em revisão (branch `feat/pbi-68-69-sem-plano-e-criar-plano`) |
+| PBI-69 | Criar plano e primeira ficha em um caminho só | em revisão (mesma branch da 68) |
 | PBI-71 | Registrar treino sempre à mão na Início | a fazer (depois da 68) |
 | PBI-72 | Manter na ficha o exercício adicionado no treino? | a fazer (front + API) |
 
@@ -40,7 +40,7 @@ Respostas do PO de 16/10 já dentro. Layouts das telas 19, 23, 25, 27, 28 e 29 n
 
 ## Ajuste de documentos junto
 
-PBI-09 e PBI-47 passam a dizer que o primeiro acesso é só da Início e só para conta nova (sem plano com ficha e sem sessão). Hoje a PBI-47 manda mostrar o primeiro acesso sempre que não há plano em uso. O texto muda junto com a entrega da PBI-68, para o documento não descrever um comportamento que o app ainda não tem.
+Feito com a PBI-68: a PBI-09 (BACKLOG) e as PBIs 44, 45 e 47 (EPICO-PLANOS) passam a dizer que o primeiro acesso é só da Início e só para conta nova (sem plano com ficha e sem sessão).
 
 ## Impacto no E2E
 
@@ -186,6 +186,12 @@ _Front · Depois da PBI-70_
 - **Widget:** cinco cenários (conta nova; plano sem fichas; só sessões; plano com fichas; sem plano na aba Planos). Atualizar `primeiro_acesso_screen_test.dart` e `inicio_screen_test.dart`.
 - **Robot:** **pode impactar.** O passo "Registrar sem ficha" vira "Registrar treino" (e, sem plano, abre direto o treino livre, ver PBI-71).
 
+### Como foi entregue (branch `feat/pbi-68-69-sem-plano-e-criar-plano`)
+
+- **Início:** `PrimeiroAcessoScreen(plano:)` só quando não há sessão e não há ficha. Sem plano e com sessões, a Início normal ganha o card `_CrieSeuPlano` acima da semana (abaixo do "Continuar treino"). Saiu o gate "sem plano em uso" da PBI-47.
+- **Planos:** sem planos, `_SemPlanos` (tela 27); a lista com "Novo plano" no cabeçalho só aparece com pelo menos um plano. Texto da lista corrigido.
+- **Testes:** os cinco cenários em `inicio_screen_test.dart`, `primeiro_acesso_screen_test.dart` e `planos_screen_test.dart`, com tema claro e escuro.
+
 ### Fora do escopo
 
 - Ilustrações novas.
@@ -232,6 +238,13 @@ _Front · Junto da PBI-68_
 - **Widget:** estado vazio de Planos abre o diálogo; detalhe do plano vazio; criar ficha volta ao plano.
 - **Teste de rota:** depois de confirmar o nome da ficha, a rota atual é o detalhe do plano.
 - **Robot:** conferir se algum passo usa "Montar fichas" ou "Criar ficha".
+
+### Como foi entregue (mesma branch da 68)
+
+- **Caminho único:** `criarPlanoEAbrir` em `planos/acoes_plano.dart` (diálogo `dialogoNovoPlano`, "Meu plano" sugerido, botões "Criar plano" e "Cancelar"). Lista, estado vazio de Planos, Bem-vindo e card "Crie seu plano" chamam a mesma função. Abre o detalhe com `go`, então a pilha fica lista → detalhe e a seta volta à lista.
+- **Detalhe vazio (tela 28):** "Nenhuma ficha ainda" com "Nova ficha"; sem o botão tracejado e sem "Duplicar". Plano do professor vazio só mostra o aviso. "Nova ficha" já ficava no plano com o aviso "Adicionar exercícios" (PBI-61).
+- **O que saiu:** "MONTAR MINHAS FICHAS" (Bem-vindo), "MONTAR FICHAS" do detalhe sem plano (vira "Criar plano") e o estado vazio "CRIAR FICHA" da tela Fichas, que agora volta ao plano quando não há ficha para abrir. O "Montar fichas" da Início (plano vazio com histórico) abre o detalhe do plano.
+- **Testes:** um `ProviderScope` só, de conta nova até a Início (Bem-vindo → Criar plano → detalhe vazio → Nova ficha → fica no plano com o aviso → seta → lista com o plano → Início); detalhe vazio nos dois temas; Fichas sem ficha volta ao plano.
 
 ### Fora do escopo
 
