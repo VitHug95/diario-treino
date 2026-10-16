@@ -902,12 +902,12 @@ Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
 
 | PBI | Título | Telas | Status |
 |---|---|---|---|
-| PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | em revisão (branch `feat/pbi-57-62-61-ficha-e-treinar`) |
+| PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | ✅ na `main` (PR #77) |
 | PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | ✅ na `main` (PR #76) |
 | PBI-59 | Início nova: semana e caixas | 23 | a fazer |
 | PBI-60 | Caixa de novidades na Início | 23 | em refinamento (resposta do PO) |
-| PBI-61 | Treinar a partir do plano | 19 | em revisão (mesma branch da 57) |
-| PBI-62 | Cartão de exercício: mover e excluir | 22 | em revisão (mesma branch da 57) |
+| PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
+| PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
 
 PBI-57, 62 e 61 vão juntas: a 57 tira os botões de treinar da ficha e a 61 os
 devolve no plano. Separadas, haveria um deploy sem como treinar uma ficha.
@@ -915,7 +915,14 @@ Notas de implementação: token novo `dangerSoft` (fundo do remover); as ações
 "Mover para cima/baixo" são as da própria lista reordenável, com os textos em
 português em `core/localizacao/material_pt.dart`; `adicionarFicha` passou a
 devolver o id da ficha criada (a API já devolvia).
-| PBI-63 | Finalizar treino sem seta de voltar | 24 | a fazer (independente) |
+
+PBI-63, notas: "Salvar mesmo assim" abre o resumo liberado para gravar a sessão
+sem séries (a API já aceitava). Só nesse caminho, com a confirmação explícita;
+fora dele continua a trava da PBI-33 ("Marque ao menos uma série"). O botão
+primário da barra segue "FINALIZAR TREINO" em caixa alta (estilo `button`),
+o mesmo rótulo que o Robot usa. Descartar volta para a tela de onde o treino
+começou (o plano, quando iniciado pelo play da PBI-61).
+| PBI-63 | Finalizar treino sem seta de voltar | 24 | em revisão (branch `feat/pbi-63-finalizar-treino`) |
 
 ---
 

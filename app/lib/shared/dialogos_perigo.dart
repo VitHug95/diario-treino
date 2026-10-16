@@ -54,7 +54,8 @@ Future<bool> confirmarPerigo(
   return confirmou ?? false;
 }
 
-/// Escolha ao sair de um treino em andamento (registro e treino ao vivo).
+/// Escolha ao sair de um treino em andamento (treino livre e registro já
+/// feito; o treino ao vivo sai só por Finalizar ou Descartar, PBI-63).
 enum SaidaTreino { finalizar, continuarDepois, descartar }
 
 /// Diálogo "Sair do treino?": três ações em coluna, largura total, 48 px, da
@@ -96,6 +97,56 @@ Future<SaidaTreino?> dialogoSairDoTreino(BuildContext context) {
             height: AppSizes.botaoSecundario,
             child: TextButton(
               onPressed: () => Navigator.pop(ctx, SaidaTreino.descartar),
+              style: TextButton.styleFrom(foregroundColor: cores.danger),
+              child: const Text('Descartar treino'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Escolha no "Salvar treino vazio?" do treino ao vivo (PBI-63).
+enum EscolhaTreinoVazio { salvar, voltar, descartar }
+
+/// "Salvar treino vazio?": finalizar sem nenhuma série marcada. Três ações em
+/// coluna, 48 px, da mais segura para a mais perigosa, como em
+/// [dialogoSairDoTreino]: "Salvar mesmo assim" (cheio), "Voltar ao treino"
+/// (contorno) e "Descartar treino" (texto vermelho). Fechar sem escolher
+/// devolve `null` (fica no treino).
+Future<EscolhaTreinoVazio?> dialogoTreinoVazio(BuildContext context) {
+  final cores = AppColors.of(context);
+  return showDialog<EscolhaTreinoVazio>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Salvar treino vazio?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Você irá salvar sem inserir nenhum dado, tem certeza?'),
+          const SizedBox(height: AppSpacing.x16),
+          SizedBox(
+            height: AppSizes.botaoSecundario,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.salvar),
+              child: const Text('Salvar mesmo assim'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.entreItens),
+          SizedBox(
+            height: AppSizes.botaoSecundario,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.voltar),
+              child: const Text('Voltar ao treino'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.entreItens),
+          SizedBox(
+            height: AppSizes.botaoSecundario,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.descartar),
               style: TextButton.styleFrom(foregroundColor: cores.danger),
               child: const Text('Descartar treino'),
             ),

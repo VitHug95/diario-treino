@@ -38,17 +38,28 @@ class TreinoAoVivoScreen extends ConsumerWidget {
       );
     }
 
+    // PBI-63: sai só por Finalizar ou Descartar. O voltar do sistema não sai,
+    // só lembra o caminho. O treino segue salvo no aparelho e a Início mostra
+    // "Continuar treino".
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        final sair = await _aoTentarSair(context, ref);
-        if (sair && context.mounted) context.pop();
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(const SnackBar(
+              content: Text('Para sair, finalize ou descarte o treino.')));
       },
       child: Scaffold(
-        // Finalizar único (PBI-51): só o botão grande no fim ("FINALIZAR
-        // TREINO"); o "Finalizar" da AppBar saiu para não duplicar a ação.
-        appBar: AppBar(title: Text(estado.treinoNome)),
+        // Sem seta de voltar (PBI-63): a saída fica na barra fixa.
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(estado.treinoNome),
+        ),
+        bottomNavigationBar: _BarraSaida(
+          aoFinalizar: () => _finalizar(context, ref),
+          aoDescartar: () => _descartar(context, ref),
+        ),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
@@ -72,14 +83,6 @@ class TreinoAoVivoScreen extends ConsumerWidget {
                   label: const Text('Adicionar exercício fora da ficha'),
                 ),
               ),
-              const SizedBox(height: AppSpacing.x16),
-              SizedBox(
-                height: AppSizes.botaoPrincipal,
-                child: FilledButton(
-                  onPressed: () => _finalizar(context, ref),
-                  child: const Text('FINALIZAR TREINO'),
-                ),
-              ),
             ],
           ),
         ),
@@ -87,10 +90,27 @@ class TreinoAoVivoScreen extends ConsumerWidget {
     );
   }
 
-  /// Finalizar: avisa se há séries pendentes e, confirmado, abre o resumo (TV-6).
+  /// Finalizar (PBI-63): vazio pergunta "Salvar treino vazio?"; parcial avisa
+  /// das séries pendentes; completo abre o resumo (TV-6) direto.
   Future<void> _finalizar(BuildContext context, WidgetRef ref) async {
     final estado = ref.read(treinoAoVivoControllerProvider);
     if (estado == null) return;
+
+    if (estado.seriesFeitas == 0) {
+      final escolha = await dialogoTreinoVazio(context);
+      if (!context.mounted) return;
+      switch (escolha) {
+        case EscolhaTreinoVazio.salvar:
+          // O resumo salva mesmo sem séries: o atleta já confirmou.
+          context.push(Rotas.resumoTreino, extra: true);
+        case EscolhaTreinoVazio.descartar:
+          await _descartar(context, ref);
+        case EscolhaTreinoVazio.voltar:
+        case null:
+          break;
+      }
+      return;
+    }
 
     final pendentes = estado.totalSeries - estado.seriesFeitas;
     final exComPendencia = estado.exercicios
@@ -125,34 +145,27 @@ class TreinoAoVivoScreen extends ConsumerWidget {
     if (context.mounted) context.push(Rotas.resumoTreino);
   }
 
-  /// Diálogo de sair (reusa a lógica do PBI-37): finalizar / continuar depois /
-  /// descartar. Devolve true quando a saída pode prosseguir.
-  Future<bool> _aoTentarSair(BuildContext context, WidgetRef ref) async {
-    final acao = await dialogoSairDoTreino(context);
+  /// Descartar (barra ou "Salvar treino vazio?"): confirma, apaga o rascunho e
+  /// volta para a tela de onde o treino começou (o plano, pelo play da PBI-61).
+  /// Nenhuma sessão é gravada.
+  Future<void> _descartar(BuildContext context, WidgetRef ref) async {
+    final confirmar = await confirmarPerigo(
+      context,
+      titulo: 'Descartar treino?',
+      texto: 'O que você fez neste treino será perdido.',
+      rotuloConfirmar: 'Descartar treino',
+      rotuloCancelar: 'Voltar ao treino',
+    );
+    if (!confirmar || !context.mounted) return;
 
-    switch (acao) {
-      case SaidaTreino.finalizar:
-        if (context.mounted) await _finalizar(context, ref);
-        return false; // o resumo assume daqui.
-      case SaidaTreino.continuarDepois:
-        return true; // rascunho já salvo pelo autosave.
-      case SaidaTreino.descartar:
-        if (!context.mounted) return false;
-        final confirmar = await confirmarPerigo(
-          context,
-          titulo: 'Descartar treino?',
-          texto: 'O que você fez neste treino será perdido.',
-          rotuloConfirmar: 'Descartar',
-          rotuloCancelar: 'Voltar',
-        );
-        if (confirmar) {
-          ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
-          ref.read(descansoControllerProvider.notifier).encerrar();
-          return true;
-        }
-        return false;
-      case null:
-        return false;
+    ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
+    ref.read(descansoControllerProvider.notifier).encerrar();
+    // Navigator.pop ignora o PopScope (que só barra o voltar do sistema).
+    final navegador = Navigator.of(context);
+    if (navegador.canPop()) {
+      navegador.pop();
+    } else {
+      context.go(Rotas.planoDetalhe);
     }
   }
 
@@ -170,6 +183,62 @@ class TreinoAoVivoScreen extends ConsumerWidget {
     ref.read(treinoAoVivoControllerProvider.notifier).adicionarExercicio(
           ExercicioEdicao.foraDaFichaDoCatalogo(escolhido, porCodigo),
         );
+  }
+}
+
+/// Barra fixa da tela 24 (PBI-63): "FINALIZAR TREINO" (primário, check) e
+/// "Descartar treino" (contorno vermelho, lixeira), 48 px cada. O rótulo do
+/// primário segue em caixa alta (estilo `button`), o mesmo que o Robot usa.
+class _BarraSaida extends StatelessWidget {
+  const _BarraSaida({required this.aoFinalizar, required this.aoDescartar});
+
+  final VoidCallback aoFinalizar;
+  final VoidCallback aoDescartar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    // Largura mínima zero: o tema dá largura infinita ao botão, o que quebra
+    // dentro de uma Row.
+    const tamanho = Size(0, AppSizes.botaoSecundario);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: cores.lineDivider)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.margemTela),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: aoDescartar,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: tamanho,
+                    foregroundColor: cores.danger,
+                    side: BorderSide(color: cores.danger),
+                  ),
+                  icon: const Icon(LucideIcons.trash2, size: AppSizes.iconeSm),
+                  label: const Text('Descartar treino'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: aoFinalizar,
+                  style: FilledButton.styleFrom(minimumSize: tamanho),
+                  icon: const Icon(LucideIcons.check, size: AppSizes.iconeSm),
+                  label: const Text('FINALIZAR TREINO'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

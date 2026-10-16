@@ -26,7 +26,12 @@ import 'widgets_ao_vivo.dart';
 /// rede mantém o rascunho para o atleta tentar de novo. "Voltar ao treino"
 /// retorna à tela 14 sem perder nada.
 class ResumoTreinoScreen extends ConsumerStatefulWidget {
-  const ResumoTreinoScreen({super.key});
+  const ResumoTreinoScreen({super.key, this.salvarVazio = false});
+
+  /// O atleta já confirmou "Salvar treino vazio?" na tela 24 (PBI-63): salva
+  /// mesmo sem séries feitas. Sem a confirmação, continua barrando a sessão
+  /// vazia (PBI-33).
+  final bool salvarVazio;
 
   @override
   ConsumerState<ResumoTreinoScreen> createState() => _ResumoTreinoScreenState();
@@ -145,7 +150,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
     // Monta a lista a gravar com SÓ as séries feitas; exercício sem série feita
     // não é realizado (não vira série no POST, igual à regra do repositório).
     final paraSalvar = estado.exercicios.map(_somenteFeitas).toList();
-    if (!paraSalvar.any((e) => e.temSerieFeita)) {
+    if (!widget.salvarVazio && !paraSalvar.any((e) => e.temSerieFeita)) {
       _erro('Marque ao menos uma série como feita para salvar o treino.');
       return;
     }
