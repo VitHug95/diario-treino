@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/theme_tokens.dart';
@@ -107,14 +108,26 @@ Future<SaidaTreino?> dialogoSairDoTreino(BuildContext context) {
   );
 }
 
-/// Escolha no "Salvar treino vazio?" do treino ao vivo (PBI-63).
+/// "Descartar treino?" do treino ao vivo (PBI-63): botão vermelho cheio e o
+/// [rotuloCancelar] ("Voltar ao treino" na tela do treino, "Voltar ao resumo"
+/// no Resumo). Devolve `true` quando confirma.
+Future<bool> confirmarDescarte(BuildContext context, {required String rotuloCancelar}) =>
+    confirmarPerigo(
+      context,
+      titulo: 'Descartar treino?',
+      texto: 'O que você fez neste treino será perdido.',
+      rotuloConfirmar: 'Descartar treino',
+      rotuloCancelar: rotuloCancelar,
+    );
+
+/// Escolha no "Salvar treino vazio?" do Resumo do treino (PBI-63).
 enum EscolhaTreinoVazio { salvar, voltar, descartar }
 
-/// "Salvar treino vazio?": finalizar sem nenhuma série marcada. Três ações em
-/// coluna, 48 px, da mais segura para a mais perigosa, como em
-/// [dialogoSairDoTreino]: "Salvar mesmo assim" (cheio), "Voltar ao treino"
-/// (contorno) e "Descartar treino" (texto vermelho). Fechar sem escolher
-/// devolve `null` (fica no treino).
+/// "Salvar treino vazio?" (PBI-63, rodada 2): aparece no "Salvar treino" do
+/// Resumo quando nenhuma série foi marcada. Três ações em coluna, 48 px:
+/// "Salvar mesmo assim" (cheio), "Descartar treino" (contorno vermelho, com
+/// lixeira) e "Voltar ao resumo" (texto). Fechar sem escolher devolve `null`
+/// (fica no Resumo).
 Future<EscolhaTreinoVazio?> dialogoTreinoVazio(BuildContext context) {
   final cores = AppColors.of(context);
   return showDialog<EscolhaTreinoVazio>(
@@ -137,18 +150,22 @@ Future<EscolhaTreinoVazio?> dialogoTreinoVazio(BuildContext context) {
           const SizedBox(height: AppSpacing.entreItens),
           SizedBox(
             height: AppSizes.botaoSecundario,
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.voltar),
-              child: const Text('Voltar ao treino'),
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.descartar),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cores.danger,
+                side: BorderSide(color: cores.danger),
+              ),
+              icon: const Icon(LucideIcons.trash2, size: AppSizes.iconeSm),
+              label: const Text('Descartar treino'),
             ),
           ),
           const SizedBox(height: AppSpacing.entreItens),
           SizedBox(
             height: AppSizes.botaoSecundario,
             child: TextButton(
-              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.descartar),
-              style: TextButton.styleFrom(foregroundColor: cores.danger),
-              child: const Text('Descartar treino'),
+              onPressed: () => Navigator.pop(ctx, EscolhaTreinoVazio.voltar),
+              child: const Text('Voltar ao resumo'),
             ),
           ),
         ],

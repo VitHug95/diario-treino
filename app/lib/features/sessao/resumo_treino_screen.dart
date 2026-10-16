@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/dialogo_pos_registro.dart';
+import '../../shared/dialogos_perigo.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -26,12 +27,7 @@ import 'widgets_ao_vivo.dart';
 /// rede mantém o rascunho para o atleta tentar de novo. "Voltar ao treino"
 /// retorna à tela 14 sem perder nada.
 class ResumoTreinoScreen extends ConsumerStatefulWidget {
-  const ResumoTreinoScreen({super.key, this.salvarVazio = false});
-
-  /// O atleta já confirmou "Salvar treino vazio?" na tela 24 (PBI-63): salva
-  /// mesmo sem séries feitas. Sem a confirmação, continua barrando a sessão
-  /// vazia (PBI-33).
-  final bool salvarVazio;
+  const ResumoTreinoScreen({super.key});
 
   @override
   ConsumerState<ResumoTreinoScreen> createState() => _ResumoTreinoScreenState();
@@ -150,9 +146,22 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
     // Monta a lista a gravar com SÓ as séries feitas; exercício sem série feita
     // não é realizado (não vira série no POST, igual à regra do repositório).
     final paraSalvar = estado.exercicios.map(_somenteFeitas).toList();
-    if (!widget.salvarVazio && !paraSalvar.any((e) => e.temSerieFeita)) {
-      _erro('Marque ao menos uma série como feita para salvar o treino.');
-      return;
+    // Treino vazio (PBI-63, rodada 2): o aviso mora aqui, no único passo de
+    // salvar. Salvar vazio só com a confirmação explícita (a trava silenciosa
+    // da PBI-33 virou este diálogo).
+    if (!paraSalvar.any((e) => e.temSerieFeita)) {
+      final escolha = await dialogoTreinoVazio(context);
+      if (!mounted) return;
+      switch (escolha) {
+        case EscolhaTreinoVazio.salvar:
+          break; // segue e salva sem dados
+        case EscolhaTreinoVazio.descartar:
+          await _descartar();
+          return;
+        case EscolhaTreinoVazio.voltar:
+        case null:
+          return;
+      }
     }
 
     setState(() => _salvando = true);
@@ -182,6 +191,17 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  /// Descartar pelo "Salvar treino vazio?": confirma, apaga o treino e fecha o
+  /// Resumo devolvendo `true`, para a tela do treino sair também (volta ao
+  /// plano). Nenhuma sessão é gravada.
+  Future<void> _descartar() async {
+    final confirmar = await confirmarDescarte(context, rotuloCancelar: 'Voltar ao resumo');
+    if (!confirmar || !mounted) return;
+    ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
+    ref.read(descansoControllerProvider.notifier).encerrar();
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _confirmar(String sessaoId) async {

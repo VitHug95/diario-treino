@@ -1,6 +1,6 @@
 # Ajustes de layout (PBI-57 a PBI-63)
 
-Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23 e 24 no PDF `Ajustes-de-layout.pdf`.
+Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23, 24 e 25 no PDF `Ajustes-de-layout.pdf`.
 
 ## O que o PO pediu e onde cada pedido cai
 
@@ -12,7 +12,7 @@ Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23 e 24
 | 4. Início só com a semana e caixas | PBI-59 (layout) e PBI-60 (novidades, em refinamento) | 23 |
 | 5. Iniciar treino só pelo plano, nunca "criar e iniciar" na mesma tela | PBI-61 (e PBI-57 revisada: ficha só de edição) | 19 e 22 |
 | 6. Botões de mover e excluir exercício e "Registrar treino já feito" | PBI-62 (mover e excluir) e PBI-61 (registrar já feito vai para o sheet do plano) | 22 e 19 |
-| 7. Finalizar treino confuso, sem seta de voltar | PBI-63 | 24 |
+| 7. Finalizar treino confuso, sem seta de voltar | PBI-63 | 24 e 25 |
 
 ## Ajustes em PBIs que já existem
 
@@ -40,7 +40,7 @@ Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23 e 24
 - PBI-59: o atalho "Iniciar treino" na Início entra? Sem ele, treinar custa 4 toques em vez de 1.
 - PBI-59: tocar no dia de hoje abre a folha do dia e registra treino já feito, como hoje. Está certo, ou deveria iniciar o treino ao vivo?
 - PBI-58: "excluir treino" era só o plano, ou plano e ficha?
-- PBI-63: ao tirar a seta, some o "Continuar depois". O treino segue salvo e a Início mostra "Continuar treino". Serve assim, ou o PO quer um botão "Minimizar"?
+- PBI-63: o Resumo passa a ser o único passo de salvar, e o aviso de treino vazio mora nele. Ao tirar a seta, some o "Continuar depois". O treino segue salvo e a Início mostra "Continuar treino". Serve assim, ou o PO quer um botão "Minimizar"?
 - PBI-61: no plano do professor o atleta também pode iniciar treino pelo play. Confirma?
 - ~~PBI-60: quem escreve as novidades e com que frequência? Recomendo a opção A.~~ Respondida: opção A, com dicas de treino que trocam a cada acesso (ver PBI-60).
 - ~~PBI-49: espera o E2E?~~ Respondida: pode entrar sem esperar o E2E; o passo do Robot que escolhe o exercício é ajustado depois.
@@ -258,21 +258,31 @@ _Front · R1 (junto da PBI-57) · Tela 22_
 
 ## PBI-63 · Finalizar treino sem seta de voltar
 
-_Front · R1 (junto do treino ao vivo) · Tela 24_
+_Front · R1 (junto do treino ao vivo) · Telas 24 e 25_
 
-**História:** Como atleta, quero sair do treino em andamento só por Finalizar ou Descartar, nos botões da tela, para não precisar adivinhar que a seta de voltar é o caminho de descartar.
+**História:** Como atleta, quero sair do treino em andamento só por Finalizar ou Descartar, nos botões da tela, e salvar em um único passo, para não precisar adivinhar a seta de voltar nem confirmar o salvamento duas vezes.
 
-**Risco assumido:** some o "Continuar depois". O treino continua salvo no aparelho e a Início mostra "Continuar treino".
+**Correção da rodada 2:** a primeira versão (PR #78) tinha o aviso de treino vazio na tela do treino e, depois dele, o Resumo com outro "Salvar treino": dois salvamentos em sequência. Agora o **Resumo é o único passo de salvar** e o aviso mora nele. Entregue na branch `fix/pbi-63-rodada-2`.
+
+**Risco assumido:** some o "Continuar depois" do diálogo atual. O treino continua salvo no aparelho e a Início mostra "Continuar treino". Um "Minimizar" explícito fica como opção futura.
 
 ### Escopo
 
-- **Tela 24:** sem seta de voltar. Barra fixa com "Finalizar treino" (primário, check) e "Descartar treino" (contorno vermelho, lixeira), 48 px cada. Voltar do sistema mostra "Para sair, finalize ou descarte o treino." (`PopScope` com `canPop: false`).
-- **Finalizar vazio:** "Salvar treino vazio?" com "Você irá salvar sem inserir nenhum dado, tem certeza?"; "Salvar mesmo assim", "Descartar treino" e "Voltar ao treino".
-- **Finalizar parcial:** "Finalizar treino?" com "Ainda tem N séries sem marcar em M exercícios. Elas ficam como não realizadas."; "Finalizar mesmo assim" e "Voltar ao treino".
-- **Completo:** finaliza direto e abre o resumo.
-- **Descartar:** "Descartar treino?" com "O que você fez neste treino será perdido."; "Descartar treino" vermelho cheio e "Voltar ao treino". Confirmar volta ao plano.
+**Tela do treino (tela 24)**
+- Sem seta de voltar. Cabeçalho escuro: "Treino em andamento", nome da ficha, cronômetro, "Começou às hh:mm" e séries feitas.
+- Barra fixa embaixo, empilhada: "Finalizar treino" (primário, check) e "Descartar treino" (contorno vermelho, lixeira), 48 px cada.
+- Voltar do sistema não sai: mostra "Para sair, finalize ou descarte o treino." (`PopScope` com `canPop: false`).
+
+**Finalizar (um passo só)**
+- "Finalizar treino" **nunca salva e nunca abre diálogo**: leva direto ao Resumo (tela 25). Os avisos de séries pendentes saem da tela do treino, porque o Resumo já mostra o que ficou sem marcar.
+- No Resumo, "Salvar treino" salva e abre "Treino registrado". "Voltar ao treino" e a seta voltam à tela do treino.
+- **Treino vazio** (zero séries): "Salvar treino" abre "Salvar treino vazio?" com "Você irá salvar sem inserir nenhum dado, tem certeza?". Botões: "Salvar mesmo assim", "Descartar treino" (contorno vermelho) e "Voltar ao resumo".
+
+**Descartar**
+- Na tela do treino, "Descartar treino" abre "Descartar treino?" com "O que você fez neste treino será perdido."; botão vermelho cheio e "Voltar ao treino". Confirmar volta ao plano.
+- No Resumo de um treino vazio, o descartar fica no diálogo de salvar vazio, com a mesma consequência (confirma e volta ao plano).
 - `dialogoSairDoTreino` continua no treino livre e no registro já feito.
 
 ### Critérios de aceite
 
-1. Sem seta. 2. Voltar do sistema mostra o aviso e fica no treino. 3. Finalizar vazio mostra o diálogo com as três opções. 4. "Salvar mesmo assim" salva e abre o resumo. 5. Descartar (barra ou diálogo) confirma e volta ao plano sem sessão. 6. Parcial informa as séries pendentes. 7. Completo salva direto. 8. Barra com alvos de 48 px, diálogos com foco preso, cronômetro como `timer` com rótulo falado.
+1. Sem seta. 2. Voltar do sistema mostra o aviso e fica no treino. 3. "Finalizar treino" abre o Resumo direto, sem diálogo e sem salvar, com qualquer quantidade de séries. 4. Uma única ação de salvar entre "Finalizar treino" e "Treino registrado". 5. Zero séries: "Salvar treino" mostra "Salvar treino vazio?"; "Salvar mesmo assim" salva sem dados e abre "Treino registrado". 6. Descartar (tela do treino ou diálogo de vazio) confirma e volta ao plano sem sessão. 7. Voltar do Resumo mantém as séries como estavam. 8. Barra com alvos de 48 px, diálogos com foco preso, cronômetro como `timer` com rótulo falado.
