@@ -90,6 +90,28 @@ Future<Widget> _tela(
       sharedPreferencesProvider.overrideWithValue(prefs),
       authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
       planoAtivoProvider.overrideWith((ref) async => plano),
+      // Fichas com 1 exercício; a de nome "V" está vazia (PBI-71).
+      fichaDetalheProvider.overrideWith((ref, id) async => TreinoDetalhe(
+            id: id,
+            nome: id,
+            descricao: null,
+            ordem: 1,
+            exercicios: [
+              if (id != 'V')
+                const TreinoExercicioResumo(
+                  id: 'te1',
+                  exercicioId: 'e1',
+                  nome: 'Supino',
+                  grupoMuscular: null,
+                  modalidade: 'FORCA',
+                  ordem: 1,
+                  rodadas: 3,
+                  descansoSeg: null,
+                  instrucao: null,
+                  alvo: null,
+                ),
+            ],
+          )),
       sessoesRecentesProvider.overrideWith(
           (ref) => carregarSessoes != null ? carregarSessoes() : Future.value(sessoes)),
     ],
@@ -407,6 +429,90 @@ void main() {
           find.bySemanticsLabel(
               RegExp('^Continuar treino B, em andamento há 12 minutos')),
           findsOneWidget);
+    });
+  });
+
+  group('PBI-71: "Registrar treino" fixo na Início', () {
+    testWidgets('fica logo abaixo da semana, com 56 px e rótulo falado',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(await _tela(_planoAB,
+          sessoes: [_sessao('s1', _hoje, treino: 'A')]));
+      await tester.pumpAndSettle();
+
+      final linha = find.bySemanticsLabel('Registrar treino');
+      expect(linha, findsOneWidget);
+      expect(tester.getSize(linha).height, greaterThanOrEqualTo(56));
+      expect(find.text('De uma ficha, sem ficha ou de outro dia'), findsOneWidget);
+      final ySemana = tester.getTopLeft(find.text('ESTA SEMANA')).dy;
+      final yLinha = tester.getTopLeft(find.text('Registrar treino')).dy;
+      final yUltimo = tester.getTopLeft(find.text('ÚLTIMO TREINO')).dy;
+      expect(ySemana, lessThan(yLinha));
+      expect(yLinha, lessThan(yUltimo));
+      handle.dispose();
+    });
+
+    testWidgets('com fichas, "Qual treino?" lista as fichas com exercícios e "Sem ficha"',
+        (tester) async {
+      const plano = PlanoAtivo(id: 'p1', nome: 'Hipertrofia', treinos: [
+        TreinoResumo(id: 'A', nome: 'A', descricao: 'Peito', ordem: 1),
+        TreinoResumo(id: 'V', nome: 'V', descricao: null, ordem: 2),
+      ]);
+      await tester.pumpWidget(await _tela(plano, tema: AppTheme.escuro));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Registrar treino'));
+      await tester.pumpAndSettle();
+      expect(find.text('QUAL TREINO?'), findsOneWidget);
+      expect(find.text('A · Peito'), findsOneWidget);
+      expect(find.text('V'), findsNothing); // ficha vazia não aparece
+      expect(find.text('Sem ficha'), findsOneWidget);
+      expect(find.text('O dia do treino você escolhe na próxima tela.'), findsOneWidget);
+
+      // Escolher a ficha abre o registro de treino já feito, hoje.
+      await tester.tap(find.text('A · Peito'));
+      await tester.pumpAndSettle();
+      expect(find.text('Registro A ${_dd(_hoje)} já feito'), findsOneWidget);
+    });
+
+    testWidgets('"Sem ficha" no sheet abre o treino livre de hoje', (tester) async {
+      await tester.pumpWidget(await _tela(_planoAB));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Registrar treino'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sem ficha'));
+      await tester.pumpAndSettle();
+      expect(find.text('Livre ${_dd(_hoje)}'), findsOneWidget);
+    });
+
+    testWidgets('sem plano, vai direto ao treino livre, sem sheet', (tester) async {
+      await tester.pumpWidget(await _tela(null,
+          sessoes: [_sessao('s1', _hoje.subtract(const Duration(days: 1)))]));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Registrar treino'));
+      await tester.pumpAndSettle();
+      expect(find.text('QUAL TREINO?'), findsNothing);
+      expect(find.text('Livre ${_dd(_hoje)}'), findsOneWidget);
+    });
+
+    testWidgets('visível também com treino em andamento', (tester) async {
+      final rascunho = TreinoEmAndamento(
+        treinoId: 'A',
+        treinoNome: 'A',
+        treinoLivre: false,
+        dataIso: '2026-10-12',
+        inicioMillis: DateTime.now().millisecondsSinceEpoch,
+        exercicios: const [],
+      );
+      await tester.pumpWidget(await _tela(_planoAB, prefsIniciais: {
+        'treino_em_andamento': jsonEncode(rascunho.paraJson()),
+      }));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Continuar treino'), findsOneWidget);
+      expect(find.text('Registrar treino'), findsOneWidget);
     });
   });
 }
