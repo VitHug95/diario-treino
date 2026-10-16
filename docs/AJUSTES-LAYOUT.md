@@ -371,7 +371,7 @@ _Bug (Front) · Pequeno · Telas 19 e 23_
 
 **Causa:** a Início e o plano liam o rascunho do aparelho por um provider que só era recalculado quando alguém o invalidava. Ao sair pela seta (PBI-63) logo depois de iniciar, nada invalidava, e o cartão "Continuar treino" não aparecia; o plano nem olhava o treino em andamento.
 
-**Correção (branch `fix/pbi-67-treino-em-andamento`):** `treinoEmAndamentoProvider` passou a derivar do treino ao vivo (`rascunhoDoEstado`), que é reativo; sem treino ao vivo carregado (app reaberto), cai no rascunho do aparelho. O treino é gravado no aparelho já ao iniciar, com 0 séries.
+**Correção (PR #86):** `treinoEmAndamentoProvider` passou a derivar do treino ao vivo (`rascunhoDoEstado`), que é reativo; sem treino ao vivo carregado (app reaberto), cai no rascunho do aparelho. O treino é gravado no aparelho já ao iniciar, com 0 séries.
 
 ### Escopo
 

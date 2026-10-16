@@ -96,6 +96,8 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 - [DESIGN.md](DESIGN.md): fontes, cores dos temas claro e escuro, espaçamentos, raios e tamanhos
 - [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
 - [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
+- [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md): tudo que entrou na `main`, PR por PR, com as migrations
+- [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md): pedidos de layout do PO (PBI-57 a 67)
 - [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
 
 O modelo de dados oficial é o do MER. Este README guarda a visão de produto e as decisões em alto nível.
