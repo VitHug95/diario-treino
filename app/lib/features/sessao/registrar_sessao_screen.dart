@@ -137,7 +137,10 @@ class RegistrarSessaoScreen extends ConsumerWidget {
 /// vazio; cada exercício adicionado traz a última execução como referência e a
 /// sessão é gravada com `treinoId` nulo. Opção de também salvar como ficha.
 class TreinoLivreScreen extends StatelessWidget {
-  const TreinoLivreScreen({super.key});
+  const TreinoLivreScreen({super.key, this.dataInicial});
+
+  /// Dia escolhido na folha do dia da Início ("Sem ficha", PBI-59). Nulo = hoje.
+  final DateTime? dataInicial;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +150,7 @@ class TreinoLivreScreen extends StatelessWidget {
         treinoId: null,
         treinoNome: 'Treino livre',
         sessaoId: null,
-        data: DateTime.now(),
+        data: dataInicial ?? DateTime.now(),
         duracaoMin: null,
         observacao: null,
         exercicios: [],

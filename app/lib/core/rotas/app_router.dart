@@ -233,7 +233,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     parentNavigatorKey: _rootNavigatorKey,
                     path: 'treino-livre',
                     name: 'treinoLivre',
-                    builder: (context, state) => const TreinoLivreScreen(),
+                    // `extra`: dia escolhido na folha do dia (PBI-59).
+                    builder: (context, state) => TreinoLivreScreen(
+                        dataInicial: state.extra is DateTime
+                            ? state.extra! as DateTime
+                            : null),
                   ),
                   // Treino ao vivo (TV-3), empilhado sobre a aba Fichas.
                   GoRoute(

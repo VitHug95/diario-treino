@@ -904,7 +904,7 @@ Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
 |---|---|---|---|
 | PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | ✅ na `main` (PR #77) |
 | PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | ✅ na `main` (PR #76) |
-| PBI-59 | Início nova: semana e caixas | 23 | a fazer |
+| PBI-59 | Início nova: semana e caixas | 23 | em revisão (branch `feat/pbi-59-inicio-nova`), sem o atalho "Iniciar treino" (decisão do PO em aberto) |
 | PBI-60 | Caixa de novidades na Início | 23 | em refinamento (resposta do PO) |
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
@@ -922,7 +922,14 @@ fora dele continua a trava da PBI-33 ("Marque ao menos uma série"). O botão
 primário da barra segue "FINALIZAR TREINO" em caixa alta (estilo `button`),
 o mesmo rótulo que o Robot usa. Descartar volta para a tela de onde o treino
 começou (o plano, quando iniciado pelo play da PBI-61).
-| PBI-63 | Finalizar treino sem seta de voltar | 24 | em revisão (branch `feat/pbi-63-finalizar-treino`) |
+
+PBI-59, notas: tocar em qualquer dia não futuro (hoje inclusive) abre a folha
+do dia; escolher uma ficha abre o registro de treino já feito naquela data, e
+"Sem ficha" abre o treino livre com a data (o treino livre passou a aceitar o
+dia). "Último treino" e a semana vêm das sessões recentes (~60 dias): sem
+sessão nesse período, o cartão não aparece. `InicioLogica.proximaFicha` saiu
+(sem uso); `ultimaVezPorFicha` fica, usada no plano e na ficha.
+| PBI-63 | Finalizar treino sem seta de voltar | 24 | ✅ na `main` (PR #78) |
 
 ---
 

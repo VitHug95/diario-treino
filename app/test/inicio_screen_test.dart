@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/auth_service.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
@@ -18,36 +19,84 @@ import 'package:shared_preferences/shared_preferences.dart';
 TreinoResumo _ficha(String nome, int ordem, {String? descricao}) =>
     TreinoResumo(id: nome, nome: nome, descricao: descricao, ordem: ordem);
 
+final _hoje = () {
+  final a = DateTime.now();
+  return DateTime(a.year, a.month, a.day);
+}();
+
+String _dd(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+
+SessaoResumo _sessao(String id, DateTime data, {String? treino, int exercicios = 3}) =>
+    SessaoResumo(
+      id: id,
+      data: data,
+      treinoId: treino,
+      treinoNome: treino,
+      quantidadeExercicios: exercicios,
+      duracaoMin: 45,
+      temObservacao: false,
+    );
+
+final _planoAB = PlanoAtivo(
+  id: 'p1',
+  nome: 'Hipertrofia',
+  treinos: [
+    _ficha('B', 2, descricao: 'Costas'),
+    _ficha('A', 1, descricao: 'Peito'),
+  ],
+);
+
+/// Início com rotas de verdade: os destinos só mostram o que receberam.
 Future<Widget> _tela(
   PlanoAtivo? plano, {
   List<SessaoResumo> sessoes = const [],
+  Future<List<SessaoResumo>> Function()? carregarSessoes,
+  ThemeData? tema,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
+  final router = GoRouter(
+    routes: [
+      GoRoute(path: '/', builder: (_, __) => const InicioScreen()),
+      GoRoute(
+        path: Rotas.registrarSessao,
+        builder: (_, s) {
+          final a = s.extra! as RegistrarSessaoArgs;
+          return Scaffold(
+            body: Text('Registro ${a.treinoId} ${_dd(a.data!)} '
+                '${a.registroPosterior ? 'já feito' : 'agora'}'),
+          );
+        },
+      ),
+      GoRoute(
+        path: Rotas.treinoLivre,
+        builder: (_, s) => Scaffold(body: Text('Livre ${_dd(s.extra! as DateTime)}')),
+      ),
+      GoRoute(
+        path: Rotas.detalheSessao,
+        builder: (_, s) =>
+            Scaffold(body: Text('Detalhe ${(s.extra! as DetalheSessaoArgs).sessaoId}')),
+      ),
+    ],
+  );
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
       authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
       planoAtivoProvider.overrideWith((ref) async => plano),
-      sessoesRecentesProvider.overrideWith((ref) async => sessoes),
+      sessoesRecentesProvider.overrideWith(
+          (ref) => carregarSessoes != null ? carregarSessoes() : Future.value(sessoes)),
     ],
-    child: MaterialApp(
-      theme: AppTheme.claro,
-      darkTheme: AppTheme.escuro,
-      home: const InicioScreen(),
-    ),
+    child: MaterialApp.router(theme: tema ?? AppTheme.claro, routerConfig: router),
   );
 }
 
+Finder _dia(DateTime d) => find.bySemanticsLabel(RegExp('^Dia ${_dd(d)},'));
+
 void main() {
   testWidgets('Saúda o atleta e alterna o tema', (tester) async {
-    // Com ao menos uma ficha, fica na tela inicial (não cai no primeiro acesso).
-    final plano = PlanoAtivo(
-      id: 'p1',
-      nome: 'Plano',
-      treinos: [_ficha('A', 1, descricao: 'Peito')],
-    );
-    await tester.pumpWidget(await _tela(plano));
+    await tester.pumpWidget(await _tela(_planoAB));
     await tester.pumpAndSettle();
 
     expect(find.text('BORA, ATLETA'), findsOneWidget);
@@ -64,7 +113,6 @@ void main() {
     await tester.pumpWidget(await _tela(null));
     await tester.pumpAndSettle();
 
-    // Tela de boas-vindas com os dois caminhos.
     expect(find.text('Seu diário de treino'), findsOneWidget);
     expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
     expect(find.text('Registrar sem ficha'), findsOneWidget);
@@ -72,236 +120,175 @@ void main() {
 
   testWidgets('PBI-47: sem plano em uso mostra o Primeiro acesso, mesmo com sessões',
       (tester) async {
-    // Excluiu todos os planos, mas tem histórico: sem plano em uso, a Início
-    // mostra a tela 6.
-    final sessoes = [
-      SessaoResumo(
-        id: 's1',
-        data: DateTime.now().subtract(const Duration(days: 1)),
-        treinoId: 'A',
-        treinoNome: 'A',
-        quantidadeExercicios: 2,
-        duracaoMin: 30,
-        temObservacao: false,
-      ),
-    ];
-    await tester.pumpWidget(await _tela(null, sessoes: sessoes));
+    await tester.pumpWidget(await _tela(null,
+        sessoes: [_sessao('s1', _hoje.subtract(const Duration(days: 1)), treino: 'A')]));
     await tester.pumpAndSettle();
 
     expect(find.text('Seu diário de treino'), findsOneWidget);
     expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
   });
 
-  testWidgets('Plano em uso sem fichas, mas com sessão: mostra a inicial',
+  testWidgets('Plano em uso sem fichas, mas com sessão: convida a montar',
       (tester) async {
-    // Já treinou (treino livre) e tem plano em uso vazio: o primeiro acesso
-    // não aparece; a inicial convida a montar as fichas.
-    final sessoes = [
-      SessaoResumo(
-        id: 's1',
-        data: DateTime.now().subtract(const Duration(days: 1)),
-        treinoId: null,
-        treinoNome: null,
-        quantidadeExercicios: 2,
-        duracaoMin: 30,
-        temObservacao: false,
-      ),
-    ];
     const vazio = PlanoAtivo(id: 'p1', nome: 'Meu plano', treinos: []);
-    await tester.pumpWidget(await _tela(vazio, sessoes: sessoes));
+    await tester.pumpWidget(await _tela(vazio,
+        sessoes: [_sessao('s1', _hoje.subtract(const Duration(days: 1)))]));
     await tester.pumpAndSettle();
 
     expect(find.text('Seu diário de treino'), findsNothing);
     expect(find.text('Monte suas fichas'), findsOneWidget);
   });
 
-  testWidgets('PBI-47: lista as fichas do plano em uso com o nome dele',
+  testWidgets('PBI-59: semana e último treino, sem sugestão nem lista de fichas',
       (tester) async {
-    final plano = PlanoAtivo(
-      id: 'p2',
-      nome: 'Treino de viagem',
-      treinos: [
-        _ficha('V1', 1, descricao: 'Corpo todo'),
-        _ficha('V2', 2, descricao: 'Core'),
-      ],
-    );
-    // Ontem treinou uma ficha de OUTRO plano (A): a sugestão continua a
-    // primeira do plano em uso.
-    final sessoes = [
-      SessaoResumo(
-        id: 's1',
-        data: DateTime.now().subtract(const Duration(days: 1)),
-        treinoId: 'A',
-        treinoNome: 'A',
-        quantidadeExercicios: 3,
-        duracaoMin: 40,
-        temObservacao: false,
-      ),
-    ];
-    await tester.pumpWidget(await _tela(plano, sessoes: sessoes));
+    await tester.pumpWidget(await _tela(_planoAB, sessoes: [
+      _sessao('s1', _hoje, treino: 'A', exercicios: 4),
+    ]));
     await tester.pumpAndSettle();
 
-    expect(find.text('SUAS FICHAS'), findsOneWidget);
-    expect(find.text(' · TREINO DE VIAGEM'), findsOneWidget);
-    expect(find.text('V1 · Corpo todo'), findsOneWidget);
-    expect(find.text('Ainda não registrada'), findsNWidgets(2));
+    expect(find.text('SUGESTÃO DE HOJE'), findsNothing);
+    expect(find.text('SUAS FICHAS'), findsNothing);
+    expect(find.text('INICIAR TREINO'), findsNothing);
+
+    expect(find.text('ESTA SEMANA'), findsOneWidget);
+    expect(find.text('1 dia treinado'), findsOneWidget);
+    expect(find.text('ÚLTIMO TREINO'), findsOneWidget);
+    expect(find.text('${dataCurtaInicio(_hoje)} · 4 exercícios'), findsOneWidget);
+
+    // Estado do dia em texto (não só cor).
+    expect(find.bySemanticsLabel('Dia ${_dd(_hoje)}, treino registrado'), findsOneWidget);
   });
 
-  testWidgets('Sem histórico, sugere a primeira ficha da ordem', (tester) async {
-    final plano = PlanoAtivo(
-      id: 'p1',
-      nome: 'Plano',
-      treinos: [
-        _ficha('B', 2, descricao: 'Costas'),
-        _ficha('A', 1, descricao: 'Peito'),
-      ],
-    );
-
-    await tester.pumpWidget(await _tela(plano));
-    await tester.pumpAndSettle();
-
-    // Cartão de sugestão com a primeira da ordem (A), e texto de recomendação.
-    expect(find.text('SUGESTÃO DE HOJE'), findsOneWidget);
-    expect(find.text('A · Peito'), findsOneWidget);
-    expect(find.text('SUAS FICHAS'), findsOneWidget);
-    // PBI-50: o botão do cartão de sugestão agora diz o que faz.
-    expect(find.text('INICIAR TREINO'), findsOneWidget);
-    // Fichas nunca registradas mostram o aviso.
-    expect(find.text('Ainda não registrada'), findsNWidgets(2));
-  });
-
-  testWidgets(
-      'PBI-50: tocar no cartão de ficha abre Fichas sem iniciar treino',
+  testWidgets('PBI-59: dias da semana com alvos de 44 px em 360 de largura',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final plano = PlanoAtivo(
-      id: 'p1',
-      nome: 'Plano',
-      treinos: [
-        _ficha('A', 1, descricao: 'Peito'),
-        _ficha('B', 2, descricao: 'Costas'),
-      ],
-    );
-    // Já há histórico (sessão do A) para a Início montar o estado completo com
-    // os cartões de ficha e sem cair no primeiro acesso.
-    final sessoes = [
-      SessaoResumo(
-        id: 's1',
-        data: DateTime.now().subtract(const Duration(days: 1)),
-        treinoId: 'A',
-        treinoNome: 'A',
-        quantidadeExercicios: 3,
-        duracaoMin: 45,
-        temObservacao: false,
-      ),
-    ];
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
 
-    final router = GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(path: '/', builder: (_, __) => const InicioScreen()),
-        // Ficha do plano em uso (PBI-46: tela 13 fica sob o detalhe do plano).
-        GoRoute(
-          path: '/fichas/plano/ficha',
-          builder: (_, state) => Scaffold(
-            body: Text('FICHAS ficha=${state.uri.queryParameters['ficha']}'),
-          ),
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
-          planoAtivoProvider.overrideWith((ref) async => plano),
-          sessoesRecentesProvider.overrideWith((ref) async => sessoes),
-        ],
-        child: MaterialApp.router(
-          theme: AppTheme.claro,
-          routerConfig: router,
-        ),
-      ),
-    );
+    await tester.pumpWidget(await _tela(_planoAB, tema: AppTheme.escuro));
     await tester.pumpAndSettle();
 
-    // Confirma o rótulo de acessibilidade PBI-50 do cartão da ficha B.
-    final semB = find.bySemanticsLabel(RegExp(r'^Abrir ficha B,'));
-    expect(semB, findsOneWidget);
-
-    // Toca no InkWell do cartão (alvo real do gesto). Garante que está visível
-    // — a lista pode rolar no tamanho de teste.
-    final inkB = find.descendant(of: semB, matching: find.byType(InkWell));
-    await tester.ensureVisible(inkB);
-    await tester.pumpAndSettle();
-    await tester.tap(inkB);
-    await tester.pumpAndSettle();
-
-    // Navegou para Fichas com o id da ficha; nenhum treino foi iniciado
-    // (não há como gravar rascunho sem passar pela ação explícita).
-    expect(find.text('FICHAS ficha=B'), findsOneWidget);
+    final rotulo = _dia(_hoje);
+    expect(rotulo, findsOneWidget);
+    final tamanho = tester.getSize(rotulo);
+    expect(tamanho.width, greaterThanOrEqualTo(44));
+    expect(tamanho.height, greaterThanOrEqualTo(44));
   });
 
-  testWidgets('Com histórico, sugere a próxima da sequência', (tester) async {
-    final plano = PlanoAtivo(
-      id: 'p1',
-      nome: 'Plano',
-      treinos: [
-        _ficha('A', 1, descricao: 'Peito'),
-        _ficha('B', 2, descricao: 'Costas'),
-      ],
-    );
-    // Última sessão foi do A → sugere o B.
-    final sessoes = [
-      SessaoResumo(
-        id: 's1',
-        data: DateTime.now().subtract(const Duration(days: 1)),
-        treinoId: 'A',
-        treinoNome: 'A',
-        quantidadeExercicios: 3,
-        duracaoMin: 45,
-        temObservacao: false,
-      ),
-    ];
-
-    await tester.pumpWidget(await _tela(plano, sessoes: sessoes));
+  testWidgets('PBI-59: dia futuro não responde ao toque', (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB));
     await tester.pumpAndSettle();
 
-    expect(find.text('B · Costas'), findsOneWidget);
+    // Domingo não tem dia futuro na semana: o teste só vale nos outros dias.
+    if (_hoje.weekday == DateTime.sunday) return;
+    final amanha = _hoje.add(const Duration(days: 1));
+    expect(find.bySemanticsLabel('Dia ${_dd(amanha)}, ainda não chegou'), findsOneWidget);
+
+    await tester.tap(_dia(amanha));
+    await tester.pumpAndSettle();
+    expect(find.text(dataCurtaInicio(amanha)), findsNothing);
   });
 
-  // Regressão do bug PBI-23A: enquanto o histórico ainda não carregou, a tela
-  // NÃO pode fabricar uma sugestão (era isso que fazia "sempre Treino A").
-  testWidgets('Enquanto o histórico carrega, não mostra sugestão', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final plano = PlanoAtivo(
-      id: 'p1',
-      nome: 'Plano',
-      treinos: [_ficha('A', 1, descricao: 'Peito'), _ficha('B', 2)],
-    );
+  testWidgets('PBI-59: dia sem treino abre a folha; ficha abre o registro do dia',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB));
+    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
-          planoAtivoProvider.overrideWith((ref) async => plano),
-          // Sessões "penduradas" em loading: nunca completam neste teste.
-          sessoesRecentesProvider.overrideWith((ref) => Completer<List<SessaoResumo>>().future),
-        ],
-        child: MaterialApp(theme: AppTheme.claro, home: const InicioScreen()),
-      ),
+    await tester.tap(_dia(_hoje));
+    await tester.pumpAndSettle();
+
+    // Folha com o dia como título e as fichas do plano em uso, na ordem.
+    expect(find.text(dataCurtaInicio(_hoje)), findsOneWidget);
+    expect(
+      tester.getSemantics(find.text(dataCurtaInicio(_hoje))),
+      matchesSemantics(label: dataCurtaInicio(_hoje), isHeader: true),
     );
+    expect(find.text('REGISTRADO'), findsNothing);
+    expect(find.text('REGISTRAR TREINO NESTE DIA'), findsOneWidget);
+    expect(find.text('Fichas do plano Hipertrofia'), findsOneWidget);
+    expect(find.text('Sem ficha'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Peito')).dy,
+        lessThan(tester.getTopLeft(find.text('Costas')).dy));
+
+    await tester.tap(find.text('Costas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Registro B ${_dd(_hoje)} já feito'), findsOneWidget);
+  });
+
+  testWidgets('PBI-59: dia com treino mostra "Registrado" e abre o detalhe',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB, sessoes: [
+      _sessao('s9', _hoje, treino: 'A'),
+    ]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(_dia(_hoje));
+    await tester.pumpAndSettle();
+
+    expect(find.text('REGISTRADO'), findsOneWidget);
+    expect(find.text('REGISTRAR OUTRO TREINO NESTE DIA'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Ver treino A'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detalhe s9'), findsOneWidget);
+  });
+
+  testWidgets('PBI-59: "Sem ficha" abre o treino livre com a data do dia',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB));
+    await tester.pumpAndSettle();
+
+    await tester.tap(_dia(_hoje));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sem ficha'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Livre ${_dd(_hoje)}'), findsOneWidget);
+  });
+
+  testWidgets('PBI-59: último treino abre o detalhe; sem sessões não aparece',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB, sessoes: [
+      _sessao('s1', _hoje.subtract(const Duration(days: 9)), treino: 'A'),
+      _sessao('s2', _hoje.subtract(const Duration(days: 8))), // livre, mais recente
+    ]));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Treino livre'), findsOneWidget);
+    await tester.tap(find.text('ÚLTIMO TREINO'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detalhe s2'), findsOneWidget);
+  });
+
+  testWidgets('PBI-59: sem sessões, não há cartão de último treino', (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ESTA SEMANA'), findsOneWidget);
+    expect(find.text('0 dias treinados'), findsOneWidget);
+    expect(find.text('ÚLTIMO TREINO'), findsNothing);
+  });
+
+  testWidgets('PBI-59: erro no histórico avisa com "Tentar de novo", sem semana',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB,
+        carregarSessoes: () => Future.error(Exception('sem rede'))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar seu histórico.'), findsOneWidget);
+    expect(find.text('Tentar de novo'), findsOneWidget);
+    expect(_dia(_hoje), findsNothing);
+    expect(find.textContaining('dias treinados'), findsNothing);
+  });
+
+  testWidgets('Enquanto o histórico carrega, não mostra semana falsa', (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB,
+        carregarSessoes: () => Completer<List<SessaoResumo>>().future));
     // pump (não pumpAndSettle: o future fica pendente de propósito).
     await tester.pump();
+    await tester.pump();
 
-    // Fichas aparecem (dá para registrar), mas sem o cartão de sugestão.
-    expect(find.text('SUAS FICHAS'), findsOneWidget);
-    expect(find.text('SUGESTÃO DE HOJE'), findsNothing);
-    expect(find.text('INICIAR TREINO'), findsNothing);
+    expect(find.text('ESTA SEMANA'), findsOneWidget);
+    expect(_dia(_hoje), findsNothing);
   });
-
 }
