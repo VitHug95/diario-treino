@@ -116,6 +116,7 @@ class TreinoDetalhe {
     required this.descricao,
     required this.ordem,
     required this.exercicios,
+    this.somenteLeitura = false,
   });
 
   final String id;
@@ -123,6 +124,10 @@ class TreinoDetalhe {
   final String? descricao;
   final int ordem;
   final List<TreinoExercicioResumo> exercicios;
+
+  /// Ficha de plano do professor: o atleta só lê e treina (PBI-72 não
+  /// pergunta "Manter na ficha?" nela).
+  final bool somenteLeitura;
 
   factory TreinoDetalhe.doJson(Map<String, dynamic> json) => TreinoDetalhe(
         id: json['id'] as String,
@@ -133,6 +138,7 @@ class TreinoDetalhe {
             .cast<Map<String, dynamic>>()
             .map(TreinoExercicioResumo.doJson)
             .toList(),
+        somenteLeitura: json['somenteLeitura'] as bool? ?? false,
       );
 }
 

@@ -318,7 +318,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/planos/ativo` | Alias do plano em uso até o front migrar | ✅ |
 | POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
 | POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
-| GET | `/treinos/{id}` | Detalhe da ficha com exercícios | ✅ |
+| GET | `/treinos/{id}` | Detalhe da ficha com exercícios e `somenteLeitura` (ficha de plano do professor, PBI-72) | ✅ |
 | PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
 | DELETE | `/treinos/{id}` | **Apaga** a ficha sem sessões, **arquiva** a com sessões | ✅ |
 | POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha | ✅ |
@@ -327,9 +327,9 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
 | GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
 | GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
-| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre) | ✅ |
+| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor | ✅ |
 | GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
-| PUT | `/sessoes/{id}` | Edita sessão | ✅ |
+| PUT | `/sessoes/{id}` | Edita sessão (com `manterNaFicha` responde 400: editar não mexe na ficha) | ✅ |
 | DELETE | `/sessoes/{id}` | Exclui sessão | ✅ |
 | GET | `/sessoes?de=&ate=` | Sessões do período | ✅ |
 | GET | `/progresso/exercicios` | Exercícios com histórico (seletor do gráfico) | ✅ |

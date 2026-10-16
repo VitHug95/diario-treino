@@ -100,6 +100,7 @@ class _FakeSessaoRepo extends SessaoRepository {
     int? duracaoMin,
     String? observacao,
     required List<ExercicioEdicao> exercicios,
+    List<String> manterNaFicha = const [],
   }) async {
     final id = 's${_store.sessoes.length + 1}';
     final ficha = treinoId == null

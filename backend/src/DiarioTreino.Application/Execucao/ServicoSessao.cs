@@ -335,9 +335,82 @@ public sealed class ServicoSessao
             }
         }
 
+        if (request.ManterNaFicha is { Count: > 0 } manter && request.TreinoId is { } fichaId)
+        {
+            await ManterNaFichaAsync(fichaId, request, manter, ct);
+        }
+
+        // Sessão e (PBI-72) os exercícios mantidos na ficha saem no mesmo
+        // SaveChanges: os repositórios dividem o DbContext, então é uma
+        // transação só. Ou grava tudo, ou nada.
         _sessoes.AdicionarSessao(sessao);
         await _sessoes.SalvarAsync(ct);
         return sessao.Id;
+    }
+
+    /// <summary>
+    /// "Manter na ficha?" (PBI-72): cada exercício adicionado fora da ficha e
+    /// escolhido pelo atleta entra no fim dela, com tantas séries quanto as
+    /// salvas nesta sessão e o alvo da última (carga e repetições, ou tempo).
+    /// Só prepara as entidades; quem salva é <see cref="CriarSessaoAsync"/>.
+    /// O acesso à ficha (404) já foi conferido antes; aqui vale a regra de
+    /// somente-leitura (403, plano do professor) e a consistência do pedido
+    /// (400: id fora da sessão, sem séries, ou que já está na ficha).
+    /// </summary>
+    private async Task ManterNaFichaAsync(
+        Guid treinoId,
+        CriarSessaoRequest request,
+        IReadOnlyList<Guid> manter,
+        CancellationToken ct)
+    {
+        var treino = await _planos.ObterTreinoComExerciciosAsync(treinoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+        var plano = await _planos.ObterPlanoAsync(treino.PlanoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+        if (plano.AutorId != plano.AtletaId)
+        {
+            throw new PlanoSomenteLeituraException();
+        }
+
+        var naFicha = treino.Exercicios.Select(te => te.ExercicioId).ToHashSet();
+        var ordem = await _planos.ObterMaiorOrdemExercicioAsync(treinoId, ct);
+
+        foreach (var exercicioId in manter.Distinct())
+        {
+            var ex = request.Exercicios.FirstOrDefault(e =>
+                e.ExercicioId == exercicioId && e.TreinoExercicioId is null && e.Series.Count > 0)
+                ?? throw new ArgumentException(
+                    $"O exercício {exercicioId} não foi adicionado fora da ficha com séries nesta sessão.");
+            if (!naFicha.Add(exercicioId))
+            {
+                throw new ArgumentException($"O exercício {exercicioId} já está na ficha.");
+            }
+
+            var ultima = ex.Series.OrderBy(s => s.Rodada).ThenBy(s => s.Ordem).Last();
+            ordem++;
+            var te = new TreinoExercicio
+            {
+                Id = Guid.NewGuid(),
+                TreinoId = treinoId,
+                ExercicioId = exercicioId,
+                Ordem = ordem,
+                // Mesmo limite do editor de alvos (1 a 12 séries).
+                Rodadas = (short)Math.Clamp(ex.Series.Count, 1, 12),
+                DescansoAlvoSeg = ultima.DescansoSeg,
+            };
+            _planos.AdicionarTreinoExercicio(te);
+            _planos.AdicionarEtapa(new EtapaPrescrita
+            {
+                Id = Guid.NewGuid(),
+                TreinoExercicioId = te.Id,
+                Ordem = 1,
+                Tipo = TipoEtapa.Esforco,
+                IntensidadeMetricaId = ultima.IntensidadeMetricaId,
+                IntensidadeAlvo = ultima.Intensidade,
+                VolumeMetricaId = ultima.VolumeMetricaId,
+                VolumeAlvo = ultima.Volume,
+            });
+        }
     }
 
     private async Task ValidarEixoAsync(short metricaId, string eixoEsperado, CancellationToken ct)
@@ -499,6 +572,12 @@ public sealed class ServicoSessao
         Guid usuarioLogadoId, Guid sessaoId, CriarSessaoRequest request, CancellationToken ct)
     {
         var sessao = await CarregarSessaoComAcessoAsync(usuarioLogadoId, sessaoId, ct);
+
+        // PBI-72: editar sessão antiga nunca mexe na ficha.
+        if (request.ManterNaFicha is { Count: > 0 })
+        {
+            throw new ArgumentException("Editar uma sessão não altera a ficha.");
+        }
 
         sessao.TreinoId = request.TreinoId;
         sessao.Data = request.Data;

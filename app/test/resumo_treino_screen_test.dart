@@ -2,6 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:diario_treino/core/relogio.dart';
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
+import 'package:diario_treino/features/fichas/fichas_repository.dart';
+import 'package:diario_treino/features/fichas/plano_models.dart';
+import 'package:diario_treino/features/sessao/manter_na_ficha.dart';
 import 'package:diario_treino/features/sessao/resumo_treino_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
@@ -179,6 +182,8 @@ void main() {
     expect(c.read(treinoAoVivoControllerProvider), isNull);
     c.dispose();
   });
+
+  _testesManterNaFicha();
 }
 
 /// Container com um treino ao vivo de um exercício com as [series].
@@ -254,6 +259,8 @@ class _RepoSessao extends SessaoRepository {
   _RepoSessao() : super(Dio());
 
   bool salvou = false;
+  List<String>? mantidos;
+  List<ExercicioEdicao>? salvas;
 
   @override
   Future<String> criarSessao({
@@ -262,8 +269,173 @@ class _RepoSessao extends SessaoRepository {
     int? duracaoMin,
     String? observacao,
     required List<ExercicioEdicao> exercicios,
+    List<String> manterNaFicha = const [],
   }) async {
     salvou = true;
+    mantidos = manterNaFicha;
+    salvas = exercicios;
     return 's1';
   }
+}
+
+// ---------- PBI-72: "Manter na ficha?" ----------
+
+/// Tríceps coice adicionado fora da ficha, com [feitas] séries feitas de 20 × 10.
+ExercicioEdicao _coice({int feitas = 2}) => ExercicioEdicao(
+      treinoExercicioId: null,
+      exercicioId: 'ex-Coice',
+      nome: 'Tríceps coice',
+      grupoMuscular: null,
+      modalidade: 'FORCA',
+      origemPreenchimento: null,
+      realizado: feitas > 0,
+      foraDaFicha: true,
+      series: [
+        for (var i = 0; i < 2; i++) _serie(feita: i < feitas, carga: '20', reps: '10'),
+      ],
+    );
+
+/// Treino ao vivo da ficha "A" com o supino (da ficha) e o [extra]. A ficha
+/// lida pelo diálogo vem do override (sem rede).
+Future<ProviderContainer> _comForaDaFicha(
+  _RepoSessao repo,
+  ExercicioEdicao extra, {
+  bool somenteLeitura = false,
+  bool treinoLivre = false,
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  final c = ProviderContainer(overrides: [
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    relogioProvider.overrideWithValue(_RelogioFixo(DateTime(2026, 10, 15, 20, 0))),
+    sessaoRepositoryProvider.overrideWithValue(repo),
+    fichaDetalheProvider.overrideWith((ref, id) async => TreinoDetalhe(
+          id: id,
+          nome: 'Treino B',
+          descricao: null,
+          ordem: 1,
+          exercicios: const [],
+          somenteLeitura: somenteLeitura,
+        )),
+  ]);
+  c.read(treinoAoVivoControllerProvider.notifier).iniciar(
+        treinoId: treinoLivre ? null : 'B',
+        treinoNome: treinoLivre ? 'Treino livre' : 'Treino B',
+        treinoLivre: treinoLivre,
+        data: DateTime(2026, 10, 15),
+        inicio: DateTime(2026, 10, 15, 19, 0),
+        exercicios: [_ex('Supino', [_serie(feita: true)]), extra],
+      );
+  return c;
+}
+
+void _testesManterNaFicha() {
+  group('PBI-72: "Manter na ficha?"', () {
+    testWidgets('etiqueta "Fora da ficha" no Resumo', (tester) async {
+      final c = await _comForaDaFicha(_RepoSessao(), _coice());
+      await _abrirResumo(tester, c);
+
+      expect(find.text('FORA DA FICHA'), findsOneWidget);
+      c.dispose();
+    });
+
+    testWidgets('pergunta com o nome e o alvo; "Manter na ficha" envia o id',
+        (tester) async {
+      final repo = _RepoSessao();
+      final c = await _comForaDaFicha(repo, _coice());
+      await _abrirResumo(tester, c);
+
+      await tester.tap(find.text('SALVAR TREINO'));
+      await tester.pumpAndSettle();
+      expect(find.text('Manter na ficha?'), findsOneWidget);
+      // Dentro do diálogo (o Resumo atrás também mostra o nome).
+      Finder noDialogo(String s) => find.descendant(
+          of: find.byType(AlertDialog), matching: find.textContaining(s, findRichText: true));
+      expect(noDialogo('Tríceps coice'), findsOneWidget);
+      expect(noDialogo('2 séries de 20 × 10'), findsOneWidget);
+      expect(find.text('Só neste treino'), findsOneWidget);
+      expect(find.text('Voltar ao resumo'), findsOneWidget);
+
+      await tester.tap(find.text('MANTER NA FICHA'));
+      await tester.pumpAndSettle();
+      expect(repo.salvou, isTrue);
+      expect(repo.mantidos, ['ex-Coice']);
+      expect(find.text('Treino salvo'), findsOneWidget);
+      c.dispose();
+    });
+
+    testWidgets('"Só neste treino" salva e não mexe na ficha', (tester) async {
+      final repo = _RepoSessao();
+      final c = await _comForaDaFicha(repo, _coice());
+      await _abrirResumo(tester, c);
+
+      await tester.tap(find.text('SALVAR TREINO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Só neste treino'));
+      await tester.pumpAndSettle();
+
+      expect(repo.salvou, isTrue);
+      expect(repo.mantidos, isEmpty);
+      c.dispose();
+    });
+
+    testWidgets('"Voltar ao resumo" não salva nada', (tester) async {
+      final repo = _RepoSessao();
+      final c = await _comForaDaFicha(repo, _coice());
+      await _abrirResumo(tester, c);
+
+      await tester.tap(find.text('SALVAR TREINO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Voltar ao resumo'));
+      await tester.pumpAndSettle();
+
+      expect(repo.salvou, isFalse);
+      expect(find.text('SALVAR TREINO'), findsOneWidget);
+      expect(c.read(treinoAoVivoControllerProvider), isNotNull);
+      c.dispose();
+    });
+
+    for (final (caso, extra, professor, livre) in [
+      ('sem série marcada', _coice(feitas: 0), false, false),
+      ('ficha do professor', _coice(), true, false),
+      ('treino livre', _coice(), false, true),
+    ]) {
+      testWidgets('não pergunta: $caso', (tester) async {
+        final repo = _RepoSessao();
+        final c = await _comForaDaFicha(repo, extra,
+            somenteLeitura: professor, treinoLivre: livre);
+        await _abrirResumo(tester, c);
+
+        await tester.tap(find.text('SALVAR TREINO'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Manter na ficha?'), findsNothing);
+        expect(repo.salvou, isTrue);
+        expect(repo.mantidos, isEmpty);
+        c.dispose();
+      });
+    }
+
+    testWidgets('diálogo no tema escuro, com alvos de toque', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.escuro,
+        home: Scaffold(
+          body: DialogoManterNaFicha(treinoNome: 'Treino B', exercicios: [_coice()]),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manter na ficha?'), findsOneWidget);
+      final manter = find.ancestor(
+          of: find.text('MANTER NA FICHA'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton));
+      expect(tester.getSize(manter).height, greaterThanOrEqualTo(44));
+    });
+
+    test('resumoParaFicha: carga × reps, só reps e tempo', () {
+      expect(resumoParaFicha(_coice()), '2 séries de 20 × 10');
+      final uma = _coice()..series.removeLast();
+      expect(resumoParaFicha(uma), '1 série de 20 × 10');
+    });
+  });
 }

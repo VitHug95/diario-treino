@@ -12,6 +12,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/metrica.dart';
 import 'descanso_controller.dart';
+import 'manter_na_ficha.dart';
 import 'sessao_edicao.dart';
 import 'sessao_comandos.dart';
 import 'sessao_repository.dart';
@@ -163,6 +164,18 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       }
     }
 
+    // PBI-72: exercício adicionado fora da ficha, com série feita, pergunta se
+    // fica na ficha. "Voltar ao resumo" não salva nada.
+    if (!mounted) return;
+    final manterNaFicha = await perguntarManterNaFicha(
+      context,
+      ref,
+      treinoId: estado.treinoLivre ? null : estado.treinoId,
+      treinoNome: estado.treinoNome,
+      exercicios: paraSalvar,
+    );
+    if (manterNaFicha == null || !mounted) return;
+
     setState(() => _salvando = true);
     try {
       final repo = ref.read(sessaoComandosProvider);
@@ -170,12 +183,14 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       final obs =
           _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
 
+      // Sessão e ficha numa chamada só (uma transação): ou grava tudo, ou nada.
       final sessaoId = await repo.criarSessao(
         treinoId: estado.treinoId,
         data: _data,
         duracaoMin: duracao,
         observacao: obs,
         exercicios: paraSalvar,
+        manterNaFicha: manterNaFicha,
       );
 
       // Só encerra o treino ao vivo (apaga rascunho + descanso) DEPOIS de a
@@ -311,7 +326,7 @@ class _LinhaResumoExercicio extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
       child: Semantics(
-        label: '${exercicio.nome}: $status',
+        label: '${exercicio.nome}${exercicio.foraDaFicha ? ', fora da ficha' : ''}: $status',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -321,6 +336,11 @@ class _LinhaResumoExercicio extends StatelessWidget {
                   child: Text(exercicio.nome,
                       style: AppText.titleS, overflow: TextOverflow.ellipsis),
                 ),
+                // PBI-72: o adicionado na hora fica marcado no Resumo.
+                if (exercicio.foraDaFicha) ...[
+                  _EtiquetaForaDaFicha(cores: cores),
+                  const SizedBox(width: AppSpacing.x8),
+                ],
                 Text(status, style: AppText.label.copyWith(color: cor)),
               ],
             ),
@@ -346,6 +366,27 @@ class _LinhaResumoExercicio extends StatelessWidget {
       return ('Concluído $feitas/$total', Theme.of(context).colorScheme.primary);
     }
     return ('Incompleto $feitas/$total', cores.obs);
+  }
+}
+
+/// Etiqueta "Fora da ficha" (PBI-72): pílula com o tom primário claro.
+class _EtiquetaForaDaFicha extends StatelessWidget {
+  const _EtiquetaForaDaFicha({required this.cores});
+
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x8, vertical: AppSpacing.x4),
+      decoration: BoxDecoration(
+        color: cores.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text('FORA DA FICHA',
+          style: AppText.overline.copyWith(color: cores.primaryOnTint)),
+    );
   }
 }
 
