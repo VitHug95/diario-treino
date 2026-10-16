@@ -1,0 +1,261 @@
+# Ajustes de layout (PBI-57 a PBI-63)
+
+Sete pedidos do PO (rodadas 1 e 2), 15/10. Layouts das telas 19, 21, 22, 23 e 24 no PDF `Ajustes-de-layout.pdf`.
+
+## O que o PO pediu e onde cada pedido cai
+
+| Pedido | Vira | Telas |
+|---|---|---|
+| 1. Ficha sem as outras fichas e sem "Nova ficha" | PBI-57 | 22 |
+| 2. Seletor igual à imagem, vários exercícios de uma vez | PBI-49 (já escrita, agora aprovada) | 21 |
+| 3. Renomear e excluir em ícones no topo | PBI-58 | 19 e 22 |
+| 4. Início só com a semana e caixas | PBI-59 (layout) e PBI-60 (novidades, em refinamento) | 23 |
+| 5. Iniciar treino só pelo plano, nunca "criar e iniciar" na mesma tela | PBI-61 (e PBI-57 revisada: ficha só de edição) | 19 e 22 |
+| 6. Botões de mover e excluir exercício e "Registrar treino já feito" | PBI-62 (mover e excluir) e PBI-61 (registrar já feito vai para o sheet do plano) | 22 e 19 |
+| 7. Finalizar treino confuso, sem seta de voltar | PBI-63 | 24 |
+
+## Ajustes em PBIs que já existem
+
+- **PBI-49:** sai a condição "sujeita à aprovação do PO". A tela deve ficar exatamente como o protótipo 21. Continua só depois do E2E fechar, ou junto da atualização do passo do Robot que escolhe o exercício.
+- **PBI-46:** o cabeçalho do detalhe do plano ganha lápis e lixeira, e o rodapé perde "Renomear" e "Excluir plano" (PBI-58). O quadrado da ficha segue a regra já escrita (nome de até 3 caracteres, senão a posição).
+- **PBI-47:** encolhe. Sai o "próximo da sequência". Ficam: o plano em uso alimenta a folha do dia (PBI-59) e, sem plano em uso, a Início mostra o Primeiro acesso.
+- **PBI-52:** o item do menu "⋯" da ficha é substituído pelos ícones da PBI-58. Os botões "Iniciar treino agora" e "Registrar treino já feito" saem da ficha e vão para o plano (PBI-61). Fica a regra de uma única ação de criar.
+- **PBI-53:** o estilo de perigo dos diálogos vale também para "Descartar treino" da PBI-63. "Sair do treino?" continua só no treino livre.
+- **PBI-50:** já entregue. A parte do cartão de ficha na Início deixa de existir com a PBI-59; a parte da Fichas continua valendo.
+
+## Ordem de entrega
+
+- PBI-58, PBI-57 e PBI-61, nessa ordem, depois da PBI-46. PBI-62 junto da PBI-57. PBI-63 é independente e pode entrar já.
+- PBI-59 pode entrar já: usa o plano ativo de hoje e não passa pelo caminho do Robot.
+- PBI-60 espera as respostas abaixo e depende da PBI-59. PBI-49 entra com a atualização do Robot.
+
+## Impacto no E2E
+
+- Sem impacto das PBIs 57, 58, 60, 61, 62 e 63 (o Robot entra por "Registrar sem ficha" e roda com `TREINO_AO_VIVO=false`).
+- Sem impacto da PBI-59 enquanto o Primeiro acesso ficar igual (o Robot espera "Registrar sem ficha" depois do cadastro).
+- A PBI-49 muda o passo "clicar no exercício".
+
+## Perguntas para o PO
+
+- PBI-59: o atalho "Iniciar treino" na Início entra? Sem ele, treinar custa 4 toques em vez de 1.
+- PBI-59: tocar no dia de hoje abre a folha do dia e registra treino já feito, como hoje. Está certo, ou deveria iniciar o treino ao vivo?
+- PBI-58: "excluir treino" era só o plano, ou plano e ficha?
+- PBI-63: ao tirar a seta, some o "Continuar depois". O treino segue salvo e a Início mostra "Continuar treino". Serve assim, ou o PO quer um botão "Minimizar"?
+- PBI-61: no plano do professor o atleta também pode iniciar treino pelo play. Confirma?
+- PBI-60: quem escreve as novidades e com que frequência? Recomendo a opção A.
+
+## Definição de pronto (vale para todas)
+
+- Critérios de aceite passando e testes de widget nos temas claro e escuro.
+- Contraste mínimo 4,5:1 para texto, alvo de toque de 44 px e largura máxima de 600 px no web.
+- Semântica (ADR-07) em todo elemento interativo.
+- MAS atualizado quando a tela muda.
+
+---
+
+## PBI-57 · Ficha enxuta: só edição da ficha aberta
+
+_Front · R1 (junto do detalhe do plano) · Tela 22_
+
+**História:** Como atleta, quero que a tela da ficha mostre apenas a ficha que abri, sem as outras fichas e sem um botão de criar no topo, para focar em montar a ficha. Treinar acontece no plano (PBI-61).
+
+### Contexto
+
+Hoje a mesma tela (`fichas_screen.dart`) serve de seletor de fichas e de edição. Depois de criar uma ficha, ela aparece com os chips de todas as fichas do plano acima do título e com "+ Nova ficha" no cabeçalho. Com o detalhe do plano (PBI-46), que já lista as fichas com resumo e tem o "Nova ficha", esses dois itens ficam repetidos.
+
+**Custo assumido:** trocar de ficha passa a custar um toque a mais (voltar ao plano).
+
+### Escopo
+
+- **Cabeçalho (tela 22):** seta de voltar para o detalhe do plano de origem. Linha pequena com o nome do plano, o nome da ficha como título e o resumo "N exercícios · último em dd/mm" (ou "nunca feito"). Some o rótulo "NOME DA FICHA". Renomear e excluir a ficha como ícones (PBI-58).
+- **O que sai:** os chips das outras fichas; o "+ Nova ficha" do cabeçalho (criar ficha só no detalhe do plano).
+- **Tela só de edição:** saem "Iniciar treino agora", "Registrar treino já feito" e "Adicione exercícios para iniciar." (PBI-61). Ficha vazia mostra só "Ficha sem exercícios" e "Adicionar exercício à ficha". Criar ficha não abre mais a ficha (PBI-61).
+- **Ficha que não existe mais:** volta ao detalhe do plano com o aviso "Essa ficha não existe mais". Substitui a regra "cai na primeira ficha" da PBI-50.
+
+### Critérios de aceite
+
+1. **Só a ficha aberta:** abrir o Treino B pelo plano mostra só o Treino B, sem chips e sem "Nova ficha" no topo.
+2. **Sem botões de treino:** nenhuma ficha tem "Iniciar treino agora" nem "Registrar treino já feito".
+3. **Ficha vazia aberta pelo plano:** mostra "Ficha sem exercícios" e "Adicionar exercício à ficha".
+4. **Voltar:** a seta leva ao detalhe do plano de onde abri a ficha.
+5. **Ficha inexistente:** volta ao plano com o aviso "Essa ficha não existe mais", sem erro.
+6. **Acessibilidade:** título da ficha como cabeçalho de semântica, seta com rótulo "Voltar para {plano}", alvos de 44 px.
+
+### Testes
+
+- **Widget:** ajustar `fichas_screen_test.dart` e cobrir ficha vazia, voltar e ficha inexistente.
+- **Robot:** sem impacto.
+
+### Fora do escopo
+
+- Trocar de ficha por deslize. Reordenar fichas. Duplicar ficha.
+
+---
+
+## PBI-58 · Renomear e excluir como ícones no topo
+
+_Front · R1 (junto do detalhe do plano) · Telas 19 e 22_
+
+**História:** Como atleta, quero um lápis e uma lixeira no topo do plano e da ficha, para renomear e excluir sem procurar texto solto no fim da tela.
+
+### Contexto
+
+Hoje o detalhe do plano tem "Renomear" e "Excluir plano" como textos no rodapé, e a ficha esconde as duas ações no menu "⋯". Texto solto no rodapé parece link e a lixeira perto do "Duplicar plano" convida ao toque errado.
+
+**Interpretação a confirmar com o PO:** "excluir treino" entendido como excluir plano e excluir ficha, com o mesmo padrão nas duas telas. Se era só o plano, a ficha mantém o "⋯".
+
+### Escopo
+
+- **Cabeçalho do plano (tela 19) e da ficha (tela 22):** dois botões de 44 × 44 px no canto direito, com o fundo de campo do cabeçalho: lápis (`LucideIcons.pencil`) e lixeira (`LucideIcons.trash2`).
+- A lixeira usa um vermelho claro fixo (`#FF8A80`), porque o vermelho de perigo do tema claro não tem contraste sobre o cabeçalho escuro.
+- Rótulos: "Renomear plano", "Excluir plano", "Renomear ficha", "Excluir ficha".
+- **O que sai:** "Renomear" e "Excluir plano" do rodapé do plano (o "Duplicar plano" fica). O menu "⋯" da ficha, se só tiver renomear e excluir.
+- **Comportamento:** o lápis abre o diálogo de nome que já existe; a lixeira, a confirmação no estilo de perigo da PBI-53. Plano do professor não mostra lápis nem lixeira. A regra de exclusão não muda.
+
+### Critérios de aceite
+
+1. **Ícones no topo:** o detalhe do meu plano tem lápis e lixeira no cabeçalho e nenhum "Renomear" ou "Excluir plano" no rodapé.
+2. **Renomear:** tocar no lápis e informar "Força" muda o título e a lista de planos.
+3. **Excluir plano:** a lixeira abre a confirmação do plano, e confirmar leva à lista.
+4. **Excluir ficha:** a confirmação diz se a ficha será apagada (sem sessões) ou só sairá do plano (com sessões), e confirmar volta ao plano.
+5. **Plano do professor:** sem lápis e sem lixeira.
+6. **Alvo e rótulo:** botões de 44 px, achados pelo Robot por `role=button[name="Excluir plano"]` e equivalentes.
+
+### Testes
+
+- **Widget:** ícones no plano e na ficha, ausentes no plano do professor, e os dois diálogos.
+- **Robot:** sem impacto.
+
+### Fora do escopo
+
+- Desfazer depois de excluir. Menu de mais ações no cabeçalho. Deslizar para excluir.
+
+---
+
+## PBI-59 · Início nova: semana e caixas
+
+_Front · Qualquer sprint · Tela 23_
+
+**História:** Como atleta, quero que a Início mostre a minha semana e o meu último treino, sem lista de fichas nem sugestão, para ver de relance como estou indo. Treinar fica nas telas de plano.
+
+### Contexto
+
+- A faixa semanal é um botão: tocar num dia chama `_registrar` com a ficha sugerida. Sem sugestão, o toque abre a folha do dia.
+- O treino livre perde a entrada (`Rotas.treinoLivre` só abre pelo Primeiro acesso e pelo "Continuar treino"). A folha do dia devolve a entrada com "Sem ficha".
+- Iniciar treino passa de 1 toque para 4 (decisão aberta abaixo).
+- `InicioLogica.proximaFicha` e `ultimaVezPorFicha` ficam sem uso na Início. A PBI-47 encolhe.
+
+### Escopo
+
+- **Tela 23:** cabeçalho igual ao de hoje. "Continuar treino" no topo quando há treino em andamento (nunca some). Cartão "Esta semana": seg a dom e "N dias treinados", com quatro estados que não dependem só de cor (treinou: círculo cheio com check; passado sem treino: círculo vazio; hoje: anel azul e letra azul; futuro: tracejado e inerte). Cartão "Último treino": ficha (ou "Treino livre"), data e quantidade de exercícios, abre o detalhe da sessão; sem sessões, não aparece. Área "Novidades" (PBI-60), oculta até lá.
+- **Folha do dia:** tocar num dia (menos os futuros) abre uma folha com o título "qua, 14/10". Seção "Registrado" quando há sessões no dia (cada uma abre o detalhe). Seção "Registrar treino neste dia" (ou "Registrar outro treino neste dia"): fichas do plano em uso, com o nome do plano, e "Sem ficha". Escolher abre o registro retroativo com a data do dia.
+- **O que sai:** "Sugestão de hoje", "Suas fichas" e o modo `_SemHistorico`. No lugar deste, aviso com "Tentar de novo" dentro do cartão da semana.
+- **O que não muda:** Primeiro acesso para quem não tem ficha nem sessão. Rótulos de semântica dos dias ("Dia 14/10, treino registrado").
+
+> **Decisão aberta do PO: atalho para treinar.** Botão "Iniciar treino" abaixo da semana que abre a folha de fichas do plano em uso e "Sem ficha", iniciando o treino ao vivo. Esta PBI entrega sem o atalho; se aprovado, vira uma PBI pequena depois.
+
+### Critérios de aceite
+
+1. Sem "Sugestão de hoje" nem "Suas fichas"; com semana e último treino.
+2. Faixa semanal: treinos na segunda e na quarta, aberto numa quinta → seg e qua com check, ter vazia, qui com anel, sex a dom tracejados, "2 dias treinados".
+3. Dia sem treino: folha "ter, 13/10" com as fichas do plano em uso e "Sem ficha"; escolher o Treino B abre o registro com a data de terça.
+4. Dia com treino: "Registrado" com o treino (abre o detalhe) e "Registrar outro treino neste dia".
+5. Dia futuro não responde ao toque.
+6. "Sem ficha" abre o treino livre com a data do dia.
+7. "Continuar treino" no topo com treino em andamento.
+8. Primeiro acesso sem mudança.
+9. Último treino abre o detalhe; sem sessões, não existe.
+10. Erro de histórico: aviso com "Tentar de novo", sem semana vazia.
+11. Acessibilidade: estado de cada dia em texto, alvos de 44 px, folha anuncia o dia como título.
+
+### Testes
+
+- **Widget:** reescrever `inicio_screen_test.dart`. Manter `primeiro_acesso_screen_test.dart`.
+- **Unitário:** `diasDaSemana` continua; decidir se `proximaFicha` e `ultimaVezPorFicha` saem junto.
+- **Robot:** sem impacto, desde que o Primeiro acesso continue igual.
+
+---
+
+## PBI-60 · Caixa de novidades na Início
+
+_Front (+ API na opção B) · Depois da PBI-59 · em refinamento_
+
+**História:** Como atleta, quero ver na Início avisos e dicas do app, para saber o que mudou e aprender algo sem sair dele.
+
+**Não está pronta para entrar em sprint:** falta o PO responder quem escreve o conteúdo e com que frequência.
+
+| Opção | Como funciona | Limite |
+|---|---|---|
+| A · Conteúdo no app | Lista de avisos e dicas num arquivo versionado; publicar o front atualiza para todos. | Mudar texto exige deploy do front. |
+| B · Tabela e API | Tabela `aviso` e `GET /avisos`, cadastro por SQL no começo. | Migration, endpoint e testes só para mostrar texto. |
+| C · Painel de edição | PO ou professor escrevem pelo app. | Fica para o épico do educador. |
+
+Recomendação: opção A.
+
+### Critérios de aceite
+
+1. Duas novidades vigentes aparecem, a mais recente primeiro, com etiqueta em texto. 2. Sem novidade vigente, a área não aparece. 3. Expirada não aparece. 4. Link abre fora do app. 5. Falha não quebra a Início. 6. Etiqueta lida com o título; caixa com link é botão com rótulo.
+
+---
+
+## PBI-61 · Treinar a partir do plano
+
+_Front · R1 (junto do detalhe do plano) · Tela 19_
+
+**História:** Como atleta, quero iniciar o treino pelo detalhe do plano, e não dentro da tela de montar a ficha, para que criar e treinar sejam momentos separados.
+
+**Decisão:** a ficha só se edita; o treino só se inicia pelo plano.
+
+### Escopo
+
+- **Linha da ficha:** o corpo abre a ficha para editar; um botão redondo de 44 × 44 px com "play" abre o sheet de treinar. Ficha sem exercícios: play desabilitado, rótulo "{ficha}: adicione exercícios para treinar". Rótulo do play: "Treinar {ficha}".
+- **Sheet de treinar:** cabeçalho "Ficha N · {plano}" e o nome da ficha. "Iniciar treino agora" (primário, treino ao vivo), "Registrar treino já feito" (secundário, prancheta), Cancelar.
+- **Depois de criar uma ficha:** volta ao detalhe do plano com a ficha na lista e o snackbar "Ficha “{nome}” criada" com a ação "Adicionar exercícios".
+- **Regras que continuam:** com treino ao vivo aberto, o play segue `iniciarTreinoAoVivoDaFicha` (sem segundo treino). No plano do professor, play e sheet funcionam.
+
+### Critérios de aceite
+
+1. Play + "Iniciar treino agora" abre o treino ao vivo com a ficha. 2. Corpo abre a edição sem iniciar treino. 3. Ficha vazia: play desabilitado com o rótulo. 4. Depois de criar: volta ao plano com o aviso; a ficha não abre sozinha. 5. "Registrar treino já feito" abre o registro manual. 6. Com treino ao vivo aberto, não nasce um segundo. 7. Alvos de 44 px, rótulos próprios, foco volta ao play ao fechar o sheet.
+
+---
+
+## PBI-62 · Cartão de exercício: mover e excluir
+
+_Front · R1 (junto da PBI-57) · Tela 22_
+
+**História:** Como atleta, quero um jeito claro de reordenar e de remover um exercício da ficha, sem dois ícones sobrepostos, para não apagar sem querer.
+
+**Contexto:** causa provável do "=" extra: `ReorderableListView.builder` sem `buildDefaultDragHandles: false`, então no web/desktop o Flutter adiciona a própria alça. Confirmar no navegador antes de mexer.
+
+### Escopo
+
+- Alça de mover à esquerda (36 × 44 px, grip de seis pontos, `ReorderableDragStartListener`).
+- Excluir à direita: botão de 44 × 44 px, fundo vermelho suave (`dangersoft`) e lixeira vermelha, sem texto.
+- `buildDefaultDragHandles: false`; ações de semântica "Mover para cima" e "Mover para baixo". Remover continua como hoje.
+
+### Critérios de aceite
+
+1. Uma alça e um excluir por cartão, sem ícones sobrepostos. 2. Arrastar muda a ordem e persiste. 3. Excluir mantém a regra atual. 4. Alça e lixeira com 44 px de altura, sem sobrepor em 360 de largura. 5. Rótulos "Arrastar para reordenar {exercício}" e "Remover {exercício} da ficha", mais as ações de mover.
+
+---
+
+## PBI-63 · Finalizar treino sem seta de voltar
+
+_Front · R1 (junto do treino ao vivo) · Tela 24_
+
+**História:** Como atleta, quero sair do treino em andamento só por Finalizar ou Descartar, nos botões da tela, para não precisar adivinhar que a seta de voltar é o caminho de descartar.
+
+**Risco assumido:** some o "Continuar depois". O treino continua salvo no aparelho e a Início mostra "Continuar treino".
+
+### Escopo
+
+- **Tela 24:** sem seta de voltar. Barra fixa com "Finalizar treino" (primário, check) e "Descartar treino" (contorno vermelho, lixeira), 48 px cada. Voltar do sistema mostra "Para sair, finalize ou descarte o treino." (`PopScope` com `canPop: false`).
+- **Finalizar vazio:** "Salvar treino vazio?" com "Você irá salvar sem inserir nenhum dado, tem certeza?"; "Salvar mesmo assim", "Descartar treino" e "Voltar ao treino".
+- **Finalizar parcial:** "Finalizar treino?" com "Ainda tem N séries sem marcar em M exercícios. Elas ficam como não realizadas."; "Finalizar mesmo assim" e "Voltar ao treino".
+- **Completo:** finaliza direto e abre o resumo.
+- **Descartar:** "Descartar treino?" com "O que você fez neste treino será perdido."; "Descartar treino" vermelho cheio e "Voltar ao treino". Confirmar volta ao plano.
+- `dialogoSairDoTreino` continua no treino livre e no registro já feito.
+
+### Critérios de aceite
+
+1. Sem seta. 2. Voltar do sistema mostra o aviso e fica no treino. 3. Finalizar vazio mostra o diálogo com as três opções. 4. "Salvar mesmo assim" salva e abre o resumo. 5. Descartar (barra ou diálogo) confirma e volta ao plano sem sessão. 6. Parcial informa as séries pendentes. 7. Completo salva direto. 8. Barra com alvos de 48 px, diálogos com foco preso, cronômetro como `timer` com rótulo falado.
