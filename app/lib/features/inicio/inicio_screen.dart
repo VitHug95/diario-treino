@@ -22,6 +22,7 @@ import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
 import '../sessao/treino_em_andamento.dart';
+import '../planos/acoes_plano.dart';
 import 'dicas.dart';
 import 'inicio_logica.dart';
 import 'primeiro_acesso_screen.dart';
@@ -45,20 +46,17 @@ class InicioScreen extends ConsumerWidget {
     final sessoesAsync = ref.watch(sessoesRecentesProvider);
     final emAndamento = ref.watch(treinoEmAndamentoProvider);
 
-    // Primeiro acesso (tela 6) no lugar da inicial quando:
-    // - não há plano em uso (PBI-47: todos os planos excluídos), mesmo que já
-    //   existam sessões; ou
-    // - há plano em uso, mas sem fichas e sem nenhuma sessão (PBI-09).
-    // Exige os dados carregados para não piscar a tela de boas-vindas durante o
-    // carregamento ou um erro de rede.
+    // Primeiro acesso (tela 29, PBI-68) só para conta nova: nenhuma sessão e
+    // nenhuma ficha (sem plano em uso, ou plano vazio). Quem já treinou e apagou
+    // os planos vê a Início normal com o card "Crie seu plano". Exige os dados
+    // carregados para não piscar a tela de boas-vindas durante o carregamento
+    // ou um erro de rede.
     final plano = planoAsync.value;
     final sessoes = sessoesAsync.value;
-    final semPlanoEmUso = planoAsync.hasValue && plano == null;
     final semFichas = plano == null || plano.treinos.isEmpty;
     final semSessoes = sessoes != null && sessoes.isEmpty;
-    if (semPlanoEmUso ||
-        (planoAsync.hasValue && sessoesAsync.hasValue && semFichas && semSessoes)) {
-      return const PrimeiroAcessoScreen();
+    if (planoAsync.hasValue && sessoesAsync.hasValue && semFichas && semSessoes) {
+      return PrimeiroAcessoScreen(plano: plano);
     }
 
     return Scaffold(
@@ -126,8 +124,9 @@ class InicioScreen extends ConsumerWidget {
   }
 }
 
-/// Semana, último treino e, se o plano em uso não tem fichas, o convite para
-/// montar.
+/// Semana, último treino e dicas. Sem plano em uso (já treinou e apagou os
+/// planos), o card "Crie seu plano" vem antes da semana; com plano vazio, o
+/// convite para montar as fichas vem no fim.
 class _Conteudo extends StatelessWidget {
   const _Conteudo({
     required this.plano,
@@ -147,6 +146,11 @@ class _Conteudo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // PBI-68: o histórico continua visível; o card só convida a criar.
+        if (plano == null) ...[
+          const _CrieSeuPlano(),
+          const SizedBox(height: AppSpacing.entreCards),
+        ],
         _CartaoSemana(
           sessoes: sessoes,
           aoTentar: aoTentarSessoes,
@@ -162,9 +166,9 @@ class _Conteudo extends StatelessWidget {
         ],
         // Dica de treino do acesso (PBI-60).
         const _CartaoDica(),
-        if (fichas.isEmpty) ...[
+        if (plano != null && fichas.isEmpty) ...[
           const SizedBox(height: AppSpacing.x20),
-          const _SemFichas(),
+          _SemFichas(planoId: plano!.id),
         ],
       ],
     );
@@ -813,9 +817,55 @@ class _ContinuarTreino extends ConsumerWidget {
   }
 }
 
+/// "Bem-vindo de volta · Crie seu plano" (tela 23, PBI-68): sem plano em uso,
+/// mas com treinos registrados. Fica acima da semana, abaixo do treino em
+/// andamento. "Criar plano" segue o caminho único (PBI-69).
+class _CrieSeuPlano extends ConsumerWidget {
+  const _CrieSeuPlano();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cores = AppColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.x20),
+      decoration: BoxDecoration(
+        color: cores.bgHeader,
+        borderRadius: BorderRadius.circular(AppRadius.destaque),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('BEM-VINDO DE VOLTA',
+              style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
+          const SizedBox(height: AppSpacing.x8),
+          Text('CRIE SEU PLANO',
+              style: AppText.displayM.copyWith(color: cores.textOnHeader)),
+          const SizedBox(height: AppSpacing.x4),
+          Text(
+            'Com um plano você treina pela ficha e acompanha a semana. Seus '
+            'treinos antigos continuam salvos.',
+            style: AppText.body.copyWith(color: cores.textOnHeaderMuted),
+          ),
+          const SizedBox(height: AppSpacing.x16),
+          SizedBox(
+            height: AppSizes.botaoSecundario,
+            child: FilledButton(
+              onPressed: () => criarPlanoEAbrir(context, ref),
+              child: const Text('CRIAR PLANO'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Plano em uso sem fichas (já treinou sem ficha): convida a montar.
 class _SemFichas extends StatelessWidget {
-  const _SemFichas();
+  const _SemFichas({required this.planoId});
+
+  final String planoId;
 
   @override
   Widget build(BuildContext context) {
@@ -840,9 +890,8 @@ class _SemFichas extends StatelessWidget {
               style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x16),
           FilledButton(
-            // Direto nas fichas do plano em uso (cria o primeiro ao salvar a
-            // primeira ficha), como antes da lista de planos.
-            onPressed: () => context.go(Rotas.fichaDoPlano),
+            // No detalhe do plano, onde as fichas nascem (PBI-69).
+            onPressed: () => context.go(rotaDoPlano(planoId)),
             child: const Text('MONTAR FICHAS'),
           ),
         ],

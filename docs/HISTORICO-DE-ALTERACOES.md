@@ -113,6 +113,12 @@ fechados sem merge.
 | #86 | PBI-67 | Treino em andamento aparece na Início e no plano logo ao iniciar; um treino por vez. |
 | #87 | docs | Este histórico de alterações. |
 
+## Correções e fluxos de entrada (PBI-67 a 72) · 16/10
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #88 | PBI-70 | Telas atualizam pela origem da mudança: escritas por comandos e mapa único de invalidação; teste de arquitetura. Registra as PBIs 67 a 72. |
+
 ---
 
 ## Migrations do banco

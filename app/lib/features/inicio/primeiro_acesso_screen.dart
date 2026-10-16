@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -6,15 +7,23 @@ import '../../core/rotas/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../fichas/plano_models.dart';
+import '../planos/acoes_plano.dart';
 
-/// Tela 6 do protótipo: primeiro acesso (PBI-09). Aparece no lugar da tela
-/// inicial enquanto o atleta não tem nenhuma ficha nem sessão. Explica o app em
-/// segundos e oferece dois caminhos: montar as fichas ou registrar sem ficha.
-class PrimeiroAcessoScreen extends StatelessWidget {
-  const PrimeiroAcessoScreen({super.key});
+/// Tela 29 (era a 6): primeiro acesso (PBI-09, PBI-68). Só na Início e só para
+/// conta nova: nenhuma sessão e nenhuma ficha (sem plano, ou plano vazio).
+/// Explica o app e oferece dois caminhos: o plano e "Registrar treino".
+///
+/// [plano]: o plano em uso, se houver. Sem plano, o primário cria um ("Criar
+/// meu plano"); com plano vazio, abre o detalhe dele ("Montar a primeira
+/// ficha"). Nenhum caminho passa pela tela Fichas sem plano (PBI-69).
+class PrimeiroAcessoScreen extends ConsumerWidget {
+  const PrimeiroAcessoScreen({super.key, this.plano});
+
+  final PlanoAtivo? plano;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
 
     return Scaffold(
@@ -45,7 +54,7 @@ class PrimeiroAcessoScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.x8),
                     Text(
                       'Registre seus treinos (mesmo dias depois) e acompanhe a '
-                      'evolução por exercício. Comece montando suas fichas ou '
+                      'evolução por exercício. Comece montando seu plano ou '
                       'registrando um treino avulso.',
                       style: AppText.body
                           .copyWith(color: cores.textOnHeaderMuted),
@@ -56,8 +65,9 @@ class PrimeiroAcessoScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.x24),
               const _Passo(
                 icone: LucideIcons.listChecks,
-                titulo: 'Monte suas fichas',
-                texto: 'Crie o Treino A, B, C com os exercícios e seus alvos.',
+                titulo: 'Monte seu plano',
+                texto: 'Crie o plano e as fichas A, B e C, com os exercícios e '
+                    'seus alvos.',
               ),
               const SizedBox(height: AppSpacing.entreCards),
               const _Passo(
@@ -74,19 +84,26 @@ class PrimeiroAcessoScreen extends StatelessWidget {
               const Spacer(),
               SizedBox(
                 height: AppSizes.botaoPrincipal,
-                child: FilledButton(
-                  // Vai direto às fichas do plano em uso, e não à lista de
-                  // planos: sem plano, a lista mostraria esta mesma tela.
-                  onPressed: () => context.go(Rotas.fichaDoPlano),
-                  child: const Text('MONTAR MINHAS FICHAS'),
-                ),
+                child: plano == null
+                    ? FilledButton(
+                        onPressed: () => criarPlanoEAbrir(context, ref),
+                        child: const Text('CRIAR MEU PLANO'),
+                      )
+                    : FilledButton(
+                        onPressed: () => context.go(rotaDoPlano(plano!.id)),
+                        child: const Text('MONTAR A PRIMEIRA FICHA'),
+                      ),
               ),
               const SizedBox(height: AppSpacing.entreItens),
               SizedBox(
                 height: AppSizes.botaoSecundario,
-                child: OutlinedButton(
+                // Conta nova não tem fichas: "Registrar treino" abre direto o
+                // treino livre (PBI-71).
+                child: OutlinedButton.icon(
                   onPressed: () => context.go(Rotas.treinoLivre),
-                  child: const Text('Registrar sem ficha'),
+                  icon: const Icon(LucideIcons.clipboardCheck,
+                      size: AppSizes.iconeSm),
+                  label: const Text('Registrar treino'),
                 ),
               ),
               const SizedBox(height: AppSpacing.x8),

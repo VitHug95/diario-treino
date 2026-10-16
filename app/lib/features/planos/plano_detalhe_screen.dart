@@ -91,8 +91,7 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
       final id = await ref.read(fichasComandosProvider).duplicarPlano(plano.id);
       // Abre a cópia no lugar deste plano: a seta volta para a lista.
       if (mounted) {
-        context.pushReplacement(
-            '${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(id)}');
+        context.pushReplacement(rotaDoPlano(id));
       }
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
@@ -156,10 +155,11 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
               child: EstadoVazio(
                 icone: LucideIcons.calendar,
                 titulo: 'Nenhum plano em uso',
-                texto: 'Monte a primeira ficha para começar.',
+                texto: 'Crie um plano para montar as fichas e treinar.',
+                // PBI-69: nenhum caminho leva à tela Fichas sem um plano.
                 acao: FilledButton(
-                  onPressed: () => context.push(Rotas.fichaDoPlano),
-                  child: const Text('MONTAR FICHAS'),
+                  onPressed: () => criarPlanoEAbrir(context, ref),
+                  child: const Text('CRIAR PLANO'),
                 ),
               ),
             );
@@ -225,6 +225,12 @@ class _Conteudo extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Plano sem fichas (tela 28, PBI-69): um único estado vazio,
+              // dentro do plano, com "Nova ficha".
+              if (plano.treinos.isEmpty)
+                _SemFichas(
+                    somenteLeitura: plano.somenteLeitura, aoNovaFicha: aoNovaFicha)
+              else ...[
               Text('FICHAS',
                   style: AppText.overline.copyWith(color: cores.textSecondary)),
               const SizedBox(height: AppSpacing.x8),
@@ -240,6 +246,7 @@ class _Conteudo extends ConsumerWidget {
               ],
               if (!plano.somenteLeitura)
                 BotaoTracejado(rotulo: 'Nova ficha', aoTocar: aoNovaFicha),
+              ],
               const SizedBox(height: AppSpacing.x24),
               if (!plano.emUso)
                 SizedBox(
@@ -255,7 +262,8 @@ class _Conteudo extends ConsumerWidget {
               if (!plano.emUso || definidoAgora)
                 const SizedBox(height: AppSpacing.entreItens),
               // Rodapé só com Duplicar (PBI-58): renomear e excluir ficam no
-              // cabeçalho, como ícones.
+              // cabeçalho, como ícones. Plano vazio não tem o que duplicar.
+              if (plano.treinos.isNotEmpty)
               SizedBox(
                 height: AppSizes.botaoSecundario,
                 child: OutlinedButton.icon(
@@ -580,6 +588,41 @@ class QuadradoFicha extends StatelessWidget {
       ),
       child: Text(texto,
           style: AppText.numeralS.copyWith(color: cores.primaryOnTint)),
+    );
+  }
+}
+
+/// Plano sem fichas (tela 28, PBI-69): "Nenhuma ficha ainda" e "Nova ficha".
+/// Plano do professor só mostra o aviso, sem botão.
+class _SemFichas extends StatelessWidget {
+  const _SemFichas({required this.somenteLeitura, required this.aoNovaFicha});
+
+  final bool somenteLeitura;
+  final VoidCallback aoNovaFicha;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x24),
+      child: EstadoVazio(
+        icone: LucideIcons.listChecks,
+        titulo: 'Nenhuma ficha ainda',
+        texto: somenteLeitura
+            ? 'O professor ainda não montou as fichas deste plano.'
+            : 'Crie a primeira ficha, por exemplo o Treino A, e adicione os '
+                'exercícios.',
+        acao: somenteLeitura
+            ? null
+            : SizedBox(
+                width: double.infinity,
+                height: AppSizes.botaoPrincipal,
+                child: FilledButton.icon(
+                  onPressed: aoNovaFicha,
+                  icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
+                  label: const Text('NOVA FICHA'),
+                ),
+              ),
+      ),
     );
   }
 }

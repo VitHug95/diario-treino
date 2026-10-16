@@ -98,12 +98,53 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('Sem planos, mostra o Primeiro acesso', (tester) async {
+  // O tema é montado dentro do teste: fora dele o google_fonts não carrega.
+  for (final escuro in [false, true]) {
+    testWidgets(
+        'PBI-68: sem planos, estado vazio próprio, sem Bem-vindo '
+        '(${escuro ? 'escuro' : 'claro'})', (tester) async {
+      await tester.pumpWidget(_tela((ref) async => <PlanoDaLista>[],
+          tema: escuro ? AppTheme.escuro : AppTheme.claro));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MONTE SEU PRIMEIRO PLANO E COMECE A TREINAR'), findsOneWidget);
+      expect(find.text('CRIAR PLANO'), findsOneWidget);
+      expect(find.text('Seu diário de treino'), findsNothing);
+      expect(find.text('BEM-VINDO'), findsNothing);
+      // "Novo plano" no cabeçalho só aparece com pelo menos um plano.
+      expect(find.text('NOVO PLANO'), findsNothing);
+      // FilledButton.icon não é achado por widgetWithText(FilledButton, ...).
+      final botao = find.ancestor(
+          of: find.text('CRIAR PLANO'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton));
+      expect(tester.getSize(botao).height, greaterThanOrEqualTo(44));
+    });
+  }
+
+  testWidgets('PBI-69: "Criar plano" abre o diálogo de nome direto',
+      (tester) async {
     await tester.pumpWidget(_tela((ref) async => <PlanoDaLista>[]));
     await tester.pumpAndSettle();
 
-    expect(find.text('Seu diário de treino'), findsOneWidget);
-    expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
+    await tester.tap(find.text('CRIAR PLANO'));
+    await tester.pumpAndSettle();
+    expect(find.text('Novo plano'), findsOneWidget);
+    expect(find.text('Dê um nome para o plano. Você pode mudar depois.'),
+        findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Meu plano'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Novo plano'), findsNothing);
+  });
+
+  testWidgets('PBI-68: a lista não fala mais da "sequência A, B, C"',
+      (tester) async {
+    await tester.pumpWidget(_tela((ref) async => _tres));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('sequência A, B, C'), findsNothing);
+    expect(find.textContaining('alimenta a semana da Início'), findsOneWidget);
   });
 
   testWidgets('Erro ao carregar oferece "Tentar de novo"', (tester) async {

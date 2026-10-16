@@ -8,7 +8,6 @@ import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
-import '../../shared/estado_vazio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -34,8 +33,8 @@ class FichasScreen extends ConsumerStatefulWidget {
 
   final String? fichaInicialId;
 
-  /// Plano de origem. Nulo = plano em uso (Início e Primeiro acesso abrem
-  /// assim; sem plano, o estado vazio "CRIAR FICHA" monta o primeiro).
+  /// Plano de origem. Nulo = plano em uso. Sem ficha para abrir, a tela volta
+  /// ao plano (PBI-69): fichas só se criam no detalhe do plano.
   final String? planoId;
 
   @override
@@ -84,22 +83,15 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     });
   }
 
-  /// Primeira ficha, pelo estado vazio "CRIAR FICHA" (plano em uso, ainda sem
-  /// fichas). Fica nesta tela para já adicionar exercícios.
-  Future<void> _criarPrimeiraFicha(PlanoAtivo? plano) async {
-    final dados = await dialogoFicha(context);
-    if (dados == null) return;
-
-    final comandos = ref.read(fichasComandosProvider);
-    try {
-      // Sem plano ainda: garante um antes de adicionar a primeira ficha.
-      final planoId = plano?.id ?? await comandos.garantirPlano();
-      await comandos.adicionarFicha(
-          planoId: planoId, nome: dados.nome, descricao: dados.descricao);
-      await _esperarPlano();
-    } on FichasException catch (e) {
-      _erro(e.mensagem);
-    }
+  /// Sem ficha para abrir (plano vazio, link sem `?ficha=`): volta ao plano,
+  /// onde as fichas nascem (PBI-69). Não há mais estado vazio "Criar ficha"
+  /// aqui, que era uma segunda tela vazia no caminho.
+  void _semFichaParaAbrir() {
+    if (_saindo) return;
+    _saindo = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _voltarAoPlano();
+    });
   }
 
   Future<void> _renomear(TreinoResumo ficha) async {
@@ -162,21 +154,10 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
         final fichas = plano?.treinos ?? const <TreinoResumo>[];
         final id = widget.fichaInicialId;
 
-        // Sem fichas e sem ficha pedida: o único caminho é criar a primeira
-        // (PBI-52; caminho do Primeiro acesso e do Robot).
+        // Sem fichas e sem ficha pedida: nada a editar aqui (PBI-69).
         if (fichas.isEmpty && id == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Fichas')),
-            body: EstadoVazio(
-              icone: LucideIcons.clipboardList,
-              titulo: 'Nenhuma ficha ainda',
-              texto: 'Crie o Treino A para começar a montar sua rotina.',
-              acao: FilledButton(
-                onPressed: () => _criarPrimeiraFicha(plano),
-                child: const Text('CRIAR FICHA'),
-              ),
-            ),
-          );
+          _semFichaParaAbrir();
+          return const Scaffold(body: SizedBox.shrink());
         }
 
         final ficha = id == null

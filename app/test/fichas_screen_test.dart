@@ -190,14 +190,16 @@ void main() {
     expect(find.byType(FichasScreen), findsNothing);
   });
 
-  testWidgets('Sem fichas: estado vazio convida a criar a primeira',
+  testWidgets('PBI-69: sem ficha para abrir, volta ao plano sem estado vazio',
       (tester) async {
-    await tester.pumpWidget(_tela(plano: (ref) async => null));
+    await tester.pumpWidget(_tela(plano: (ref) async => _plano(const [])));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'CRIAR FICHA'), findsOneWidget);
-    expect(find.text('Nova ficha'), findsNothing);
+    // A tela Fichas antiga sem plano não existe mais: nada de "Criar ficha".
+    expect(find.text('Tela do plano'), findsOneWidget);
+    expect(find.byType(FichasScreen), findsNothing);
+    expect(find.text('CRIAR FICHA'), findsNothing);
+    expect(find.text('Essa ficha não existe mais'), findsNothing);
   });
 
   testWidgets('PBI-58: lixeira no topo pede confirmação (ficha com sessões)',

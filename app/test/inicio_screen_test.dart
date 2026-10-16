@@ -113,24 +113,61 @@ void main() {
     expect(prefs.getString('tema_modo'), 'escuro');
   });
 
-  testWidgets('Primeiro acesso: sem ficha e sem sessão mostra a tela 6 (PBI-09)',
+  testWidgets('PBI-68: conta nova (sem plano, sem sessão) mostra o Bem-vindo',
       (tester) async {
     await tester.pumpWidget(await _tela(null));
     await tester.pumpAndSettle();
 
     expect(find.text('Seu diário de treino'), findsOneWidget);
-    expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
-    expect(find.text('Registrar sem ficha'), findsOneWidget);
+    expect(find.text('CRIAR MEU PLANO'), findsOneWidget);
+    expect(find.text('Registrar treino'), findsOneWidget);
   });
 
-  testWidgets('PBI-47: sem plano em uso mostra o Primeiro acesso, mesmo com sessões',
+  testWidgets('PBI-68: plano sem fichas e sem sessão: "Montar a primeira ficha"',
+      (tester) async {
+    const vazio = PlanoAtivo(id: 'p1', nome: 'Meu plano', treinos: []);
+    await tester.pumpWidget(await _tela(vazio, tema: AppTheme.escuro));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seu diário de treino'), findsOneWidget);
+    expect(find.text('MONTAR A PRIMEIRA FICHA'), findsOneWidget);
+    expect(find.text('CRIAR MEU PLANO'), findsNothing);
+  });
+
+  testWidgets('PBI-68: sem plano mas com sessões, Início normal com "Crie seu plano"',
       (tester) async {
     await tester.pumpWidget(await _tela(null,
         sessoes: [_sessao('s1', _hoje.subtract(const Duration(days: 1)), treino: 'A')]));
     await tester.pumpAndSettle();
 
-    expect(find.text('Seu diário de treino'), findsOneWidget);
-    expect(find.text('MONTAR MINHAS FICHAS'), findsOneWidget);
+    // Nada de Bem-vindo de tela cheia: o histórico continua visível.
+    expect(find.text('Seu diário de treino'), findsNothing);
+    expect(find.text('BEM-VINDO DE VOLTA'), findsOneWidget);
+    expect(find.text('CRIE SEU PLANO'), findsOneWidget);
+    expect(find.text('CRIAR PLANO'), findsOneWidget);
+    expect(find.text('ÚLTIMO TREINO'), findsOneWidget);
+    // O card fica acima da semana.
+    expect(tester.getTopLeft(find.text('CRIE SEU PLANO')).dy,
+        lessThan(tester.getTopLeft(find.text('ESTA SEMANA')).dy));
+  });
+
+  testWidgets('PBI-68: com treino em andamento, "Continuar" vem antes de "Crie seu plano"',
+      (tester) async {
+    final rascunho = TreinoEmAndamento(
+      treinoId: null,
+      treinoNome: 'Treino livre',
+      treinoLivre: true,
+      dataIso: '2026-10-12',
+      inicioMillis: DateTime.now().millisecondsSinceEpoch,
+      exercicios: const [],
+    );
+    await tester.pumpWidget(await _tela(null,
+        sessoes: [_sessao('s1', _hoje.subtract(const Duration(days: 1)))],
+        prefsIniciais: {'treino_em_andamento': jsonEncode(rascunho.paraJson())}));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(find.text('Continuar treino')).dy,
+        lessThan(tester.getTopLeft(find.text('CRIE SEU PLANO')).dy));
   });
 
   testWidgets('Plano em uso sem fichas, mas com sessão: convida a montar',

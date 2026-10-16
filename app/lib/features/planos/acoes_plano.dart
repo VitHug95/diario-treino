@@ -1,6 +1,95 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/rotas/app_router.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
+import '../../theme/theme_tokens.dart';
+import '../fichas/fichas_comandos.dart';
+import '../fichas/fichas_repository.dart';
 
 /// Peças compartilhadas pela lista (tela 18) e pelo detalhe do plano (tela 19).
+
+/// Rota do detalhe de um plano (tela 19).
+String rotaDoPlano(String planoId) =>
+    '${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(planoId)}';
+
+/// Caminho único de criar plano (PBI-69): pede só o nome ("Novo plano"), cria
+/// (o primeiro do atleta nasce em uso) e abre o detalhe do plano vazio, com
+/// "Nova ficha". Vale para a lista, o estado vazio de Planos e a Início.
+///
+/// `go` (e não `push`): de qualquer aba, o atleta cai na aba Planos com a
+/// pilha lista → detalhe, então a seta do detalhe leva à lista já com o plano.
+Future<void> criarPlanoEAbrir(BuildContext context, WidgetRef ref) async {
+  final nome = await dialogoNovoPlano(context);
+  if (nome == null || !context.mounted) return;
+  try {
+    final id = await ref.read(fichasComandosProvider).criarPlano(nome);
+    if (context.mounted) context.go(rotaDoPlano(id));
+  } on FichasException catch (e) {
+    if (context.mounted) avisarPlano(context, e.mensagem);
+  }
+}
+
+/// Diálogo "Novo plano" (tela 27): só o nome, já sugerido como "Meu plano",
+/// com "Criar plano" (primário, largura total) e "Cancelar".
+Future<String?> dialogoNovoPlano(BuildContext context) {
+  final nome = TextEditingController(text: 'Meu plano');
+  final formKey = GlobalKey<FormState>();
+  final cores = AppColors.of(context);
+
+  void confirmar(BuildContext ctx) {
+    if (!formKey.currentState!.validate()) return;
+    Navigator.pop(ctx, nome.text.trim());
+  }
+
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Novo plano'),
+      content: Form(
+        key: formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Dê um nome para o plano. Você pode mudar depois.',
+                style: AppText.bodyS.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x16),
+            TextFormField(
+              controller: nome,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Nome do plano'),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Informe o nome do plano' : null,
+              onFieldSubmitted: (_) => confirmar(ctx),
+            ),
+          ],
+        ),
+      ),
+      actionsOverflowDirection: VerticalDirection.down,
+      actions: [
+        SizedBox(
+          width: double.infinity,
+          height: AppSizes.botaoSecundario,
+          child: FilledButton(
+            onPressed: () => confirmar(ctx),
+            child: const Text('CRIAR PLANO'),
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 /// Texto da confirmação de "Excluir plano". Quando o plano está em uso, avisa
 /// que o uso passa para o último plano usado (regra da PBI-44).
