@@ -71,7 +71,12 @@ class TreinoAoVivoScreen extends ConsumerWidget {
                   for (var i = 0; i < estado.exercicios.length; i++) ...[
                     _CardExercicioVivo(
                       exercicio: estado.exercicios[i],
-                      aoTocar: () => context.push(Rotas.exercicioAoVivo, extra: i),
+                      aoTocar: () {
+                        // Aberto pela tela do treino: começa sempre em Séries
+                        // (PBI-66). As setas dentro do exercício mantêm a aba.
+                        ref.read(abaExercicioAoVivoProvider.notifier).definir(0);
+                        context.push(Rotas.exercicioAoVivo, extra: i);
+                      },
                     ),
                     const SizedBox(height: AppSpacing.entreCards),
                   ],
@@ -377,13 +382,53 @@ class _CardExercicioVivo extends StatelessWidget {
 /// de M"), nome, alvo e cronômetro pequeno; navegação anterior/próximo; e três
 /// abas: Séries (completar série, tag, stepper), Histórico (3 últimas sessões) e
 /// Evolução (gráfico do exercício).
-class ExercicioAoVivoScreen extends ConsumerWidget {
+/// Aba ativa da tela do exercício (0 Séries, 1 Histórico, 2 Evolução), para as
+/// setas anterior/próximo não voltarem para Séries (PBI-66).
+final abaExercicioAoVivoProvider =
+    NotifierProvider<AbaExercicioAoVivo, int>(AbaExercicioAoVivo.new);
+
+class AbaExercicioAoVivo extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void definir(int aba) => state = aba;
+}
+
+class ExercicioAoVivoScreen extends ConsumerStatefulWidget {
   const ExercicioAoVivoScreen({super.key, required this.indice});
 
   final int indice;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExercicioAoVivoScreen> createState() => _ExercicioAoVivoScreenState();
+}
+
+class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
+    with SingleTickerProviderStateMixin {
+  /// Cada exercício é uma rota nova (as setas fazem pushReplacement). A aba
+  /// nasce da que estava ativa (PBI-66) e cada troca de aba fica guardada.
+  late final TabController _abas = TabController(
+    length: 3,
+    vsync: this,
+    initialIndex: ref.read(abaExercicioAoVivoProvider),
+  )..addListener(_guardarAba);
+
+  void _guardarAba() {
+    if (_abas.indexIsChanging) return;
+    ref.read(abaExercicioAoVivoProvider.notifier).definir(_abas.index);
+  }
+
+  @override
+  void dispose() {
+    _abas
+      ..removeListener(_guardarAba)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final indice = widget.indice;
     final estado = ref.watch(treinoAoVivoControllerProvider);
 
     if (estado == null || indice < 0 || indice >= estado.exercicios.length) {
@@ -401,8 +446,9 @@ class ExercicioAoVivoScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(exercicio.nome, overflow: TextOverflow.ellipsis),
-          bottom: const TabBar(
-            tabs: [
+          bottom: TabBar(
+            controller: _abas,
+            tabs: const [
               Tab(text: 'Séries'),
               Tab(text: 'Histórico'),
               Tab(text: 'Evolução'),
@@ -420,6 +466,7 @@ class ExercicioAoVivoScreen extends ConsumerWidget {
               ),
               Expanded(
                 child: TabBarView(
+                  controller: _abas,
                   children: [
                     _AbaSeries(indice: indice, exercicio: exercicio),
                     _AbaHistorico(exercicioId: exercicio.exercicioId),

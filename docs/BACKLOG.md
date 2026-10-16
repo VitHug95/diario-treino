@@ -895,9 +895,9 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
 | PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
 
-### Ajustes de layout (PBI-57 a PBI-63)
+### Ajustes de layout (PBI-57 a PBI-66)
 
-Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
+Dez pedidos do PO em 15/10 (rodadas 1 a 3). Detalhamento, perguntas abertas e ajustes nas PBIs
 46, 47, 49, 50, 52 e 53 em [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md).
 
 | PBI | Título | Telas | Status |
@@ -909,6 +909,9 @@ Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
 | PBI-63 | Finalizar treino: seta só sai, botões encerram | 24 e 25 | rodadas 1 e 2 na `main` (PR #78 e #82); rodada 3 (seta volta, só leva à Início) em revisão (branch `fix/pbi-63-seta-volta`) |
+| PBI-64 | Depois de salvar: Início com aviso, sem diálogo | 23 | a fazer (junto da 65) |
+| PBI-65 | Concluir exercício e ir para o próximo | 26 | a fazer (junto da 64) |
+| PBI-66 | Bug: trocar de exercício não deve resetar a aba | 26 | em revisão (branch `fix/pbi-66-aba-exercicio`) |
 
 PBI-57, 62 e 61 vão juntas: a 57 tira os botões de treinar da ficha e a 61 os
 devolve no plano. Separadas, haveria um deploy sem como treinar uma ficha.
