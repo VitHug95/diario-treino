@@ -6,6 +6,7 @@ import 'package:diario_treino/features/planos/acoes_plano.dart';
 import 'package:diario_treino/features/planos/plano_detalhe_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
+import 'package:diario_treino/features/sessao/treino_em_andamento.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +57,10 @@ int _qtdExercicios(String treinoId) => switch (treinoId) {
     };
 
 /// Overrides comuns às telas de teste.
-List<Override> _overrides(PlanoDetalhe plano, {FichasRepository? repo}) => [
+List<Override> _overrides(PlanoDetalhe plano,
+        {FichasRepository? repo, TreinoEmAndamento? emAndamento}) =>
+    [
+      treinoEmAndamentoProvider.overrideWithValue(emAndamento),
       planoDetalheProvider.overrideWith((ref, id) async => plano),
       fichaDetalheProvider.overrideWith((ref, treinoId) async => TreinoDetalhe(
             id: treinoId,
@@ -73,7 +77,8 @@ List<Override> _overrides(PlanoDetalhe plano, {FichasRepository? repo}) => [
 
 /// Com rotas de verdade (go_router), para conferir para onde o play e o corpo
 /// da linha levam. As telas de destino só mostram o que receberam.
-Widget _telaComRotas(PlanoDetalhe plano, {FichasRepository? repo}) {
+Widget _telaComRotas(PlanoDetalhe plano,
+    {FichasRepository? repo, TreinoEmAndamento? emAndamento}) {
   final router = GoRouter(
     initialLocation: Rotas.planoDetalhe,
     routes: [
@@ -99,7 +104,7 @@ Widget _telaComRotas(PlanoDetalhe plano, {FichasRepository? repo}) {
     ],
   );
   return ProviderScope(
-    overrides: _overrides(plano, repo: repo),
+    overrides: _overrides(plano, repo: repo, emAndamento: emAndamento),
     child: MaterialApp.router(theme: AppTheme.claro, routerConfig: router),
   );
 }
@@ -123,6 +128,7 @@ class _RepoCriaFicha extends FichasRepository {
 
 Widget _tela(PlanoDetalhe plano, {ThemeData? tema}) => ProviderScope(
       overrides: [
+        treinoEmAndamentoProvider.overrideWithValue(null),
         planoDetalheProvider.overrideWith((ref, id) async => plano),
         // A ficha A tem 4 exercícios; as outras, 5.
         fichaDetalheProvider.overrideWith((ref, treinoId) async => TreinoDetalhe(
@@ -359,5 +365,62 @@ void main() {
     expect(find.text('Excluir plano?'), findsOneWidget);
     expect(find.textContaining('o uso passa para o último plano que você usou'),
         findsOneWidget);
+  });
+
+  testWidgets('PBI-67: ficha em andamento fica destacada e o play vira Continuar',
+      (tester) async {
+    final emAndamento = TreinoEmAndamento(
+      treinoId: 'fa',
+      treinoNome: 'A',
+      treinoLivre: false,
+      dataIso: '2026-10-12',
+      inicioMillis: DateTime.now()
+          .subtract(const Duration(minutes: 5, seconds: 3))
+          .millisecondsSinceEpoch,
+      exercicios: const [],
+    );
+    await tester.pumpWidget(_telaComRotas(_plano(), emAndamento: emAndamento));
+    await tester.pumpAndSettle();
+
+    // Só a ficha A muda; as outras seguem com o play.
+    expect(find.text('Em andamento · '), findsOneWidget);
+    expect(find.byTooltip('Treinar A'), findsNothing);
+    expect(find.byTooltip('Treinar B'), findsOneWidget);
+    expect(
+        find.bySemanticsLabel(
+            RegExp(r'^Continuar A, em andamento há 5 minutos$')),
+        findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Abrir ficha A, em andamento$')),
+        findsOneWidget);
+
+    // Continuar retoma (com TREINO_AO_VIVO=false, no registro de uma vez),
+    // sem passar pelo sheet de treinar.
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    expect(find.text('INICIAR TREINO AGORA'), findsNothing);
+    expect(find.text('Registro fa agora'), findsOneWidget);
+  });
+
+  testWidgets('PBI-67: destaque confere no tema escuro', (tester) async {
+    final emAndamento = TreinoEmAndamento(
+      treinoId: 'fb',
+      treinoNome: 'B',
+      treinoLivre: false,
+      dataIso: '2026-10-12',
+      inicioMillis: DateTime.now().millisecondsSinceEpoch,
+      exercicios: const [],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: _overrides(_plano(), emAndamento: emAndamento),
+      child: MaterialApp(
+        theme: AppTheme.escuro,
+        home: const PlanoDetalheScreen(planoId: 'p1'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Em andamento · '), findsOneWidget);
+    expect(find.text('Continuar'), findsOneWidget);
+    expect(find.byTooltip('Treinar B'), findsNothing);
   });
 }

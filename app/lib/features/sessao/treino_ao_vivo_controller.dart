@@ -145,18 +145,12 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
     mudar((estado) => estado.exercicios.add(exercicio));
   }
 
-  /// Persiste o estado atual no rascunho local (autosave).
+  /// Persiste o estado atual no rascunho local (autosave). Vale desde o
+  /// `iniciar`, mesmo com 0 séries marcadas.
   void _persistir() {
     final atual = state;
     if (atual == null) return;
-    _rascunho.salvar(TreinoEmAndamento(
-      treinoId: atual.treinoId,
-      treinoNome: atual.treinoNome,
-      treinoLivre: atual.treinoLivre,
-      dataIso: _soDataIso(atual.data),
-      inicioMillis: atual.inicio.millisecondsSinceEpoch,
-      exercicios: atual.exercicios.map(exercicioParaRascunho).toList(),
-    ));
+    _rascunho.salvar(rascunhoDoEstado(atual));
   }
 
   /// Encerra o treino (finalizar ou descartar): apaga o rascunho e zera o estado.
@@ -165,11 +159,23 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
     state = null;
   }
 
-  static String _soDataIso(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
 }
+
+/// Converte o estado vivo no formato do rascunho (o mesmo que vai para o
+/// aparelho e que a Início e o plano leem como "treino em andamento").
+TreinoEmAndamento rascunhoDoEstado(TreinoAoVivoEstado e) => TreinoEmAndamento(
+      treinoId: e.treinoId,
+      treinoNome: e.treinoNome,
+      treinoLivre: e.treinoLivre,
+      dataIso: _soDataIso(e.data),
+      inicioMillis: e.inicio.millisecondsSinceEpoch,
+      exercicios: e.exercicios.map(exercicioParaRascunho).toList(),
+    );
+
+String _soDataIso(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
 
 /// Treino ao vivo em andamento (TV-3). Nulo quando não há treino aberto.
 final treinoAoVivoControllerProvider =

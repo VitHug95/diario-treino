@@ -895,9 +895,9 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
 | PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
 
-### Ajustes de layout (PBI-57 a PBI-66)
+### Ajustes de layout (PBI-57 a PBI-67)
 
-Dez pedidos do PO em 15/10 (rodadas 1 a 3). Detalhamento, perguntas abertas e ajustes nas PBIs
+Onze pedidos do PO em 15/10 (rodadas 1 a 4). Detalhamento, perguntas abertas e ajustes nas PBIs
 46, 47, 49, 50, 52 e 53 em [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md).
 
 | PBI | Título | Telas | Status |
@@ -908,10 +908,11 @@ Dez pedidos do PO em 15/10 (rodadas 1 a 3). Detalhamento, perguntas abertas e aj
 | PBI-60 | Dicas de treino na Início (era "caixa de novidades") | 23 | ✅ na `main` (PR #80) |
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
-| PBI-63 | Finalizar treino: seta só sai, botões encerram | 24 e 25 | rodadas 1 e 2 na `main` (PR #78 e #82); rodada 3 (seta volta, só leva à Início) em revisão (branch `fix/pbi-63-seta-volta`) |
+| PBI-63 | Finalizar treino: seta só sai, botões encerram | 24 e 25 | ✅ na `main` (PR #78, #82 e #83) |
 | PBI-64 | Depois de salvar: Início com aviso, sem diálogo | 23 | em revisão (branch `feat/pbi-64-65-salvar-e-concluir`) |
 | PBI-65 | Concluir exercício e ir para o próximo | 26 | em revisão (mesma branch da 64) |
-| PBI-66 | Bug: trocar de exercício não deve resetar a aba | 26 | em revisão (branch `fix/pbi-66-aba-exercicio`) |
+| PBI-66 | Bug: trocar de exercício não deve resetar a aba | 26 | ✅ na `main` (PR #84) |
+| PBI-67 | Bug: treino em andamento invisível ao voltar | 19 e 23 | em revisão (branch `fix/pbi-67-treino-em-andamento`, depois da 64/65) |
 
 PBI-57, 62 e 61 vão juntas: a 57 tira os botões de treinar da ficha e a 61 os
 devolve no plano. Separadas, haveria um deploy sem como treinar uma ficha.
@@ -947,6 +948,15 @@ Sem nenhuma série feita, continua "Não realizado". A tela do treino sai sozinh
 quando o treino é encerrado (descartado na barra ou no Resumo).
 **Robot:** os passos que tocam em "Ir para o Início" ou esperam "Treino
 registrado" depois de salvar precisam esperar a Início e o aviso "Treino salvo".
+
+
+PBI-67, notas: `treinoEmAndamentoProvider` deriva do treino ao vivo
+(`rascunhoDoEstado`) e, sem ele, do rascunho do aparelho; a Início e o plano
+deixam de depender de invalidação. O plano destaca a ficha em andamento
+(borda primária, "Em andamento" com cronômetro, botão "Continuar"). Play em
+outra ficha abre "Treino em andamento" com "Voltar" e "Continuar {ficha}":
+nunca há dois treinos abertos. Tokens novos `AppSizes.borda` e
+`AppSizes.bordaDestaque`.
 
 ---
 

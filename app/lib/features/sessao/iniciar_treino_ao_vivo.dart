@@ -33,8 +33,32 @@ Future<void> iniciarTreinoAoVivoDaFicha(
   // Já existe um treino em andamento desta ficha? Retoma sem recarregar.
   final emAndamento = ref.read(treinoEmAndamentoProvider);
   if (emAndamento != null && emAndamento.treinoId == treinoId) {
-    controller.retomarDoRascunho();
-    if (context.mounted) context.push(Rotas.treinoAoVivo);
+    retomarTreinoAoVivo(context, ref);
+    return;
+  }
+
+  // Outro treino em andamento (PBI-67): nunca nasce um segundo. Pergunta e,
+  // se o atleta quiser, retoma o que está aberto.
+  if (emAndamento != null) {
+    final continuar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Treino em andamento'),
+        content: Text('Você já começou o ${emAndamento.treinoNome}. '
+            'Finalize ou descarte esse treino antes de iniciar outro.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Continuar ${emAndamento.treinoNome}'),
+          ),
+        ],
+      ),
+    );
+    if (continuar == true && context.mounted) retomarTreinoAoVivo(context, ref);
     return;
   }
 
@@ -77,7 +101,10 @@ Future<void> iniciarTreinoAoVivoDaFicha(
 /// treino" da tela inicial) e abre a tela 14. Devolve false quando não havia
 /// rascunho para retomar (o chamador cai no comportamento antigo).
 bool retomarTreinoAoVivo(BuildContext context, WidgetRef ref) {
-  final retomou = ref.read(treinoAoVivoControllerProvider.notifier).retomarDoRascunho();
+  // Treino já carregado (saiu pela seta, PBI-63): só volta para ele. Senão
+  // (app reaberto), carrega do rascunho do aparelho.
+  final retomou = ref.read(treinoAoVivoControllerProvider) != null ||
+      ref.read(treinoAoVivoControllerProvider.notifier).retomarDoRascunho();
   if (retomou && context.mounted) {
     context.push(Rotas.treinoAoVivo);
   }

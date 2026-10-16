@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/flags.dart';
+import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
 import '../../core/tema/tema_controller.dart';
 import '../../shared/estado_erro.dart';
@@ -748,11 +749,19 @@ class _ContinuarTreino extends ConsumerWidget {
     final cores = AppColors.of(context);
     final feitos = treino.exercicios.where((e) => e.realizado).length;
     final total = treino.exercicios.length;
+    final tempo =
+        minutosEmAndamento(ref.read(relogioProvider).agora(), treino.inicio);
 
     return Material(
       color: cores.primaryTint,
       borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
+      // PBI-67: o leitor de tela ouve há quanto tempo o treino está aberto.
+      child: Semantics(
+        button: true,
+        label: 'Continuar treino ${treino.treinoNome}, em andamento há $tempo, '
+            '$feitos de $total exercícios marcados',
+        excludeSemantics: true,
+        child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
         onTap: () {
           // Flag TV-3: retoma na tela 14 ao vivo. O treino livre segue no
@@ -799,6 +808,7 @@ class _ContinuarTreino extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

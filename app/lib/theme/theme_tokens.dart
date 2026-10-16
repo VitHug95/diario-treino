@@ -126,4 +126,8 @@ abstract final class AppSizes {
   static const navInferior = 78.0;
   static const iconeMd = 24.0;
   static const iconeSm = 20.0;
+
+  /// Borda padrão de card e a de destaque (ficha em andamento, PBI-67).
+  static const borda = 1.0;
+  static const bordaDestaque = 2.0;
 }
