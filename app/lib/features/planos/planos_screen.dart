@@ -12,6 +12,7 @@ import '../../theme/theme_tokens.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../inicio/primeiro_acesso_screen.dart';
+import 'acoes_plano.dart';
 
 /// Tela 18 (PBI-45): lista de planos do atleta. O plano em uso vem primeiro,
 /// com borda e a tag "Em uso"; cada cartão tem dois alvos separados (abrir o
@@ -272,21 +273,12 @@ void _abrirPlano(BuildContext context, String planoId) {
   context.push('${Rotas.planoDetalhe}?id=${Uri.encodeQueryComponent(planoId)}');
 }
 
-/// Depois de mexer em planos, atualiza a lista e a Início (que segue o em uso).
-void _atualizar(WidgetRef ref) {
-  ref.invalidate(planosProvider);
-  ref.invalidate(planoAtivoProvider);
-}
+void _atualizar(WidgetRef ref) => atualizarPlanos(ref);
 
-void _avisar(BuildContext context, String msg) {
-  if (!context.mounted) return;
-  ScaffoldMessenger.of(context)
-    ..clearSnackBars()
-    ..showSnackBar(SnackBar(content: Text(msg)));
-}
+void _avisar(BuildContext context, String msg) => avisarPlano(context, msg);
 
 Future<void> _novoPlano(BuildContext context, WidgetRef ref) async {
-  final nome = await _dialogoNomePlano(context, titulo: 'Novo plano');
+  final nome = await dialogoNomePlano(context, titulo: 'Novo plano');
   if (nome == null || !context.mounted) return;
   try {
     final id = await ref.read(fichasRepositoryProvider).criarPlano(nome);
@@ -373,12 +365,12 @@ Future<void> _abrirMenu(
         _atualizar(ref);
         if (context.mounted) _avisar(context, 'Cópia criada, fora de uso.');
       case _AcaoPlano.copiar:
-        if (!await _confirmarCopia(context)) return;
+        if (!await confirmarCopiaPlano(context)) return;
         await repo.duplicarPlano(plano.id);
         _atualizar(ref);
         if (context.mounted) _avisar(context, 'Cópia criada. Agora ela é sua para editar.');
       case _AcaoPlano.renomear:
-        final nome = await _dialogoNomePlano(context,
+        final nome = await dialogoNomePlano(context,
             titulo: 'Renomear plano', inicial: plano.nome);
         if (nome == null) return;
         await repo.renomearPlano(planoId: plano.id, nome: nome);
@@ -387,10 +379,7 @@ Future<void> _abrirMenu(
         final confirmou = await confirmarPerigo(
           context,
           titulo: 'Excluir plano?',
-          texto: 'O plano e as fichas dele serão apagados. As sessões que você '
-              'já registrou e os gráficos continuam.'
-              '${plano.emUso ? ' Como ele está em uso, o uso passa para o '
-                  'último plano que você usou.' : ''}',
+          texto: textoExcluirPlano(emUso: plano.emUso),
           rotuloConfirmar: 'Excluir plano',
         );
         if (!confirmou) return;
@@ -432,62 +421,3 @@ class _LinhaMenu extends StatelessWidget {
   }
 }
 
-/// Confirmação de "Copiar para editar" (plano do professor, PBI-48).
-Future<bool> _confirmarCopia(BuildContext context) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Copiar plano?'),
-      content: const Text('Você ganha uma cópia sua, que pode editar. '
-          'O plano do professor continua como está.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('COPIAR PLANO'),
-        ),
-      ],
-    ),
-  );
-  return ok ?? false;
-}
-
-/// Diálogo que pede só o nome do plano (novo ou renomear).
-Future<String?> _dialogoNomePlano(BuildContext context,
-    {required String titulo, String? inicial}) {
-  final nome = TextEditingController(text: inicial ?? '');
-  final formKey = GlobalKey<FormState>();
-
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(titulo),
-      content: Form(
-        key: formKey,
-        child: TextFormField(
-          controller: nome,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-              labelText: 'Nome do plano', hintText: 'Ex.: Treino de viagem'),
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () {
-            if (!formKey.currentState!.validate()) return;
-            Navigator.pop(ctx, nome.text.trim());
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
-    ),
-  );
-}

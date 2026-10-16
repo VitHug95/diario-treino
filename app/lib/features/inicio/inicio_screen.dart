@@ -239,7 +239,7 @@ void _abrirFicha(BuildContext context, TreinoResumo ficha) {
   // go (e não push) troca para a aba Planos já dentro do plano em uso (sem
   // `id`); o `?ficha=<id>` seleciona a ficha certa (FichasScreen resolve).
   context.go(
-      '${Rotas.planoDetalhe}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
+      '${Rotas.fichaDoPlano}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
 }
 
 /// Inicia o treino de uma ficha a partir da tela inicial, por AÇÃO EXPLÍCITA
@@ -607,7 +607,7 @@ class _SemFichas extends StatelessWidget {
           FilledButton(
             // Direto nas fichas do plano em uso (cria o primeiro ao salvar a
             // primeira ficha), como antes da lista de planos.
-            onPressed: () => context.go(Rotas.planoDetalhe),
+            onPressed: () => context.go(Rotas.fichaDoPlano),
             child: const Text('MONTAR FICHAS'),
           ),
         ],
