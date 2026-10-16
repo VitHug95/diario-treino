@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
@@ -9,6 +10,8 @@ import 'package:diario_treino/features/inicio/dicas.dart';
 import 'package:diario_treino/features/inicio/inicio_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
+import 'package:diario_treino/features/sessao/treino_ao_vivo_controller.dart';
+import 'package:diario_treino/features/sessao/treino_em_andamento.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -54,8 +57,9 @@ Future<Widget> _tela(
   List<SessaoResumo> sessoes = const [],
   Future<List<SessaoResumo>> Function()? carregarSessoes,
   ThemeData? tema,
+  Map<String, Object> prefsIniciais = const {},
 }) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues(prefsIniciais);
   final prefs = await SharedPreferences.getInstance();
   final router = GoRouter(
     routes: [
@@ -300,5 +304,72 @@ void main() {
 
     expect(find.text('ESTA SEMANA'), findsOneWidget);
     expect(_dia(_hoje), findsNothing);
+  });
+
+  group('PBI-67: treino em andamento na Início', () {
+    ExercicioEmAndamento ex(String id) => ExercicioEmAndamento(
+          treinoExercicioId: 'te$id',
+          exercicioId: id,
+          nome: 'Exercício $id',
+          modalidade: 'FORCA',
+          origemPreenchimento: null,
+          foraDaFicha: false,
+          realizado: false,
+          series: const [],
+        );
+
+    testWidgets('iniciar já mostra o card, com 0 séries; encerrar tira',
+        (tester) async {
+      await tester.pumpWidget(await _tela(_planoAB));
+      await tester.pumpAndSettle();
+      expect(find.text('Continuar treino'), findsNothing);
+
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(InicioScreen)));
+      container.read(treinoAoVivoControllerProvider.notifier).iniciar(
+            treinoId: 'A',
+            treinoNome: 'A',
+            treinoLivre: false,
+            data: _hoje,
+            exercicios: [ex('1').paraEdicao(), ex('2').paraEdicao()],
+          );
+      await tester.pumpAndSettle();
+
+      // Sem invalidar nada: o card nasce do treino ao vivo.
+      expect(find.text('Continuar treino'), findsOneWidget);
+      expect(find.text('0 de 2 exercícios marcados'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel(
+              RegExp('^Continuar treino A, em andamento há 0 minutos')),
+          findsOneWidget);
+
+      container.read(treinoAoVivoControllerProvider.notifier).encerrar();
+      await tester.pumpAndSettle();
+      expect(find.text('Continuar treino'), findsNothing);
+    });
+
+    testWidgets('app reaberto: o rascunho do aparelho ainda mostra o card',
+        (tester) async {
+      final rascunho = TreinoEmAndamento(
+        treinoId: 'B',
+        treinoNome: 'B',
+        treinoLivre: false,
+        dataIso: '2026-10-12',
+        inicioMillis: DateTime.now()
+            .subtract(const Duration(minutes: 12, seconds: 5))
+            .millisecondsSinceEpoch,
+        exercicios: [ex('1')],
+      );
+      await tester.pumpWidget(await _tela(_planoAB, prefsIniciais: {
+        'treino_em_andamento': jsonEncode(rascunho.paraJson()),
+      }));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Continuar treino'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel(
+              RegExp('^Continuar treino B, em andamento há 12 minutos')),
+          findsOneWidget);
+    });
   });
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/flags.dart';
+import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/acoes_cabecalho.dart';
 import '../../shared/botao_tracejado.dart';
@@ -19,6 +20,8 @@ import '../fichas/plano_models.dart';
 import '../inicio/inicio_logica.dart';
 import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_repository.dart';
+import '../sessao/treino_em_andamento.dart';
+import '../sessao/widgets_ao_vivo.dart';
 import 'acoes_plano.dart';
 
 /// Tela 19 (PBI-46): detalhe de um plano, com as fichas dele. Dá para abrir
@@ -427,13 +430,21 @@ class _LinhaFicha extends ConsumerWidget {
     // saber se há exercícios.
     final podeTreinar = (qtd ?? 0) > 0;
     final raio = BorderRadius.circular(AppRadius.card);
+    // PBI-67: a ficha com treino em andamento fica destacada (borda primária,
+    // "Em andamento · cronômetro") e o play vira "Continuar".
+    final em = ref.watch(treinoEmAndamentoProvider);
+    final emCurso = em != null && !em.treinoLivre && em.treinoId == ficha.id;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: raio,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: cores.lineDefault),
+          border: Border.all(
+              color: emCurso
+                  ? Theme.of(context).colorScheme.primary
+                  : cores.lineDefault,
+              width: emCurso ? AppSizes.bordaDestaque : AppSizes.borda),
           borderRadius: raio,
         ),
         child: Row(
@@ -441,7 +452,9 @@ class _LinhaFicha extends ConsumerWidget {
             Expanded(
               child: Semantics(
                 button: true,
-                label: 'Abrir ficha ${ficha.nome}, $resumo',
+                label: emCurso
+                    ? 'Abrir ficha ${ficha.nome}, em andamento'
+                    : 'Abrir ficha ${ficha.nome}, $resumo',
                 excludeSemantics: true,
                 child: InkWell(
                   borderRadius: const BorderRadius.horizontal(
@@ -459,9 +472,23 @@ class _LinhaFicha extends ConsumerWidget {
                             children: [
                               Text(_titulo(ficha), style: AppText.title),
                               const SizedBox(height: AppSpacing.x4),
-                              Text(resumo,
-                                  style: AppText.caption
-                                      .copyWith(color: cores.textSecondary)),
+                              if (emCurso)
+                                Row(
+                                  children: [
+                                    Text('Em andamento · ',
+                                        style: AppText.caption
+                                            .copyWith(color: cores.primaryText)),
+                                    CronometroVivo(
+                                      inicio: em.inicio,
+                                      estilo: AppText.caption
+                                          .copyWith(color: cores.primaryText),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Text(resumo,
+                                    style: AppText.caption
+                                        .copyWith(color: cores.textSecondary)),
                             ],
                           ),
                         ),
@@ -471,6 +498,35 @@ class _LinhaFicha extends ConsumerWidget {
                 ),
               ),
             ),
+            if (emCurso)
+              Padding(
+                padding:
+                    const EdgeInsets.only(right: AppSpacing.paddingCardCompacto),
+                child: Semantics(
+                  button: true,
+                  label: 'Continuar ${ficha.nome}, em andamento há '
+                      '${minutosEmAndamento(ref.read(relogioProvider).agora(), em.inicio)}',
+                  excludeSemantics: true,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      // Flag TV-3 desligada (ou sem treino para retomar): o
+                      // rascunho reabre no registro de uma vez, como na Início.
+                      if (treinoAoVivoHabilitado &&
+                          retomarTreinoAoVivo(context, ref)) {
+                        return;
+                      }
+                      context.push(Rotas.registrarSessao,
+                          extra: RegistrarSessaoArgs(
+                              treinoId: ficha.id, treinoNome: ficha.nome));
+                    },
+                    style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, AppSizes.touchMin)),
+                    icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
+                    label: const Text('Continuar'),
+                  ),
+                ),
+              )
+            else
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.paddingCardCompacto),
               child: SizedBox(

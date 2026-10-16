@@ -1,6 +1,6 @@
-# Ajustes de layout (PBI-57 a PBI-66)
+# Ajustes de layout (PBI-57 a PBI-67)
 
-Dez pedidos do PO (rodadas 1 a 3), 15/10. Layouts das telas 19, 21, 22, 23, 24, 25 e 26 no PDF `Ajustes-de-layout.pdf`.
+Onze pedidos do PO (rodadas 1 a 4), 15/10. Layouts das telas 19, 21, 22, 23, 24, 25 e 26 no PDF `Ajustes-de-layout.pdf`.
 
 ## O que o PO pediu e onde cada pedido cai
 
@@ -16,6 +16,7 @@ Dez pedidos do PO (rodadas 1 a 3), 15/10. Layouts das telas 19, 21, 22, 23, 24, 
 | 8. Botões do diálogo "Treino registrado" feios e desnecessários; "Ver o treino" volta para a Início | PBI-64 | 23 |
 | 9. Botão para concluir o exercício e ir ao próximo | PBI-65 | 26 |
 | 10. Seta do próximo exercício, na aba Histórico, volta para Séries | PBI-66 (bug) | 26 |
+| 11. Treino em andamento some ao voltar à Início; o plano não mostra a ficha aberta | PBI-67 (bug) | 19 e 23 |
 
 ## Ajustes em PBIs que já existem
 
@@ -272,14 +273,14 @@ _Front · R1 (junto do treino ao vivo) · Telas 24 e 25_
 **Histórico das rodadas:**
 - Rodada 1 (PR #78): sem seta; aviso de treino vazio e de séries pendentes na tela do treino.
 - Rodada 2 (PR #82): o Resumo virou o único passo de salvar e o aviso de treino vazio foi para o "Salvar treino" dele (antes eram dois salvamentos em sequência).
-- Rodada 3 (branch `fix/pbi-63-seta-volta`): tirar a seta foi decisão errada, porque sem ela o atleta não vai à Início durante o treino. A seta volta, sem salvar nem descartar.
+- Rodada 3 (PR #83): tirar a seta foi decisão errada, porque sem ela o atleta não vai à Início durante o treino. A seta volta, sem salvar nem descartar.
 
 ### Escopo
 
 **Tela do treino (tela 24)**
 - Cabeçalho escuro com **seta de voltar**, "Treino em andamento", nome da ficha, cronômetro, "Começou às hh:mm" e séries feitas.
 - **A seta e o voltar do sistema fazem a mesma coisa:** vão para a Início, sem diálogo, sem salvar e sem descartar. O cronômetro e as séries marcadas continuam salvos no aparelho.
-- Na Início, o cartão "Continuar treino" (PBI-59) leva de volta ao treino.
+- Na Início, o cartão "Continuar treino" (PBI-59) leva de volta ao treino. **Depende da PBI-67**, que faz o cartão aparecer logo depois de iniciar.
 - Barra fixa embaixo, empilhada: "Finalizar treino" (primário, check) e "Descartar treino" (contorno vermelho, lixeira), 48 px cada.
 - Texto de apoio: "Pode voltar para a Início sem perder nada: o treino continua em andamento e fica salvo no aparelho. Para encerrar, use os botões abaixo."
 
@@ -354,8 +355,33 @@ _Bug (Front) · Pequeno · Tela 26_
 
 **Causa:** `ExercicioAoVivoScreen` é uma rota por exercício (as setas fazem `pushReplacement`) e criava um `DefaultTabController` novo, que nasce na aba 0.
 
-**Correção (branch `fix/pbi-66-aba-exercicio`):** a aba ativa fica em `abaExercicioAoVivoProvider`; a tela usa um `TabController` próprio com `initialIndex` vindo dele e grava cada troca. Abrir um exercício pela tela do treino zera para Séries.
+**Correção (PR #84):** a aba ativa fica em `abaExercicioAoVivoProvider`; a tela usa um `TabController` próprio com `initialIndex` vindo dele e grava cada troca. Abrir um exercício pela tela do treino zera para Séries.
 
 ### Critérios de aceite
 
 1. Em Histórico do exercício 1, próximo abre o 2 em Histórico. 2. Em Evolução do exercício 3, anterior abre o 2 em Evolução. 3. Aberto pela tela do treino, começa em Séries. 4. "Concluir exercício" (PBI-65) abre o próximo em Séries.
+
+---
+
+## PBI-67 · Bug: treino em andamento invisível ao voltar
+
+_Bug (Front) · Pequeno · Telas 19 e 23_
+
+**História:** Como atleta, quero ver o treino que deixei aberto na Início e no plano, para voltar a ele sem perder o que já fiz e sem começar outro por engano.
+
+**Causa:** a Início e o plano liam o rascunho do aparelho por um provider que só era recalculado quando alguém o invalidava. Ao sair pela seta (PBI-63) logo depois de iniciar, nada invalidava, e o cartão "Continuar treino" não aparecia; o plano nem olhava o treino em andamento.
+
+**Correção (branch `fix/pbi-67-treino-em-andamento`):** `treinoEmAndamentoProvider` passou a derivar do treino ao vivo (`rascunhoDoEstado`), que é reativo; sem treino ao vivo carregado (app reaberto), cai no rascunho do aparelho. O treino é gravado no aparelho já ao iniciar, com 0 séries.
+
+### Escopo
+
+- **Início:** "Continuar treino" aparece assim que o treino começa, mesmo com 0 séries, e some ao salvar ou descartar.
+- **Plano (tela 19):** a ficha em andamento ganha borda primária, "Em andamento · cronômetro" no lugar do resumo, e o play vira o botão "Continuar", que volta ao treino sem passar pelo sheet. O corpo da linha continua abrindo a ficha para editar.
+- **Um treino por vez:** o play de outra ficha abre "Treino em andamento" ("Você já começou o {ficha}. Finalize ou descarte esse treino antes de iniciar outro.") com "Voltar" e "Continuar {ficha}". Nunca nasce um segundo treino nem o aberto é trocado em silêncio.
+- Retomar com o treino já carregado só volta a ele; o rascunho do aparelho só é lido quando o app foi reaberto.
+
+### Critérios de aceite
+
+1. Iniciar e sair pela seta: a Início mostra "Continuar treino" com 0 séries. 2. O plano mostra a ficha "Em andamento" com "Continuar". 3. Play em outra ficha mostra o diálogo e não cria outro treino. 4. Salvar ou descartar tira o cartão e o destaque. 5. App reaberto com rascunho salvo: cartão e destaque continuam. 6. Rótulos falados "Continuar treino {ficha}, em andamento há N minutos" (Início) e "Continuar {ficha}, em andamento há N minutos" (plano); o cronômetro da linha não é lido a cada segundo.
+
+**Robot:** sem impacto (roda com `TREINO_AO_VIVO=false` e entra por "Registrar sem ficha").

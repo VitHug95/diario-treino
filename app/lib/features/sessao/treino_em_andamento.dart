@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/tema/tema_controller.dart';
 import 'sessao_edicao.dart';
+import 'treino_ao_vivo_controller.dart';
 
 /// Rascunho de um treino em andamento, guardado só no aparelho (PBI-37). Não há
 /// estado "em andamento" no servidor: isto some ao finalizar ou descartar.
@@ -287,8 +288,22 @@ final rascunhoTreinoServiceProvider = Provider<RascunhoTreinoService>(
   (ref) => RascunhoTreinoService(ref.watch(sharedPreferencesProvider)),
 );
 
-/// Treino em andamento atual (ou nulo). A tela inicial observa isto para
-/// oferecer "Continuar treino"; o registro invalida ao salvar/descartar.
-final treinoEmAndamentoProvider = Provider<TreinoEmAndamento?>(
-  (ref) => ref.watch(rascunhoTreinoServiceProvider).carregar(),
-);
+/// Treino em andamento atual (ou nulo), a única fonte para a Início ("Continuar
+/// treino") e o plano (ficha "Em andamento"), PBI-67.
+///
+/// Deriva do treino ao vivo, que é reativo: iniciar, marcar série, salvar ou
+/// descartar já atualizam quem observa, sem invalidar nos chamadores. Sem treino
+/// ao vivo carregado (app reaberto, ou o registro antigo com a flag desligada),
+/// cai no rascunho gravado no aparelho.
+final treinoEmAndamentoProvider = Provider<TreinoEmAndamento?>((ref) {
+  final vivo = ref.watch(treinoAoVivoControllerProvider);
+  if (vivo != null) return rascunhoDoEstado(vivo);
+  return ref.watch(rascunhoTreinoServiceProvider).carregar();
+});
+
+/// Tempo de treino para o leitor de tela (PBI-67): "1 minuto", "12 minutos".
+/// O cronômetro visível não entra no rótulo para não ser lido a cada segundo.
+String minutosEmAndamento(DateTime agora, DateTime inicio) {
+  final m = agora.difference(inicio).inMinutes.clamp(0, 1 << 30);
+  return m == 1 ? '1 minuto' : '$m minutos';
+}
