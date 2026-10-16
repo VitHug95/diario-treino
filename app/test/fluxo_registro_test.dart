@@ -157,7 +157,7 @@ Future<void> _assentar(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'Registrar o Treino A faz a tela inicial passar a sugerir o Treino B',
+    'Registrar o Treino A pela folha do dia atualiza a semana e o último treino',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -173,17 +173,22 @@ void main() {
       await tester.pumpWidget(_appComFakes(store, prefs));
       await tester.pumpAndSettle();
 
-      // Estado inicial: sem histórico, sugere o A.
-      expect(find.text('A · Peito'), findsOneWidget);
+      // Estado inicial (PBI-59): semana sem treino e sem "Último treino".
+      expect(find.text('0 dias treinados'), findsOneWidget);
+      expect(find.text('ÚLTIMO TREINO'), findsNothing);
       // Na Início, a barra de navegação inferior está visível.
       expect(find.byType(NavigationBar), findsOneWidget);
 
-      // Inicia o treino pelo botão explícito do cartão de sugestão (PBI-50:
-      // antes "REGISTRAR TREINO", agora "INICIAR TREINO").
-      await tester.tap(find.text('INICIAR TREINO'));
+      // Toca no dia de hoje: a folha do dia lista as fichas do plano em uso.
+      final hoje = DateTime.now();
+      final dd = '${hoje.day.toString().padLeft(2, '0')}/'
+          '${hoje.month.toString().padLeft(2, '0')}';
+      await tester.tap(find.bySemanticsLabel(RegExp('^Dia $dd,')));
       await tester.pumpAndSettle();
-      // Em andamento (PBI-37), o título é o nome da ficha.
-      expect(find.text('A'), findsWidgets);
+      await tester.tap(find.text('Peito'));
+      await tester.pumpAndSettle();
+      // Registro do treino já feito, com o nome da ficha no título.
+      expect(find.text('Registrar A'), findsOneWidget);
       // PBI-55: o registro abre em tela cheia, sem a barra de abas.
       expect(find.byType(NavigationBar), findsNothing);
 
@@ -211,10 +216,11 @@ void main() {
       await tester.tap(find.text('Ir para o Início'));
       await _assentar(tester);
 
-      // AQUI está o coração do bug PBI-23A: ao voltar, a Início deve refletir
-      // a nova sessão e recomendar o PRÓXIMO da sequência (B), não mais o A.
-      expect(find.text('B · Costas'), findsOneWidget);
-      expect(find.text('A · Peito'), findsNothing);
+      // Regressão do bug PBI-23A: ao voltar, a Início reflete a nova sessão
+      // (semana marcada e último treino), sem precisar recarregar.
+      expect(find.text('1 dia treinado'), findsOneWidget);
+      expect(find.text('ÚLTIMO TREINO'), findsOneWidget);
+      expect(find.bySemanticsLabel('Dia $dd, treino registrado'), findsOneWidget);
     },
   );
 }

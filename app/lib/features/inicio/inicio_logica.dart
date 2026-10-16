@@ -1,38 +1,26 @@
-import '../fichas/plano_models.dart';
 import '../sessao/sessao_models.dart';
 
-/// Regras puras da tela inicial (PBI-23A), separadas da UI para teste.
+/// Regras puras da tela inicial, separadas da UI para teste.
 ///
-/// O app não trava ficha por dia: a sequência é só uma RECOMENDAÇÃO. A próxima
-/// ficha sugerida é a seguinte (na ordem) à última ficha registrada; sem
-/// histórico, sugere a primeira.
+/// Desde a PBI-59 a Início não sugere ficha (a "próxima da sequência" saiu):
+/// mostra a semana e o último treino. Treinar fica nas telas de plano.
 abstract final class InicioLogica {
-  /// Ficha recomendada para o próximo treino. [fichas] deve vir ordenada por
-  /// `ordem`. [sessoes] são as sessões recentes (qualquer ordem). Devolve nulo
-  /// só se não houver fichas.
-  static TreinoResumo? proximaFicha(
-    List<TreinoResumo> fichas,
-    List<SessaoResumo> sessoes,
-  ) {
-    if (fichas.isEmpty) return null;
-
-    // Última sessão (mais recente) que foi de uma ficha que ainda existe.
-    final idsFichas = {for (final f in fichas) f.id};
-    final comFicha = sessoes
-        .where((s) => s.treinoId != null && idsFichas.contains(s.treinoId))
-        .toList()
-      ..sort((a, b) => b.data.compareTo(a.data));
-
-    if (comFicha.isEmpty) {
-      return fichas.first; // sem histórico: começa pela primeira
+  /// Sessão mais recente (pela data; empate fica a primeira da lista). Nulo
+  /// sem sessões: o cartão "Último treino" não aparece.
+  static SessaoResumo? ultimaSessao(List<SessaoResumo> sessoes) {
+    SessaoResumo? ultima;
+    for (final s in sessoes) {
+      if (ultima == null || s.data.isAfter(ultima.data)) ultima = s;
     }
-
-    final ultimoId = comFicha.first.treinoId;
-    final idx = fichas.indexWhere((f) => f.id == ultimoId);
-    // Próxima na rotação (volta para a primeira após a última).
-    final proximo = (idx + 1) % fichas.length;
-    return fichas[proximo];
+    return ultima;
   }
+
+  /// Sessões registradas no dia [dia] (a hora não conta), para a folha do dia.
+  static List<SessaoResumo> sessoesDoDia(DateTime dia, List<SessaoResumo> sessoes) =>
+      sessoes
+          .where((s) =>
+              s.data.year == dia.year && s.data.month == dia.month && s.data.day == dia.day)
+          .toList();
 
   /// Data da última vez que cada ficha foi registrada (treinoId -> data).
   /// Fichas nunca registradas não entram no mapa.

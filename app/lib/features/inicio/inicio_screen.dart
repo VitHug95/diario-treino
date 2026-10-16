@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,7 @@ import '../../theme/theme_tokens.dart';
 import '../auth/auth_service.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
+import '../planos/plano_detalhe_screen.dart' show QuadradoFicha, rotuloQuadradoFicha;
 import '../sessao/iniciar_treino_ao_vivo.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
@@ -20,12 +23,12 @@ import '../sessao/treino_em_andamento.dart';
 import 'inicio_logica.dart';
 import 'primeiro_acesso_screen.dart';
 
-/// Tela inicial (tela 2 do protótipo), PBI-23 (partes B e A).
+/// Tela inicial (tela 23, PBI-59): a semana e o último treino, de relance.
+/// Sem lista de fichas nem sugestão: treinar fica nas telas de plano (PBI-61).
 ///
-/// Lista as fichas do plano ativo, recomenda a próxima ficha da sequência
-/// (rotação a partir da última registrada — recomendação, não obrigação),
-/// mostra a data da última vez de cada ficha e uma faixa semanal (seg→dom)
-/// marcando os dias com treino registrado.
+/// Tocar num dia (menos os futuros) abre a folha do dia: o que foi registrado
+/// nele e como registrar um treino naquele dia (fichas do plano em uso ou
+/// "Sem ficha").
 class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
@@ -94,6 +97,7 @@ class InicioScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.x20),
+              // Treino em andamento: sempre no topo, nunca some (PBI-59).
               if (emAndamento != null) ...[
                 _ContinuarTreino(treino: emAndamento),
                 const SizedBox(height: AppSpacing.x20),
@@ -113,6 +117,7 @@ class InicioScreen extends ConsumerWidget {
                   aoTentarSessoes: () => ref.invalidate(sessoesRecentesProvider),
                 ),
               ),
+              // Área "Novidades" (PBI-60) entra aqui, oculta até lá.
             ],
           ),
         ),
@@ -121,13 +126,8 @@ class InicioScreen extends ConsumerWidget {
   }
 }
 
-/// Decide o que mostrar conforme o estado do plano: sem plano/sem fichas
-/// (chamada para montar) ou com fichas (faixa semanal + destaque + lista).
-///
-/// As sessões (histórico) são tratadas por estado explícito: a recomendação, a
-/// faixa semanal e a "última vez" só aparecem quando o histórico carregou. Em
-/// carregamento, mostra a lista de fichas sem fingir uma sugestão (evita o bug
-/// de sugerir sempre a primeira ficha). Em erro, oferece recarregar.
+/// Semana, último treino e, se o plano em uso não tem fichas, o convite para
+/// montar.
 class _Conteudo extends StatelessWidget {
   const _Conteudo({
     required this.plano,
@@ -141,196 +141,517 @@ class _Conteudo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fichas = plano?.treinos ?? const <TreinoResumo>[];
-    if (fichas.isEmpty) {
-      return const _SemFichas();
-    }
-
-    final ordenadas = [...fichas]..sort((a, b) => a.ordem.compareTo(b.ordem));
-
-    // O plano vem de GET /planos/ativo, que devolve o plano EM USO (PBI-44).
-    // A sequência só olha as fichas dele (PBI-47); o nome vai no título.
-    final planoNome = plano!.nome;
-
-    return sessoes.when(
-      // Histórico carregado: recomendação, semana e "última vez" reais.
-      data: (lista) =>
-          _ComHistorico(fichas: ordenadas, sessoes: lista, planoNome: planoNome),
-      // Carregando: mostra as fichas para registrar, sem sugestão prematura.
-      loading: () => _SemHistorico(
-          fichas: ordenadas, carregando: true, aoTentar: aoTentarSessoes, planoNome: planoNome),
-      // Erro: não engole; mostra as fichas e um aviso para recarregar.
-      error: (_, __) => _SemHistorico(
-          fichas: ordenadas, carregando: false, aoTentar: aoTentarSessoes, planoNome: planoNome),
-    );
-  }
-}
-
-/// Estado completo: histórico disponível. Recomenda a próxima ficha, mostra a
-/// faixa semanal e a "última vez" de cada ficha.
-class _ComHistorico extends ConsumerWidget {
-  const _ComHistorico({
-    required this.fichas,
-    required this.sessoes,
-    required this.planoNome,
-  });
-
-  final List<TreinoResumo> fichas;
-  final List<SessaoResumo> sessoes;
-  final String planoNome;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Sessões de fichas de outros planos e treino livre não mudam a sequência
-    // (proximaFicha só olha as fichas deste plano). A faixa semanal usa todas:
-    // dia treinado é do atleta, não do plano.
-    final recomendada = InicioLogica.proximaFicha(fichas, sessoes) ?? fichas.first;
-    final ultimaVez = InicioLogica.ultimaVezPorFicha(sessoes);
-    final dias = InicioLogica.diasDaSemana(DateTime.now(), sessoes);
+    final fichas = [...?plano?.treinos]..sort((a, b) => a.ordem.compareTo(b.ordem));
+    final ultima = sessoes.whenOrNull(data: InicioLogica.ultimaSessao);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FaixaSemana(dias: dias, aoTocarDia: (d) => _registrar(context, ref, recomendada, data: d)),
-        const SizedBox(height: AppSpacing.x20),
-        _CartaoDestaque(ficha: recomendada),
-        const SizedBox(height: AppSpacing.x24),
-        _TituloFichas(planoNome: planoNome),
-        const SizedBox(height: AppSpacing.x12),
-        for (final ficha in fichas) ...[
-          _CartaoFicha(ficha: ficha, ultimaVez: ultimaVez[ficha.id]),
-          const SizedBox(height: AppSpacing.entreItens),
+        _CartaoSemana(
+          sessoes: sessoes,
+          aoTentar: aoTentarSessoes,
+          aoTocarDia: (dia, lista) => abrirFolhaDoDia(context,
+              dia: dia,
+              sessoes: InicioLogica.sessoesDoDia(dia, lista),
+              fichas: fichas,
+              planoNome: plano?.nome),
+        ),
+        if (ultima != null) ...[
+          const SizedBox(height: AppSpacing.entreCards),
+          _CartaoUltimoTreino(sessao: ultima),
+        ],
+        if (fichas.isEmpty) ...[
+          const SizedBox(height: AppSpacing.x20),
+          const _SemFichas(),
         ],
       ],
     );
   }
 }
 
-/// Estado sem histórico pronto (carregando ou erro): lista as fichas para
-/// registrar, sem recomendação nem checks (não finge uma sugestão). Em erro,
-/// mostra um aviso discreto com recarregar.
-class _SemHistorico extends StatelessWidget {
-  const _SemHistorico({
-    required this.fichas,
-    required this.carregando,
+/// Cartão "Esta semana": seg a dom e "N dias treinados". Carregando, um
+/// indicador; erro, aviso com "Tentar de novo" (nunca uma semana vazia falsa).
+class _CartaoSemana extends StatelessWidget {
+  const _CartaoSemana({
+    required this.sessoes,
     required this.aoTentar,
-    required this.planoNome,
+    required this.aoTocarDia,
   });
 
-  final List<TreinoResumo> fichas;
-  final bool carregando;
+  final AsyncValue<List<SessaoResumo>> sessoes;
   final VoidCallback aoTentar;
-  final String planoNome;
+  final void Function(DateTime dia, List<SessaoResumo> sessoes) aoTocarDia;
 
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!carregando)
+    final dias = sessoes.whenOrNull(
+        data: (lista) => InicioLogica.diasDaSemana(DateTime.now(), lista));
+    final treinados = dias?.where((d) => d.treinou).length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: cores.lineDefault),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      // Lateral menor que a do card (8): sete alvos de 44 px cabem em 360 px.
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x8, vertical: AppSpacing.paddingCardCompacto),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
             child: Row(
               children: [
-                Icon(LucideIcons.cloudOff, size: AppSizes.iconeSm, color: cores.textSecondary),
-                const SizedBox(width: AppSpacing.x8),
                 Expanded(
-                  child: Text('Não foi possível carregar seu histórico.',
-                      style: AppText.caption.copyWith(color: cores.textSecondary)),
+                  child: Text('ESTA SEMANA',
+                      style: AppText.overline.copyWith(color: cores.textSecondary)),
                 ),
-                TextButton(onPressed: aoTentar, child: const Text('Recarregar')),
+                if (treinados != null)
+                  Text('$treinados ${treinados == 1 ? 'dia treinado' : 'dias treinados'}',
+                      style: AppText.caption.copyWith(color: cores.textStrong)),
               ],
             ),
           ),
-        _TituloFichas(planoNome: planoNome),
-        const SizedBox(height: AppSpacing.x12),
-        for (final ficha in fichas) ...[
-          _CartaoFicha(ficha: ficha, ultimaVez: null),
-          const SizedBox(height: AppSpacing.entreItens),
+          const SizedBox(height: AppSpacing.x8),
+          sessoes.when(
+            data: (lista) => _FaixaSemana(
+              dias: dias!,
+              aoTocarDia: (dia) => aoTocarDia(dia, lista),
+            ),
+            loading: () => const SizedBox(
+              height: 64,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, __) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.cloudOff,
+                      size: AppSizes.iconeSm, color: cores.textSecondary),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text('Não foi possível carregar seu histórico.',
+                        style: AppText.caption.copyWith(color: cores.textSecondary)),
+                  ),
+                  TextButton(onPressed: aoTentar, child: const Text('Tentar de novo')),
+                ],
+              ),
+            ),
+          ),
         ],
-      ],
+      ),
     );
   }
 }
 
-/// Título da lista de fichas com o nome do plano em uso ao lado (PBI-47):
-/// "SUAS FICHAS · HIPERTROFIA". Dois textos, para o rótulo "SUAS FICHAS"
-/// continuar achável pelos testes e pelo Robot.
-class _TituloFichas extends StatelessWidget {
-  const _TituloFichas({required this.planoNome});
+/// Faixa dos 7 dias (seg→dom). Quatro estados que não dependem só da cor:
+/// treinou (círculo cheio com check), passado sem treino (círculo vazio), hoje
+/// (anel e letra azuis) e futuro (tracejado, sem toque).
+class _FaixaSemana extends StatelessWidget {
+  const _FaixaSemana({required this.dias, required this.aoTocarDia});
 
-  final String planoNome;
+  final List<DiaSemana> dias;
+  final ValueChanged<DateTime> aoTocarDia;
 
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
     return Row(
       children: [
-        Text('SUAS FICHAS', style: AppText.overline),
-        Flexible(
-          child: Text(
-            ' · ${planoNome.toUpperCase()}',
-            overflow: TextOverflow.ellipsis,
-            style: AppText.overline.copyWith(color: cores.textSecondary),
+        for (final dia in dias)
+          Expanded(
+            child: Semantics(
+              // Nó próprio também no dia futuro (sem toque), para o leitor de
+              // tela anunciar cada dia separado.
+              container: true,
+              button: !dia.futuro,
+              label: _rotuloAcessivel(dia),
+              excludeSemantics: true,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                onTap: dia.futuro ? null : () => aoTocarDia(dia.data),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
+                    child: Column(
+                      children: [
+                        Text(dia.inicial,
+                            style: AppText.caption.copyWith(
+                              color: dia.ehHoje ? cores.primaryText : cores.textSecondary,
+                              fontWeight: dia.ehHoje ? FontWeight.w700 : null,
+                            )),
+                        const SizedBox(height: AppSpacing.x6),
+                        _MarcaDia(dia: dia, cores: cores),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
-}
 
-/// Abre a ficha na aba Fichas, selecionada, SEM iniciar treino (bug PBI-50).
-/// Vale com a flag ligada ou desligada: abrir uma ficha nunca grava rascunho
-/// nem liga o cronômetro. O início fica a cargo de botões explícitos.
-void _abrirFicha(BuildContext context, TreinoResumo ficha) {
-  // go (e não push) troca para a aba Planos já dentro do plano em uso (sem
-  // `id`); o `?ficha=<id>` seleciona a ficha certa (FichasScreen resolve).
-  context.go(
-      '${Rotas.fichaDoPlano}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
-}
-
-/// Inicia o treino de uma ficha a partir da tela inicial, por AÇÃO EXPLÍCITA
-/// (botão "INICIAR TREINO" do cartão de sugestão, ou toque num dia da faixa
-/// semanal). Nunca é chamada por toque no cartão de ficha — isso é PBI-50.
-/// [data] opcional pré-seleciona o dia (faixa semanal).
-///
-/// Com a flag TV-3 ligada e sem [data] (ou seja, "treinar agora"), abre o
-/// treino ao vivo (tela 14). Com um dia específico escolhido na faixa semanal
-/// ([data] != null) é um registro retroativo — segue no formulário de sempre,
-/// que aceita data passada. Flag desligada mantém tudo no fluxo antigo.
-void _registrar(
-  BuildContext context,
-  WidgetRef ref,
-  TreinoResumo ficha, {
-  DateTime? data,
-}) {
-  if (treinoAoVivoHabilitado && data == null) {
-    iniciarTreinoAoVivoDaFicha(
-      context,
-      ref,
-      treinoId: ficha.id,
-      treinoNome: ficha.nome,
-    );
-    return;
+  static String _rotuloAcessivel(DiaSemana dia) {
+    final dd = '${dia.data.day.toString().padLeft(2, '0')}/${dia.data.month.toString().padLeft(2, '0')}';
+    if (dia.treinou) return 'Dia $dd, treino registrado';
+    if (dia.futuro) return 'Dia $dd, ainda não chegou';
+    return 'Dia $dd, sem treino. Toque para registrar';
   }
-  context.push(
-    Rotas.registrarSessao,
-    extra: RegistrarSessaoArgs(
-      treinoId: ficha.id,
-      treinoNome: ficha.nome,
-      data: data,
-    ),
-  );
 }
+
+/// Marca do dia, conforme o estado (ver [_FaixaSemana]).
+class _MarcaDia extends StatelessWidget {
+  const _MarcaDia({required this.dia, required this.cores});
+
+  final DiaSemana dia;
+  final AppColors cores;
+
+  static const _tamanho = 28.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
+    if (dia.treinou) {
+      return Container(
+        width: _tamanho,
+        height: _tamanho,
+        decoration: BoxDecoration(color: esquema.primary, shape: BoxShape.circle),
+        child: Icon(LucideIcons.check, size: AppSizes.iconeSm, color: esquema.onPrimary),
+      );
+    }
+    if (dia.futuro) {
+      return CustomPaint(
+        size: const Size.square(_tamanho),
+        painter: _CirculoTracejado(cor: cores.lineDashed),
+      );
+    }
+    return Container(
+      width: _tamanho,
+      height: _tamanho,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // Hoje: anel azul mais grosso. Passado sem treino: círculo vazio.
+        border: dia.ehHoje
+            ? Border.all(color: cores.primaryText, width: 2)
+            : Border.all(color: cores.lineDashed, width: 1.5),
+      ),
+    );
+  }
+}
+
+/// Círculo tracejado do dia futuro.
+class _CirculoTracejado extends CustomPainter {
+  _CirculoTracejado({required this.cor});
+
+  final Color cor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const tracos = 12;
+    const preenchido = 0.55; // fração de cada passo que é traço
+    final raio = size.width / 2 - 0.75;
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: raio);
+    final pincel = Paint()
+      ..color = cor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    const passo = 2 * math.pi / tracos;
+    for (var i = 0; i < tracos; i++) {
+      canvas.drawArc(rect, i * passo, passo * preenchido, false, pincel);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CirculoTracejado old) => old.cor != cor;
+}
+
+/// Cartão "Último treino": ficha (ou "Treino livre"), data e quantidade de
+/// exercícios. Toque abre o detalhe da sessão.
+class _CartaoUltimoTreino extends StatelessWidget {
+  const _CartaoUltimoTreino({required this.sessao});
+
+  final SessaoResumo sessao;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final nome = _nomeSessao(sessao);
+    final resumo = '${dataCurtaInicio(sessao.data)} · ${_exercicios(sessao.quantidadeExercicios)}';
+
+    return Semantics(
+      button: true,
+      label: 'Último treino: $nome, $resumo. Abrir detalhe',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => _abrirSessao(context, sessao),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('ÚLTIMO TREINO',
+                          style: AppText.overline.copyWith(color: cores.textSecondary)),
+                      const SizedBox(height: AppSpacing.x6),
+                      Text(nome, style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(resumo,
+                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight, color: cores.iconMuted, size: AppSizes.iconeMd),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _abrirSessao(BuildContext context, SessaoResumo sessao) => context.push(
+      Rotas.detalheSessao,
+      extra: DetalheSessaoArgs(sessaoId: sessao.id, treinoNome: sessao.treinoNome),
+    );
+
+String _nomeSessao(SessaoResumo s) =>
+    (s.treinoNome == null || s.treinoNome!.isEmpty) ? 'Treino livre' : s.treinoNome!;
+
+String _exercicios(int n) => '$n ${n == 1 ? 'exercício' : 'exercícios'}';
 
 /// Formata uma data como "seg, 13/10".
-String _dataCurta(DateTime d) {
+String dataCurtaInicio(DateTime d) {
   const dias = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
   final dia = dias[d.weekday - 1];
   final dd = d.day.toString().padLeft(2, '0');
   final mm = d.month.toString().padLeft(2, '0');
   return '$dia, $dd/$mm';
+}
+
+/// O que o atleta escolheu na folha do dia.
+sealed class _EscolhaDia {
+  const _EscolhaDia();
+}
+
+class _VerSessao extends _EscolhaDia {
+  const _VerSessao(this.sessao);
+  final SessaoResumo sessao;
+}
+
+class _RegistrarFicha extends _EscolhaDia {
+  const _RegistrarFicha(this.ficha);
+  final TreinoResumo ficha;
+}
+
+class _RegistrarSemFicha extends _EscolhaDia {
+  const _RegistrarSemFicha();
+}
+
+/// Folha do dia (PBI-59): título "qua, 14/10", o que foi registrado nele e as
+/// opções de registrar um treino naquele dia. A folha só devolve a escolha; a
+/// navegação sai daqui, com o contexto da Início.
+Future<void> abrirFolhaDoDia(
+  BuildContext context, {
+  required DateTime dia,
+  required List<SessaoResumo> sessoes,
+  required List<TreinoResumo> fichas,
+  required String? planoNome,
+}) async {
+  final escolha = await showModalBottomSheet<_EscolhaDia>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _FolhaDoDia(
+      dia: dia,
+      sessoes: sessoes,
+      fichas: fichas,
+      planoNome: planoNome,
+    ),
+  );
+  if (escolha == null || !context.mounted) return;
+
+  switch (escolha) {
+    case _VerSessao(:final sessao):
+      _abrirSessao(context, sessao);
+    case _RegistrarFicha(:final ficha):
+      // Registro retroativo (data editável, duração digitada), no dia tocado.
+      context.push(
+        Rotas.registrarSessao,
+        extra: RegistrarSessaoArgs(
+          treinoId: ficha.id,
+          treinoNome: ficha.nome,
+          data: dia,
+          registroPosterior: true,
+        ),
+      );
+    case _RegistrarSemFicha():
+      context.push(Rotas.treinoLivre, extra: dia);
+  }
+}
+
+class _FolhaDoDia extends StatelessWidget {
+  const _FolhaDoDia({
+    required this.dia,
+    required this.sessoes,
+    required this.fichas,
+    required this.planoNome,
+  });
+
+  final DateTime dia;
+  final List<SessaoResumo> sessoes;
+  final List<TreinoResumo> fichas;
+  final String? planoNome;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    void escolher(_EscolhaDia e) => Navigator.of(context).pop(e);
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.margemTela, 0, AppSpacing.margemTela, AppSpacing.margemTela),
+          children: [
+            Semantics(
+              header: true,
+              child: Text(dataCurtaInicio(dia), style: AppText.displayS),
+            ),
+            if (sessoes.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x16),
+              Text('REGISTRADO', style: AppText.overline.copyWith(color: cores.textSecondary)),
+              const SizedBox(height: AppSpacing.x8),
+              for (final s in sessoes) ...[
+                _LinhaFolha(
+                  inicio: Icon(LucideIcons.checkCircle,
+                      size: AppSizes.iconeMd, color: cores.primaryText),
+                  titulo: _nomeSessao(s),
+                  subtitulo: [
+                    _exercicios(s.quantidadeExercicios),
+                    if (s.duracaoMin != null) '${s.duracaoMin} min',
+                  ].join(' · '),
+                  rotulo: 'Ver treino ${_nomeSessao(s)}',
+                  aoTocar: () => escolher(_VerSessao(s)),
+                ),
+                const SizedBox(height: AppSpacing.entreItens),
+              ],
+            ],
+            const SizedBox(height: AppSpacing.x16),
+            Text(
+              sessoes.isEmpty ? 'REGISTRAR TREINO NESTE DIA' : 'REGISTRAR OUTRO TREINO NESTE DIA',
+              style: AppText.overline.copyWith(color: cores.textSecondary),
+            ),
+            if (fichas.isNotEmpty && planoNome != null) ...[
+              const SizedBox(height: AppSpacing.x4),
+              Text('Fichas do plano $planoNome',
+                  style: AppText.caption.copyWith(color: cores.textSecondary)),
+            ],
+            const SizedBox(height: AppSpacing.x8),
+            for (var i = 0; i < fichas.length; i++) ...[
+              _LinhaFolha(
+                inicio: QuadradoFicha(texto: rotuloQuadradoFicha(fichas[i].nome, i + 1)),
+                titulo: fichas[i].nome,
+                subtitulo: fichas[i].descricao,
+                rotulo: 'Registrar ${fichas[i].nome} em ${dataCurtaInicio(dia)}',
+                aoTocar: () => escolher(_RegistrarFicha(fichas[i])),
+              ),
+              const SizedBox(height: AppSpacing.entreItens),
+            ],
+            _LinhaFolha(
+              inicio: Icon(LucideIcons.plus, size: AppSizes.iconeMd, color: cores.textStrong),
+              titulo: 'Sem ficha',
+              subtitulo: 'Treino livre',
+              rotulo: 'Registrar sem ficha em ${dataCurtaInicio(dia)}',
+              aoTocar: () => escolher(const _RegistrarSemFicha()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Uma opção da folha do dia: ícone ou quadrado, título e subtítulo.
+class _LinhaFolha extends StatelessWidget {
+  const _LinhaFolha({
+    required this.inicio,
+    required this.titulo,
+    required this.subtitulo,
+    required this.rotulo,
+    required this.aoTocar,
+  });
+
+  final Widget inicio;
+  final String titulo;
+  final String? subtitulo;
+  final String rotulo;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final temSub = subtitulo != null && subtitulo!.trim().isNotEmpty;
+    return Semantics(
+      button: true,
+      label: rotulo,
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.campoForm),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.campoForm),
+          onTap: aoTocar,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: AppSizes.campoForm),
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.campoForm),
+            ),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x12, vertical: AppSpacing.x8),
+            child: Row(
+              children: [
+                inicio,
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titulo, style: AppText.titleS),
+                      if (temSub)
+                        Text(subtitulo!,
+                            style: AppText.caption.copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight, color: cores.iconMuted, size: AppSizes.iconeSm),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _BotaoTema extends StatelessWidget {
@@ -352,208 +673,6 @@ class _BotaoTema extends StatelessWidget {
       icon: Icon(escuro ? LucideIcons.sun : LucideIcons.moon,
           size: AppSizes.iconeSm),
       tooltip: escuro ? 'Usar tema claro' : 'Usar tema escuro',
-    );
-  }
-}
-
-/// Faixa dos 7 dias da semana (seg→dom) com check nos dias com treino. Tocar
-/// num dia (que não seja futuro) abre o registro naquela data (PBI-23A).
-class _FaixaSemana extends StatelessWidget {
-  const _FaixaSemana({required this.dias, required this.aoTocarDia});
-
-  final List<DiaSemana> dias;
-  final ValueChanged<DateTime> aoTocarDia;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        for (final dia in dias)
-          Expanded(
-            child: Semantics(
-              button: !dia.futuro,
-              label: _rotuloAcessivel(dia),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.campoSerie),
-                onTap: dia.futuro ? null : () => aoTocarDia(dia.data),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x6),
-                  child: Column(
-                    children: [
-                      Text(dia.inicial,
-                          style: AppText.caption.copyWith(
-                            color: dia.ehHoje ? cores.primaryText : cores.textSecondary,
-                          )),
-                      const SizedBox(height: AppSpacing.x6),
-                      _MarcaDia(dia: dia, cores: cores),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  static String _rotuloAcessivel(DiaSemana dia) {
-    final dd = '${dia.data.day.toString().padLeft(2, '0')}/${dia.data.month.toString().padLeft(2, '0')}';
-    if (dia.treinou) return 'Dia $dd, treino registrado';
-    if (dia.futuro) return 'Dia $dd, ainda não chegou';
-    return 'Dia $dd, sem treino. Toque para registrar';
-  }
-}
-
-/// Bolinha do dia: check quando treinou; círculo apagado quando não.
-class _MarcaDia extends StatelessWidget {
-  const _MarcaDia({required this.dia, required this.cores});
-
-  final DiaSemana dia;
-  final AppColors cores;
-
-  @override
-  Widget build(BuildContext context) {
-    const tamanho = 28.0;
-    if (dia.treinou) {
-      return Container(
-        width: tamanho,
-        height: tamanho,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(LucideIcons.check,
-            size: AppSizes.iconeSm, color: Theme.of(context).colorScheme.onPrimary),
-      );
-    }
-    return Container(
-      width: tamanho,
-      height: tamanho,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: dia.ehHoje ? cores.primaryText : cores.lineDefault,
-        ),
-      ),
-    );
-  }
-}
-
-/// Cartão de recomendação — fundo escuro (bg-header). Sugere a próxima ficha da
-/// sequência (rotação a partir da última registrada). É recomendação, não trava:
-/// qualquer ficha pode ser registrada pela lista abaixo (PBI-23A).
-class _CartaoDestaque extends ConsumerWidget {
-  const _CartaoDestaque({required this.ficha});
-
-  final TreinoResumo ficha;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cores = AppColors.of(context);
-    final titulo = ficha.descricao != null && ficha.descricao!.isNotEmpty
-        ? '${ficha.nome} · ${ficha.descricao}'
-        : ficha.nome;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.x20),
-      decoration: BoxDecoration(
-        color: cores.bgHeader,
-        borderRadius: BorderRadius.circular(AppRadius.destaque),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('SUGESTÃO DE HOJE',
-              style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
-          const SizedBox(height: AppSpacing.x8),
-          Text(titulo,
-              style: AppText.displayM.copyWith(color: cores.textOnHeader)),
-          const SizedBox(height: AppSpacing.x4),
-          Text('Próxima da sua sequência. Você pode registrar qualquer ficha.',
-              style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
-          const SizedBox(height: AppSpacing.x16),
-          // Ação explícita de iniciar (PBI-50): rótulo que diz o que faz, com
-          // ícone de play. É o único ponto da Início que inicia o treino.
-          Semantics(
-            button: true,
-            label: 'Iniciar treino ${ficha.nome}',
-            child: FilledButton.icon(
-              onPressed: () => _registrar(context, ref, ficha),
-              icon: const Icon(LucideIcons.play, size: AppSizes.iconeSm),
-              label: const Text('INICIAR TREINO'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Ficha da lista: toque ABRE a ficha na aba Fichas (não inicia treino — bug
-/// PBI-50). O treino só começa por ação explícita ("INICIAR TREINO" no cartão
-/// de sugestão, ou "INICIAR TREINO AGORA" na Fichas). Mostra a última vez.
-class _CartaoFicha extends ConsumerWidget {
-  const _CartaoFicha({required this.ficha, required this.ultimaVez});
-
-  final TreinoResumo ficha;
-  final DateTime? ultimaVez;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cores = AppColors.of(context);
-    final temDescricao = ficha.descricao != null && ficha.descricao!.isNotEmpty;
-    final rotuloUltima = ultimaVez == null
-        ? 'ainda não registrada'
-        : 'última vez em ${_dataCurta(ultimaVez!)}';
-
-    return Semantics(
-      button: true,
-      label: 'Abrir ficha ${ficha.nome}, $rotuloUltima',
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          onTap: () => _abrirFicha(context, ficha),
-          child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: cores.lineDefault),
-            borderRadius: BorderRadius.circular(AppRadius.card),
-          ),
-          padding: const EdgeInsets.all(AppSpacing.paddingCard),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(ficha.nome, style: AppText.title),
-                    if (temDescricao) ...[
-                      const SizedBox(height: AppSpacing.x4),
-                      Text(ficha.descricao!,
-                          style: AppText.caption
-                              .copyWith(color: cores.textSecondary)),
-                    ],
-                    const SizedBox(height: AppSpacing.x4),
-                    Text(
-                      ultimaVez == null
-                          ? 'Ainda não registrada'
-                          : 'Última vez: ${_dataCurta(ultimaVez!)}',
-                      style: AppText.caption.copyWith(color: cores.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(LucideIcons.chevronRight,
-                  color: cores.iconMuted, size: AppSizes.iconeMd),
-            ],
-          ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -626,7 +745,7 @@ class _ContinuarTreino extends ConsumerWidget {
   }
 }
 
-/// Sem plano ou sem fichas: convida a montar as fichas.
+/// Plano em uso sem fichas (já treinou sem ficha): convida a montar.
 class _SemFichas extends StatelessWidget {
   const _SemFichas();
 
@@ -643,7 +762,7 @@ class _SemFichas extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('PRÓXIMO DA SEQUÊNCIA',
+          Text('PLANO EM USO',
               style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x8),
           Text('Monte suas fichas',
