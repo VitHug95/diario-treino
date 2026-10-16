@@ -34,6 +34,81 @@ class FichasRepository {
     return resposta.data!['id'] as String;
   }
 
+  // ---- Planos (PBI-44/45) ----
+
+  /// Planos do atleta (só os ativos), na ordem da API.
+  Future<List<PlanoDaLista>> listarPlanos() async {
+    final resposta = await _dio.get<List<dynamic>>('/planos');
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(PlanoDaLista.doJson)
+        .toList();
+  }
+
+  /// Plano específico com as fichas (GET /planos/{id}), no mesmo formato do
+  /// plano em uso. A API devolve também uso e autoria, lidos na PBI-46.
+  Future<PlanoAtivo> obterPlano(String planoId) async {
+    final resposta = await _dio.get<Map<String, dynamic>>('/planos/$planoId');
+    return PlanoAtivo.doJson(resposta.data!);
+  }
+
+  /// Cria um plano com nome e devolve o id. O primeiro do atleta nasce em uso.
+  Future<String> criarPlano(String nome) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>(
+        '/planos',
+        data: {'nome': nome},
+      );
+      return resposta.data!['id'] as String;
+    } on DioException catch (e) {
+      throw FichasException(_traduzirPlano(e));
+    }
+  }
+
+  Future<void> renomearPlano({required String planoId, required String nome}) =>
+      _executarPlano(() => _dio.put<void>('/planos/$planoId', data: {'nome': nome}));
+
+  /// Define o plano em uso (a API troca numa transação só).
+  Future<void> definirEmUso(String planoId) =>
+      _executarPlano(() => _dio.post<void>('/planos/$planoId/em-uso'));
+
+  /// Duplica o plano (cópia do atleta, fora de uso, sem sessões). Devolve o id.
+  Future<String> duplicarPlano(String planoId) async {
+    try {
+      final resposta =
+          await _dio.post<Map<String, dynamic>>('/planos/$planoId/duplicar');
+      return resposta.data!['id'] as String;
+    } on DioException catch (e) {
+      throw FichasException(_traduzirPlano(e));
+    }
+  }
+
+  /// Exclui o plano. A API apaga se não houver sessões ou esconde se houver,
+  /// e passa o uso adiante quando ele estava em uso.
+  Future<void> excluirPlano(String planoId) =>
+      _executarPlano(() => _dio.delete<void>('/planos/$planoId'));
+
+  Future<void> _executarPlano(Future<void> Function() acao) async {
+    try {
+      await acao();
+    } on DioException catch (e) {
+      throw FichasException(_traduzirPlano(e));
+    }
+  }
+
+  static String _traduzirPlano(DioException e) {
+    final status = e.response?.statusCode;
+    return switch (status) {
+      400 => 'Confira o nome do plano.',
+      403 => 'Este plano é do seu professor: só ele edita. Copie para mudar.',
+      404 => 'Plano não encontrado.',
+      null => 'Sem conexão. Verifique sua internet e tente de novo.',
+      _ => 'Não foi possível concluir. Tente novamente.',
+    };
+  }
+
+  // ---- Fichas ----
+
   Future<void> adicionarFicha({
     required String planoId,
     required String nome,
@@ -171,6 +246,17 @@ final fichasRepositoryProvider = Provider<FichasRepository>(
 /// Plano ativo atual (recarrega ao invalidar após criar/editar/arquivar).
 final planoAtivoProvider = FutureProvider.autoDispose<PlanoAtivo?>(
   (ref) => ref.watch(fichasRepositoryProvider).obterPlanoAtivo(),
+);
+
+/// Planos do atleta (PBI-45). A tela ordena com [ordenarPlanos].
+final planosProvider = FutureProvider.autoDispose<List<PlanoDaLista>>(
+  (ref) => ref.watch(fichasRepositoryProvider).listarPlanos(),
+);
+
+/// Um plano específico com as fichas, por id (aberto a partir da lista).
+final planoPorIdProvider =
+    FutureProvider.autoDispose.family<PlanoAtivo?, String>(
+  (ref, planoId) => ref.watch(fichasRepositoryProvider).obterPlano(planoId),
 );
 
 /// Detalhe de uma ficha (com os exercícios), por id.

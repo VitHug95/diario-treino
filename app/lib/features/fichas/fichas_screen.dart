@@ -24,9 +24,13 @@ import 'plano_models.dart';
 /// tela Início via `/fichas?ficha=<id>` — abrir a ficha nunca inicia o treino.
 /// Id inexistente ou nulo cai na primeira ficha.
 class FichasScreen extends ConsumerStatefulWidget {
-  const FichasScreen({super.key, this.fichaInicialId});
+  const FichasScreen({super.key, this.fichaInicialId, this.planoId});
 
   final String? fichaInicialId;
+
+  /// Plano aberto a partir da lista de planos (PBI-45). Nulo = plano em uso,
+  /// como antes (Início e Primeiro acesso continuam abrindo assim).
+  final String? planoId;
 
   @override
   ConsumerState<FichasScreen> createState() => _FichasScreenState();
@@ -50,9 +54,17 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     if (i > 0) _selecionada = i;
   }
 
+  /// Fonte das fichas: o plano escolhido na lista ou, sem id, o plano em uso.
+  FutureProvider<PlanoAtivo?> get _plano => widget.planoId == null
+      ? planoAtivoProvider
+      : planoPorIdProvider(widget.planoId!);
+
   Future<void> _recarregar() async {
+    // Mudou ficha: atualiza este plano, a lista (contagens) e a Início.
+    ref.invalidate(_plano);
     ref.invalidate(planoAtivoProvider);
-    await ref.read(planoAtivoProvider.future);
+    ref.invalidate(planosProvider);
+    await ref.read(_plano.future);
   }
 
   Future<void> _novaFicha(PlanoAtivo? plano) async {
@@ -67,7 +79,7 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
           planoId: planoId, nome: dados.nome, descricao: dados.descricao);
       await _recarregar();
       // Seleciona a última (a recém-criada).
-      final atual = ref.read(planoAtivoProvider).value;
+      final atual = ref.read(_plano).value;
       if (atual != null && atual.treinos.isNotEmpty) {
         setState(() => _selecionada = atual.treinos.length - 1);
       }
@@ -116,15 +128,20 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final planoAsync = ref.watch(planoAtivoProvider);
+    final planoAsync = ref.watch(_plano);
 
     // "Nova ficha" na AppBar só quando já existe ao menos uma ficha. Sem
     // fichas, o único caminho é o botão "CRIAR FICHA" do estado vazio (PBI-52).
     final temFichas = (planoAsync.value?.treinos ?? const []).isNotEmpty;
 
+    // Aberta pela lista de planos, o título é o nome do plano (PBI-45).
+    final titulo = widget.planoId == null
+        ? 'Fichas'
+        : (planoAsync.value?.nome ?? 'Plano');
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fichas'),
+        title: Text(titulo),
         actions: [
           if (temFichas) ...[
             TextButton.icon(

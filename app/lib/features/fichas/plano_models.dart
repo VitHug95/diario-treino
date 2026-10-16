@@ -16,6 +16,60 @@ class PlanoAtivo {
       );
 }
 
+/// Um plano na lista de planos (GET /api/v1/planos, PBI-44/45). Espelha o
+/// `PlanoDaLista` da API.
+class PlanoDaLista {
+  const PlanoDaLista({
+    required this.id,
+    required this.nome,
+    required this.inicio,
+    required this.emUso,
+    required this.autor,
+    required this.somenteLeitura,
+    required this.quantidadeFichas,
+    required this.quantidadeExercicios,
+  });
+
+  final String id;
+  final String nome;
+  final DateTime inicio;
+
+  /// O plano que a Início segue. No máximo um por atleta.
+  final bool emUso;
+
+  /// Nome do autor (para "Prof. Nome" quando não é o próprio atleta).
+  final String autor;
+
+  /// Plano do professor (autor ≠ atleta): o atleta só lê, treina e copia.
+  final bool somenteLeitura;
+
+  final int quantidadeFichas;
+  final int quantidadeExercicios;
+
+  factory PlanoDaLista.doJson(Map<String, dynamic> json) => PlanoDaLista(
+        id: json['id'] as String,
+        nome: json['nome'] as String,
+        inicio: DateTime.parse(json['inicio'] as String),
+        emUso: json['emUso'] as bool,
+        autor: (json['autor'] as String?) ?? '',
+        somenteLeitura: json['somenteLeitura'] as bool,
+        quantidadeFichas: (json['quantidadeFichas'] as num).toInt(),
+        quantidadeExercicios: (json['quantidadeExercicios'] as num).toInt(),
+      );
+}
+
+/// Ordena a lista de planos: em uso primeiro, depois pelo início mais recente
+/// (PBI-45). A API já devolve nessa ordem; reordenar aqui deixa a tela
+/// determinística independentemente do servidor.
+List<PlanoDaLista> ordenarPlanos(List<PlanoDaLista> planos) {
+  final copia = [...planos];
+  copia.sort((a, b) {
+    if (a.emUso != b.emUso) return a.emUso ? -1 : 1;
+    return b.inicio.compareTo(a.inicio);
+  });
+  return copia;
+}
+
 /// Ficha com seus exercícios prescritos (GET /api/v1/treinos/{id}).
 class TreinoDetalhe {
   const TreinoDetalhe({
