@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/dados/invalidacao.dart';
 import '../../core/flags.dart';
 import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
@@ -63,10 +64,8 @@ class InicioScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(planoAtivoProvider);
-            ref.invalidate(sessoesRecentesProvider);
-          },
+          onRefresh: () async =>
+              tentarDeNovo(ref, [planoAtivoProvider, sessoesRecentesProvider]),
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
@@ -111,12 +110,12 @@ class InicioScreen extends ConsumerWidget {
                 ),
                 error: (_, __) => EstadoErro(
                   mensagem: 'Não foi possível carregar suas fichas.',
-                  aoTentar: () => ref.invalidate(planoAtivoProvider),
+                  aoTentar: () => ref.refresh(planoAtivoProvider),
                 ),
                 data: (plano) => _Conteudo(
                   plano: plano,
                   sessoes: sessoesAsync,
-                  aoTentarSessoes: () => ref.invalidate(sessoesRecentesProvider),
+                  aoTentarSessoes: () => ref.refresh(sessoesRecentesProvider),
                 ),
               ),
             ],

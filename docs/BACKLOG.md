@@ -959,6 +959,33 @@ outra ficha abre "Treino em andamento" com "Voltar" e "Continuar {ficha}":
 nunca há dois treinos abertos. Tokens novos `AppSizes.borda` e
 `AppSizes.bordaDestaque`.
 
+### Correções e fluxos de entrada (PBI-67 a PBI-72)
+
+Pedidos do PO em 16/10, com as respostas dele. Detalhamento, decisões a
+revisar e impacto no E2E em [CORRECOES-FLUXOS.md](CORRECOES-FLUXOS.md).
+Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
+
+| PBI | Título | Telas | Status |
+|---|---|---|---|
+| PBI-70 | Telas atualizam pela origem da mudança | todas | em revisão (branch `fix/pbi-70-invalidacao-pela-origem`) |
+| PBI-67 | Treino em andamento visível ao voltar | 19 e 23 | ✅ na `main` (PR #86); o ponto único de aviso veio com a 70 |
+| PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | a fazer |
+| PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | a fazer |
+| PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | a fazer |
+| PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | a fazer (front + API) |
+
+PBI-70, notas: as telas gravam por `fichasComandosProvider`,
+`sessaoComandosProvider` e `catalogoComandosProvider`; cada comando chama o
+repositório e depois `invalidarDerivados` (`lib/core/dados/invalidacao.dart`),
+o único lugar que invalida. "Tentar de novo" usa `ref.refresh` da própria
+leitura. O rascunho do treino avisa por `versaoRascunhoTreinoProvider` (o
+Riverpod não deixa invalidar quem depende do serviço). Um teste de
+arquitetura falha se aparecer `invalidate(` fora do mapa ou escrita direta no
+repositório fora dos comandos. Escritas que não avisavam ninguém foram
+corrigidas junto: alvos e exercícios da ficha (plano e rascunho do registro
+ficavam velhos), sessão (aba Progresso e histórico do exercício) e "Salvar
+também como ficha". `fichaTemSessoesProvider` foi para `sessao_repository.dart`.
+
 ---
 
 ## 9. Épicos futuros (ainda não refinados)

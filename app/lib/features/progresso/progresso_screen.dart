@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../core/dados/invalidacao.dart';
 import '../../core/rotas/app_router.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/estado_vazio.dart';
@@ -31,11 +32,11 @@ class ProgressoScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Progresso')),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(sessoesDoPeriodoProvider);
-            ref.invalidate(exerciciosComHistoricoProvider);
-            ref.invalidate(progressoDoExercicioProvider);
-          },
+          onRefresh: () async => tentarDeNovo(ref, [
+                sessoesDoPeriodoProvider,
+                exerciciosComHistoricoProvider,
+                progressoDoExercicioProvider,
+              ]),
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
@@ -62,7 +63,7 @@ class ProgressoScreen extends ConsumerWidget {
                 ),
                 error: (_, __) => EstadoErro(
                   mensagem: 'Não foi possível carregar as sessões.',
-                  aoTentar: () => ref.invalidate(sessoesDoPeriodoProvider),
+                  aoTentar: () => ref.refresh(sessoesDoPeriodoProvider),
                 ),
                 data: (sessoes) => sessoes.isEmpty
                     ? const EstadoVazio(
@@ -103,7 +104,7 @@ class _SeletorExercicio extends ConsumerWidget {
       loading: () => const _CampoSeletorVazio(texto: 'Carregando exercícios…'),
       error: (_, __) => InkWell(
         borderRadius: BorderRadius.circular(AppRadius.campoForm),
-        onTap: () => ref.invalidate(exerciciosComHistoricoProvider),
+        onTap: () => ref.refresh(exerciciosComHistoricoProvider),
         child: const _CampoSeletorVazio(
             texto: 'Erro ao carregar. Toque para tentar de novo.'),
       ),
@@ -202,7 +203,7 @@ class _GraficoEvolucao extends ConsumerWidget {
         child: MensagemGrafico(
           icone: LucideIcons.cloudOff,
           texto: 'Não foi possível carregar o gráfico.',
-          aoTentar: () => ref.invalidate(progressoDoExercicioProvider),
+          aoTentar: () => ref.refresh(progressoDoExercicioProvider),
         ),
       ),
       data: (progresso) {

@@ -10,7 +10,8 @@ import '../theme/theme_tokens.dart';
 /// (`_Erro`, `_ErroCarregar`, `_ErroMetricas`), para corrigir num lugar só.
 ///
 /// [aoTentar] roda ao tocar em "Tentar de novo" — tipicamente um
-/// `ref.invalidate(...)`. Para callbacks assíncronos, passe `() => algo()`.
+/// `ref.refresh(...)` da própria leitura da tela (PBI-70). Para callbacks
+/// assíncronos, passe `() => algo()`.
 class EstadoErro extends StatelessWidget {
   const EstadoErro({super.key, required this.mensagem, required this.aoTentar});
 

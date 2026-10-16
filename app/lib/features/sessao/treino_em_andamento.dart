@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/dados/invalidacao.dart';
 import '../../core/tema/tema_controller.dart';
 import 'sessao_edicao.dart';
 import 'treino_ao_vivo_controller.dart';
@@ -195,9 +196,13 @@ class SerieEmAndamento {
 /// Lê e grava o único treino em andamento no `shared_preferences` (PBI-37).
 /// Só existe um por vez: gravar substitui o anterior.
 class RascunhoTreinoService {
-  RascunhoTreinoService(this._prefs);
+  RascunhoTreinoService(this._prefs, {void Function()? aoMudar})
+      : _aoMudar = aoMudar;
 
   final SharedPreferences _prefs;
+
+  /// Avisa quem lê o treino em andamento depois de gravar ou apagar (PBI-70).
+  final void Function()? _aoMudar;
 
   static const _chave = 'treino_em_andamento';
 
@@ -214,10 +219,19 @@ class RascunhoTreinoService {
     }
   }
 
-  Future<void> salvar(TreinoEmAndamento treino) =>
-      _prefs.setString(_chave, jsonEncode(treino.paraJson()));
+  // O shared_preferences atualiza a cópia em memória na hora; o aviso pode
+  // sair antes de o disco terminar.
+  Future<void> salvar(TreinoEmAndamento treino) {
+    final gravacao = _prefs.setString(_chave, jsonEncode(treino.paraJson()));
+    _aoMudar?.call();
+    return gravacao;
+  }
 
-  Future<void> limpar() => _prefs.remove(_chave);
+  Future<void> limpar() {
+    final remocao = _prefs.remove(_chave);
+    _aoMudar?.call();
+    return remocao;
+  }
 }
 
 /// Converte o estado vivo da tela ([ExercicioEdicao]) para o rascunho e de volta.
@@ -285,7 +299,10 @@ ExercicioEmAndamento exercicioParaRascunho(ExercicioEdicao e) =>
     );
 
 final rascunhoTreinoServiceProvider = Provider<RascunhoTreinoService>(
-  (ref) => RascunhoTreinoService(ref.watch(sharedPreferencesProvider)),
+  (ref) => RascunhoTreinoService(
+    ref.watch(sharedPreferencesProvider),
+    aoMudar: () => invalidarDerivados(ref, Mudanca.treinoEmAndamento),
+  ),
 );
 
 /// Treino em andamento atual (ou nulo), a única fonte para a Início ("Continuar
@@ -298,8 +315,23 @@ final rascunhoTreinoServiceProvider = Provider<RascunhoTreinoService>(
 final treinoEmAndamentoProvider = Provider<TreinoEmAndamento?>((ref) {
   final vivo = ref.watch(treinoAoVivoControllerProvider);
   if (vivo != null) return rascunhoDoEstado(vivo);
+  // Muda a cada gravação do rascunho (PBI-70): relê o aparelho.
+  ref.watch(versaoRascunhoTreinoProvider);
   return ref.watch(rascunhoTreinoServiceProvider).carregar();
 });
+
+/// Contador que avança a cada gravação ou remoção do rascunho (PBI-70). O
+/// serviço não pode invalidar quem depende dele (o Riverpod acusa ciclo), então
+/// avisa por aqui, via [invalidarDerivados].
+final versaoRascunhoTreinoProvider =
+    NotifierProvider<VersaoRascunhoTreino, int>(VersaoRascunhoTreino.new);
+
+class VersaoRascunhoTreino extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void avancar() => state++;
+}
 
 /// Tempo de treino para o leitor de tela (PBI-67): "1 minuto", "12 minutos".
 /// O cronômetro visível não entra no rótulo para não ser lido a cada segundo.

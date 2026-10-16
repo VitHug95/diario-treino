@@ -89,7 +89,7 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => EstadoErro(
                 mensagem: 'Não foi possível carregar os exercícios.',
-                aoTentar: () => ref.invalidate(catalogoProvider),
+                aoTentar: () => ref.refresh(catalogoProvider),
               ),
               data: (itens) => itens.isEmpty
                   ? EstadoVazio(

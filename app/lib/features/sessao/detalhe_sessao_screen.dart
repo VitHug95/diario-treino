@@ -10,8 +10,8 @@ import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
-import '../fichas/fichas_repository.dart';
 import 'registrar_sessao_screen.dart';
+import 'sessao_comandos.dart';
 import 'sessao_models.dart';
 import 'sessao_repository.dart';
 
@@ -38,8 +38,7 @@ class DetalheSessaoScreen extends ConsumerWidget {
         ),
       ),
     );
-    // Ao voltar da edição, recarrega para refletir as mudanças.
-    ref.invalidate(sessaoDetalheProvider(sessaoId));
+    // Salvar a edição já atualiza este detalhe (PBI-70).
   }
 
   Future<void> _excluir(BuildContext context, WidgetRef ref) async {
@@ -53,10 +52,8 @@ class DetalheSessaoScreen extends ConsumerWidget {
     if (!confirmar) return;
 
     try {
-      await ref.read(sessaoRepositoryProvider).excluirSessao(sessaoId);
-      // Excluir muda recomendação/checks/última vez na tela inicial.
-      ref.invalidate(sessoesRecentesProvider);
-      ref.invalidate(planoAtivoProvider);
+      // O comando atualiza a semana, o último treino e o progresso.
+      await ref.read(sessaoComandosProvider).excluirSessao(sessaoId);
       if (context.mounted) context.go(Rotas.inicio);
     } on SessaoException catch (e) {
       if (context.mounted) {
@@ -92,7 +89,7 @@ class DetalheSessaoScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => EstadoErro(
           mensagem: 'Não foi possível carregar o treino.',
-          aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId)),
+          aoTentar: () => ref.refresh(sessaoDetalheProvider(sessaoId)),
         ),
         data: (dados) => _Conteudo(detalhe: dados),
       ),

@@ -1,4 +1,6 @@
+import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/sessao/treino_em_andamento.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -86,5 +88,27 @@ void main() {
     final rascunho = exercicioParaRascunho(ex);
     expect(rascunho.series.single.volumeTexto, '10');
     expect(rascunho.realizado, isTrue);
+  });
+
+  test('PBI-70: gravar ou apagar o rascunho avisa o treino em andamento',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ]);
+    addTearDown(container.dispose);
+    final lidos = <String?>[];
+    container.listen(treinoEmAndamentoProvider, (_, t) => lidos.add(t?.treinoId),
+        fireImmediately: true);
+
+    // Fluxo antigo (flag desligada): o registro grava só o rascunho, sem o
+    // treino ao vivo. Ninguém invalida na tela; a Início precisa ver mesmo assim.
+    await container.read(rascunhoTreinoServiceProvider).salvar(_exemplo());
+    await container.pump();
+    await container.read(rascunhoTreinoServiceProvider).limpar();
+    await container.pump();
+
+    expect(lidos, [null, _exemplo().treinoId, null]);
   });
 }

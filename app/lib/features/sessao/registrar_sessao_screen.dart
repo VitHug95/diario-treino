@@ -14,6 +14,8 @@ import '../../theme/theme_tokens.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../fichas/fichas_repository.dart';
+import '../fichas/fichas_comandos.dart';
+import 'sessao_comandos.dart';
 import 'sessao_edicao.dart';
 import 'sessao_repository.dart';
 import 'treino_em_andamento.dart';
@@ -64,7 +66,7 @@ class RegistrarSessaoScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) => EstadoErro(
             mensagem: 'Não foi possível preparar o registro.',
-            aoTentar: () => ref.invalidate(sessaoDetalheProvider(sessaoId!)),
+            aoTentar: () => ref.refresh(sessaoDetalheProvider(sessaoId!)),
           ),
           data: (dados) => _Formulario(
             treinoId: dados.treinoId,
@@ -113,7 +115,7 @@ class RegistrarSessaoScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => EstadoErro(
           mensagem: 'Não foi possível preparar o registro.',
-          aoTentar: () => ref.invalidate(rascunhoSessaoProvider(treinoId)),
+          aoTentar: () => ref.refresh(rascunhoSessaoProvider(treinoId)),
         ),
         data: (dados) => _Formulario(
           treinoId: treinoId,
@@ -273,7 +275,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
       exercicios: _exercicios.map(exercicioParaRascunho).toList(),
     );
     ref.read(rascunhoTreinoServiceProvider).salvar(treino);
-    ref.invalidate(treinoEmAndamentoProvider);
   }
 
   static String _soDataIso(DateTime d) =>
@@ -286,7 +287,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
     _encerrado = true;
     if (_emAndamento) {
       ref.read(rascunhoTreinoServiceProvider).limpar();
-      ref.invalidate(treinoEmAndamentoProvider);
     }
   }
 
@@ -438,7 +438,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
     setState(() => _salvando = true);
     try {
-      final repo = ref.read(sessaoRepositoryProvider);
+      final repo = ref.read(sessaoComandosProvider);
       final duracao = int.tryParse(_duracao.text.trim());
       final obs = _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
 
@@ -451,10 +451,8 @@ class _FormularioState extends ConsumerState<_Formulario> {
           observacao: obs,
           exercicios: _exercicios,
         );
+        // O comando já atualizou o detalhe, a semana e o progresso (PBI-70).
         if (!mounted) return;
-        // Atualiza o detalhe e a tela inicial (sugestão/checks/última vez).
-        ref.invalidate(sessaoDetalheProvider(widget.sessaoId!));
-        _invalidarInicio();
         Navigator.of(context).pop(true);
       } else {
         final sessaoId = await repo.criarSessao(
@@ -475,9 +473,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
           await _criarFichaDoTreino();
         }
 
-        // A sessão nova muda a recomendação, os checks da semana e a "última
-        // vez" na tela inicial; invalida para refletir ao voltar (bug PBI-23A).
-        _invalidarInicio();
         if (mounted) _confirmarRegistro(sessaoId);
       }
     } on SessaoException catch (e) {
@@ -501,11 +496,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
     if (nome == null || !mounted) return;
 
     try {
-      await ref.read(fichasRepositoryProvider).salvarComoFicha(
+      await ref.read(fichasComandosProvider).salvarComoFicha(
             nome: nome,
             exercicioIds: ids,
           );
-      ref.invalidate(planoAtivoProvider);
     } on FichasException catch (e) {
       _erro('Treino salvo, mas não deu para criar a ficha: ${e.mensagem}');
     }
@@ -545,13 +539,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
   void _confirmarRegistro(String sessaoId) =>
       irParaInicioComTreinoSalvo(context, sessaoId);
-
-  /// Invalida os dados que a tela inicial deriva do histórico de sessões, para
-  /// a recomendação/semana/última-vez refletirem a sessão recém-salva.
-  void _invalidarInicio() {
-    ref.invalidate(sessoesRecentesProvider);
-    ref.invalidate(planoAtivoProvider);
-  }
 
   void _erro(String msg) {
     if (!mounted) return;

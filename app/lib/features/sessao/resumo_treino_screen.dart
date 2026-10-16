@@ -11,9 +11,9 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/metrica.dart';
-import '../fichas/fichas_repository.dart';
 import 'descanso_controller.dart';
 import 'sessao_edicao.dart';
+import 'sessao_comandos.dart';
 import 'sessao_repository.dart';
 import 'treino_ao_vivo_controller.dart';
 import 'widgets_ao_vivo.dart';
@@ -165,7 +165,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
 
     setState(() => _salvando = true);
     try {
-      final repo = ref.read(sessaoRepositoryProvider);
+      final repo = ref.read(sessaoComandosProvider);
       final duracao = int.tryParse(_duracao.text.trim());
       final obs =
           _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
@@ -182,7 +182,6 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       // sessão ser salva: se o POST falha, o rascunho fica para tentar de novo.
       ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
       ref.read(descansoControllerProvider.notifier).encerrar();
-      _invalidarInicio();
 
       if (mounted) _confirmar(sessaoId);
     } on SessaoException catch (e) {
@@ -205,11 +204,6 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
 
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
   void _confirmar(String sessaoId) => irParaInicioComTreinoSalvo(context, sessaoId);
-
-  void _invalidarInicio() {
-    ref.invalidate(sessoesRecentesProvider);
-    ref.invalidate(planoAtivoProvider);
-  }
 
   void _erro(String msg) {
     if (!mounted) return;
