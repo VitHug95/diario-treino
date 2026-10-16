@@ -77,7 +77,7 @@ class PrimeiroAcessoScreen extends StatelessWidget {
                 child: FilledButton(
                   // Vai direto às fichas do plano em uso, e não à lista de
                   // planos: sem plano, a lista mostraria esta mesma tela.
-                  onPressed: () => context.go(Rotas.planoDetalhe),
+                  onPressed: () => context.go(Rotas.fichaDoPlano),
                   child: const Text('MONTAR MINHAS FICHAS'),
                 ),
               ),

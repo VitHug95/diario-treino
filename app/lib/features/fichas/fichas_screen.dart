@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/flags.dart';
 import '../../core/rotas/app_router.dart';
+import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/estado_vazio.dart';
@@ -13,6 +14,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../sessao/iniciar_treino_ao_vivo.dart';
+import 'dialogo_ficha.dart';
 import 'editar_alvos_screen.dart';
 import 'fichas_repository.dart';
 import 'plano_models.dart';
@@ -64,11 +66,12 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
     ref.invalidate(_plano);
     ref.invalidate(planoAtivoProvider);
     ref.invalidate(planosProvider);
+    ref.invalidate(planoDetalheProvider);
     await ref.read(_plano.future);
   }
 
   Future<void> _novaFicha(PlanoAtivo? plano) async {
-    final dados = await _dialogoFicha(context);
+    final dados = await dialogoFicha(context);
     if (dados == null) return;
 
     final repo = ref.read(fichasRepositoryProvider);
@@ -89,7 +92,7 @@ class _FichasScreenState extends ConsumerState<FichasScreen> {
   }
 
   Future<void> _renomear(TreinoResumo ficha) async {
-    final dados = await _dialogoFicha(context, inicial: ficha);
+    final dados = await dialogoFicha(context, inicial: ficha);
     if (dados == null) return;
     try {
       await ref.read(fichasRepositoryProvider).editarFicha(
@@ -453,7 +456,7 @@ class _ListaExerciciosFicha extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              child: _BotaoAdicionarTracejado(
+              child: BotaoTracejado(
                 rotulo: 'Adicionar exercício à ficha',
                 aoTocar: () => _adicionar(context, ref),
               ),
@@ -657,127 +660,5 @@ Future<void> _abrirAcoesFicha(
   }
 }
 
-/// Botão de "adicionar" com borda tracejada (design system): transparente,
-/// borda `lineDashed` 1,5 px, altura 44, raio 10, texto `body-s` 600.
-class _BotaoAdicionarTracejado extends StatelessWidget {
-  const _BotaoAdicionarTracejado({required this.rotulo, required this.aoTocar});
-
-  final String rotulo;
-  final VoidCallback aoTocar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    return SizedBox(
-      width: double.infinity,
-      height: AppSizes.touchMin,
-      child: CustomPaint(
-        painter: _BordaTracejada(cor: cores.lineDashed, raio: AppRadius.campoSerie),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: aoTocar,
-            borderRadius: BorderRadius.circular(AppRadius.campoSerie),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(LucideIcons.plus,
-                    size: AppSizes.iconeSm, color: cores.textStrong),
-                const SizedBox(width: AppSpacing.x8),
-                Text(rotulo,
-                    style: AppText.bodyS.copyWith(
-                        fontWeight: FontWeight.w600, color: cores.textStrong)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Pinta uma borda arredondada tracejada. Usada pelo botão "adicionar".
-class _BordaTracejada extends CustomPainter {
-  _BordaTracejada({required this.cor, required this.raio});
-
-  final Color cor;
-  final double raio;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(raio),
-    );
-    final caminho = Path()..addRRect(rrect);
-    final tracejado = Path();
-    const traco = 6.0;
-    const vao = 4.0;
-    for (final metrica in caminho.computeMetrics()) {
-      var distancia = 0.0;
-      while (distancia < metrica.length) {
-        final fim = (distancia + traco).clamp(0.0, metrica.length);
-        tracejado.addPath(metrica.extractPath(distancia, fim), Offset.zero);
-        distancia += traco + vao;
-      }
-    }
-    final tinta = Paint()
-      ..color = cor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(tracejado, tinta);
-  }
-
-  @override
-  bool shouldRepaint(_BordaTracejada old) => old.cor != cor || old.raio != raio;
-}
-
-/// Resultado do diálogo de criar/editar ficha.
-class _DadosFicha {
-  const _DadosFicha(this.nome, this.descricao);
-  final String nome;
-  final String? descricao;
-}
-
-/// Diálogo com nome e descrição. [inicial] preenche para edição.
-Future<_DadosFicha?> _dialogoFicha(BuildContext context, {TreinoResumo? inicial}) {
-  final nome = TextEditingController(text: inicial?.nome ?? '');
-  final descricao = TextEditingController(text: inicial?.descricao ?? '');
-  final formKey = GlobalKey<FormState>();
-
-  return showDialog<_DadosFicha>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(inicial == null ? 'Nova ficha' : 'Renomear ficha'),
-      content: Form(
-        key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: nome,
-              decoration: const InputDecoration(labelText: 'Nome', hintText: 'Ex.: A'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            TextFormField(
-              controller: descricao,
-              decoration: const InputDecoration(
-                  labelText: 'Descrição (opcional)', hintText: 'Ex.: Peito e tríceps'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () {
-            if (!formKey.currentState!.validate()) return;
-            Navigator.pop(ctx, _DadosFicha(nome.text.trim(), descricao.text.trim()));
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
-    ),
-  );
-}
+// Botão tracejado e diálogo de ficha extraídos para shared/botao_tracejado.dart
+// e fichas/dialogo_ficha.dart (PBI-46), para o detalhe do plano reaproveitar.

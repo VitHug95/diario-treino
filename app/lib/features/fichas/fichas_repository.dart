@@ -52,6 +52,12 @@ class FichasRepository {
     return PlanoAtivo.doJson(resposta.data!);
   }
 
+  /// Detalhe do plano com uso e autoria (tela 19).
+  Future<PlanoDetalhe> obterDetalhePlano(String planoId) async {
+    final resposta = await _dio.get<Map<String, dynamic>>('/planos/$planoId');
+    return PlanoDetalhe.doJson(resposta.data!);
+  }
+
   /// Cria um plano com nome e devolve o id. O primeiro do atleta nasce em uso.
   Future<String> criarPlano(String nome) async {
     try {
@@ -257,6 +263,18 @@ final planosProvider = FutureProvider.autoDispose<List<PlanoDaLista>>(
 final planoPorIdProvider =
     FutureProvider.autoDispose.family<PlanoAtivo?, String>(
   (ref, planoId) => ref.watch(fichasRepositoryProvider).obterPlano(planoId),
+);
+
+/// Detalhe do plano para a tela 19 (PBI-46). Sem id, abre o plano em uso;
+/// devolve nulo se o atleta não tem plano em uso.
+final planoDetalheProvider =
+    FutureProvider.autoDispose.family<PlanoDetalhe?, String?>(
+  (ref, planoId) async {
+    final repo = ref.watch(fichasRepositoryProvider);
+    final alvo = planoId ?? (await repo.obterPlanoAtivo())?.id;
+    if (alvo == null) return null;
+    return repo.obterDetalhePlano(alvo);
+  },
 );
 
 /// Detalhe de uma ficha (com os exercícios), por id.

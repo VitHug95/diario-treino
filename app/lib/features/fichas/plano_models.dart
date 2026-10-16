@@ -58,6 +58,44 @@ class PlanoDaLista {
       );
 }
 
+/// Detalhe de um plano com as fichas, uso e autoria (GET /api/v1/planos/{id},
+/// tela 19). Espelha o `PlanoDetalhe` da API.
+class PlanoDetalhe {
+  const PlanoDetalhe({
+    required this.id,
+    required this.nome,
+    required this.inicio,
+    required this.emUso,
+    required this.autor,
+    required this.somenteLeitura,
+    required this.treinos,
+  });
+
+  final String id;
+  final String nome;
+  final DateTime inicio;
+  final bool emUso;
+  final String autor;
+  final bool somenteLeitura;
+
+  /// Fichas do plano, na ordem da sequência (`ordem`).
+  final List<TreinoResumo> treinos;
+
+  factory PlanoDetalhe.doJson(Map<String, dynamic> json) => PlanoDetalhe(
+        id: json['id'] as String,
+        nome: json['nome'] as String,
+        inicio: DateTime.parse(json['inicio'] as String),
+        emUso: json['emUso'] as bool,
+        autor: (json['autor'] as String?) ?? '',
+        somenteLeitura: json['somenteLeitura'] as bool,
+        treinos: ((json['treinos'] as List<dynamic>)
+                .cast<Map<String, dynamic>>()
+                .map(TreinoResumo.doJson)
+                .toList())
+          ..sort((a, b) => a.ordem.compareTo(b.ordem)),
+      );
+}
+
 /// Ordena a lista de planos: em uso primeiro, depois pelo início mais recente
 /// (PBI-45). A API já devolve nessa ordem; reordenar aqui deixa a tela
 /// determinística independentemente do servidor.
