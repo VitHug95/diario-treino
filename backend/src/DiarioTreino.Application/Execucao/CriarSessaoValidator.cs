@@ -20,6 +20,18 @@ public sealed class CriarSessaoValidator : AbstractValidator<CriarSessaoRequest>
         RuleFor(x => x.Observacao).MaximumLength(2000);
 
         RuleForEach(x => x.Exercicios).SetValidator(new ExercicioSessaoValidator());
+
+        // PBI-72: manter na ficha só faz sentido com ficha; o resto (id na
+        // sessão, fora da ficha, com série) é conferido no serviço.
+        RuleFor(x => x.ManterNaFicha)
+            .Must(ids => ids!.Count <= 50)
+            .When(x => x.ManterNaFicha is { Count: > 0 })
+            .WithMessage("Exercícios demais para manter na ficha.");
+        RuleForEach(x => x.ManterNaFicha)
+            .NotEmpty().WithMessage("Exercício inválido para manter na ficha.");
+        RuleFor(x => x.TreinoId)
+            .NotNull().When(x => x.ManterNaFicha is { Count: > 0 })
+            .WithMessage("Treino livre não tem ficha para manter o exercício.");
     }
 }
 

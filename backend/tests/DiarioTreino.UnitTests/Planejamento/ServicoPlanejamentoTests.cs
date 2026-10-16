@@ -7,7 +7,7 @@ namespace DiarioTreino.UnitTests.Planejamento;
 
 public sealed class ServicoPlanejamentoTests
 {
-    private sealed class RepositorioPlanoFake : IRepositorioPlano
+    internal sealed class RepositorioPlanoFake : IRepositorioPlano
     {
         public PlanoTreino? PlanoAtivo;
         public readonly List<PlanoTreino> Planos = [];
@@ -150,7 +150,7 @@ public sealed class ServicoPlanejamentoTests
     }
 
     // Métricas: eixo por faixa de id (1-3 intensidade, 10-12 volume).
-    private sealed class RepositorioMetricaFake : IRepositorioMetrica
+    internal sealed class RepositorioMetricaFake : IRepositorioMetrica
     {
         public Task<IReadOnlyList<MetricaResumo>> ListarAsync(CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MetricaResumo>>([]);
@@ -167,14 +167,14 @@ public sealed class ServicoPlanejamentoTests
         }
     }
 
-    private sealed class RepositorioVinculoFake : IRepositorioVinculo
+    internal sealed class RepositorioVinculoFake : IRepositorioVinculo
     {
         public Task<bool> ExisteVinculoAtivoAsync(Guid e, Guid a, CancellationToken ct)
             => Task.FromResult(false);
     }
 
     // Repositório de exercício: só o necessário para o planejamento.
-    private sealed class RepositorioExercicioFake : IRepositorioExercicio
+    internal sealed class RepositorioExercicioFake : IRepositorioExercicio
     {
         public bool Disponivel = true;
 

@@ -119,6 +119,7 @@ fechados sem merge.
 |---|---|---|
 | #88 | PBI-70 | Telas atualizam pela origem da mudança: escritas por comandos e mapa único de invalidação; teste de arquitetura. Registra as PBIs 67 a 72. |
 | #89 | PBI-68, 69 | Bem-vindo só na Início e só para conta nova; Planos vazio com tela própria; "Crie seu plano" para quem já treinou; caminho único de criar plano até o detalhe vazio com "Nova ficha". |
+| #90 | PBI-71 | "Registrar treino" fixo na Início: sheet "Qual treino?" com as fichas que têm exercícios e "Sem ficha"; sem plano, direto ao treino livre. |
 
 ---
 

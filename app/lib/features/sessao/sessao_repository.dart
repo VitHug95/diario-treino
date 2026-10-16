@@ -54,21 +54,28 @@ class SessaoRepository {
 
   /// Grava a sessão e devolve o id criado. Exercícios não realizados ou sem
   /// séries ficam de fora.
+  ///
+  /// [manterNaFicha] (PBI-72): ids dos exercícios adicionados fora da ficha que
+  /// entram no fim dela, na mesma transação da sessão.
   Future<String> criarSessao({
     required String? treinoId,
     required DateTime data,
     int? duracaoMin,
     String? observacao,
     required List<ExercicioEdicao> exercicios,
+    List<String> manterNaFicha = const [],
   }) async {
     try {
-      final resposta = await _dio.post<Map<String, dynamic>>('/sessoes', data: _corpoSessao(
-        treinoId: treinoId,
-        data: data,
-        duracaoMin: duracaoMin,
-        observacao: observacao,
-        exercicios: exercicios,
-      ));
+      final resposta = await _dio.post<Map<String, dynamic>>('/sessoes', data: {
+        ..._corpoSessao(
+          treinoId: treinoId,
+          data: data,
+          duracaoMin: duracaoMin,
+          observacao: observacao,
+          exercicios: exercicios,
+        ),
+        if (manterNaFicha.isNotEmpty) 'manterNaFicha': manterNaFicha,
+      });
       return resposta.data!['id'] as String;
     } on DioException catch (e) {
       throw SessaoException(_traduzir(e));
@@ -154,6 +161,12 @@ class SessaoRepository {
       'exercicios': corpoExercicios,
     };
   }
+
+  /// Séries que vão de fato para o servidor: as que têm volume (as outras são
+  /// ignoradas ao enviar). Usado também pelo "Manter na ficha?" (PBI-72).
+  static List<SerieEdicao> seriesQueVaoSalvar(ExercicioEdicao e) => e.realizado
+      ? e.series.where((s) => _parse(s.volumeTexto) != null).toList()
+      : const [];
 
   static List<Map<String, dynamic>> _serializarSeries(List<SerieEdicao> series) {
     final lista = <Map<String, dynamic>>[];

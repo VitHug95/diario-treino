@@ -27,6 +27,7 @@ class SessaoComandos {
     int? duracaoMin,
     String? observacao,
     required List<ExercicioEdicao> exercicios,
+    List<String> manterNaFicha = const [],
   }) =>
       _mudar((r) => r.criarSessao(
             treinoId: treinoId,
@@ -34,6 +35,7 @@ class SessaoComandos {
             duracaoMin: duracaoMin,
             observacao: observacao,
             exercicios: exercicios,
+            manterNaFicha: manterNaFicha,
           ));
 
   Future<void> editarSessao({

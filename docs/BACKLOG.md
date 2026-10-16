@@ -972,8 +972,8 @@ Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
 | PBI-67 | Treino em andamento visível ao voltar | 19 e 23 | ✅ na `main` (PR #86); o ponto único de aviso veio com a 70 |
 | PBI-68 | Início e Planos sem plano: cada aba com a sua tela | 23, 27 e 29 | ✅ na `main` (PR #89) |
 | PBI-69 | Criar plano e primeira ficha em um caminho só | 27, 28 e 19 | ✅ na `main` (PR #89) |
-| PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | em revisão (branch `feat/pbi-71-registrar-treino`) |
-| PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | a fazer (front + API) |
+| PBI-71 | Registrar treino sempre à mão na Início | 23 e 29 | ✅ na `main` (PR #90) |
+| PBI-72 | Manter na ficha o exercício adicionado no treino? | 25 | em revisão (branch `feat/pbi-72-manter-na-ficha`) |
 
 PBI-70, notas: as telas gravam por `fichasComandosProvider`,
 `sessaoComandosProvider` e `catalogoComandosProvider`; cada comando chama o
@@ -1009,6 +1009,20 @@ de treino já feito com hoje como padrão (dá para trocar por um dia passado).
 O "Registrar treino" do Bem-vindo já abria o treino livre desde a PBI-68.
 **Robot:** o passo depois do cadastro toca em "Registrar treino" (Bem-vindo);
 para quem já tem plano, "Registrar treino" → "Sem ficha" leva ao treino livre.
+
+PBI-72, notas: `POST /sessoes` ganhou `manterNaFicha` (ids de exercícios). O
+serviço acrescenta cada um no fim da ficha (`treino_exercicio` com rodadas =
+séries salvas, até 12, e descanso da última; uma `etapa_prescrita` de esforço
+com a intensidade e o volume da última série) e grava sessão e ficha no mesmo
+`SaveChanges`, uma transação só: não existe "sessão salva, ficha não". Recusa
+com 400 id que não seja de exercício fora da ficha com séries nesta sessão, id
+que já está na ficha, treino livre e o `PUT` de edição; ficha do professor dá
+403 e de outro usuário, 404, antes de gravar qualquer coisa. Sem migration (só
+tabelas existentes). `GET /treinos/{id}` passou a dizer `somenteLeitura`, que o
+app usa para não perguntar em ficha do professor. No app,
+`perguntarManterNaFicha` (`sessao/manter_na_ficha.dart`) é chamada pelo Resumo
+e pelo registro de treino já feito; o Resumo mostra a etiqueta "Fora da ficha".
+O histórico da sessão continua marcado como fora da ficha.
 
 ---
 

@@ -425,7 +425,11 @@ public sealed class ServicoPlanejamento
                 marcadores));
         }
 
-        return new TreinoDetalhe(treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios);
+        var plano = await _repositorio.ObterPlanoAsync(treino.PlanoId, ct);
+        var somenteLeitura = plano is not null && plano.AutorId != plano.AtletaId;
+
+        return new TreinoDetalhe(
+            treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios, somenteLeitura);
     }
 
     private async Task<AlvoExercicio?> MapearAlvoAsync(EtapaPrescrita? etapa, CancellationToken ct)

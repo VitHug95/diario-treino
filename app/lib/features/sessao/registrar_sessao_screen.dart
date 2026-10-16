@@ -15,6 +15,7 @@ import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/fichas_comandos.dart';
+import 'manter_na_ficha.dart';
 import 'sessao_comandos.dart';
 import 'sessao_edicao.dart';
 import 'sessao_repository.dart';
@@ -436,6 +437,22 @@ class _FormularioState extends ConsumerState<_Formulario> {
       return;
     }
 
+    // PBI-72: "Manter na ficha?" ao registrar treino de ficha. Não pergunta
+    // em treino livre nem ao editar uma sessão antiga.
+    var manterNaFicha = const <String>[];
+    if (!_editando && !_treinoLivre) {
+      final escolha = await perguntarManterNaFicha(
+        context,
+        ref,
+        treinoId: widget.treinoId,
+        treinoNome: widget.treinoNome,
+        exercicios: _exercicios,
+        rotuloVoltar: 'Voltar ao registro',
+      );
+      if (escolha == null || !mounted) return;
+      manterNaFicha = escolha;
+    }
+
     setState(() => _salvando = true);
     try {
       final repo = ref.read(sessaoComandosProvider);
@@ -461,6 +478,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
           duracaoMin: duracao,
           observacao: obs,
           exercicios: _exercicios,
+          manterNaFicha: manterNaFicha,
         );
 
         // Treino em andamento finalizado: apaga o rascunho local (PBI-37).

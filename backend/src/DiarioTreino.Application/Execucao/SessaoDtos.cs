@@ -82,7 +82,12 @@ public sealed record CriarSessaoRequest(
     DateOnly Data,
     short? DuracaoMin,
     string? Observacao,
-    IReadOnlyList<ExercicioSessaoRequest> Exercicios);
+    IReadOnlyList<ExercicioSessaoRequest> Exercicios,
+    /// <summary>
+    /// "Manter na ficha?" (PBI-72): ids dos exercícios adicionados fora da
+    /// ficha que entram no fim dela, na mesma transação da sessão. Só no POST.
+    /// </summary>
+    IReadOnlyList<Guid>? ManterNaFicha = null);
 
 /// <summary>
 /// Exercício da sessão. Sem séries = exercício não realizado (não grava nada).

@@ -66,7 +66,12 @@ public sealed record TreinoDetalhe(
     string Nome,
     string? Descricao,
     short Ordem,
-    IReadOnlyList<TreinoExercicioResumo> Exercicios);
+    IReadOnlyList<TreinoExercicioResumo> Exercicios,
+    /// <summary>
+    /// Ficha de plano do professor (autor ≠ atleta): o atleta só lê e treina.
+    /// O app usa para não perguntar "Manter na ficha?" (PBI-72).
+    /// </summary>
+    bool SomenteLeitura = false);
 
 /// <summary>
 /// Exercício prescrito dentro de uma ficha, com os alvos (PBI-14).

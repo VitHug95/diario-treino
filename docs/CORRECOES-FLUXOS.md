@@ -10,8 +10,8 @@ Respostas do PO de 16/10 já dentro. Layouts das telas 19, 23, 25, 27, 28 e 29 n
 | PBI-67 | Treino em andamento visível ao voltar | ✅ na `main` (PR #86). Entrou antes da 70; o "ponto único" de aviso do rascunho veio com a 70 |
 | PBI-68 | Início e Planos sem plano: cada aba com a sua tela | ✅ na `main` (PR #89) |
 | PBI-69 | Criar plano e primeira ficha em um caminho só | ✅ na `main` (PR #89) |
-| PBI-71 | Registrar treino sempre à mão na Início | em revisão (branch `feat/pbi-71-registrar-treino`) |
-| PBI-72 | Manter na ficha o exercício adicionado no treino? | a fazer (front + API) |
+| PBI-71 | Registrar treino sempre à mão na Início | ✅ na `main` (PR #90) |
+| PBI-72 | Manter na ficha o exercício adicionado no treino? | em revisão (branch `feat/pbi-72-manter-na-ficha`) |
 
 ## O que o PO decidiu e onde entrou
 
@@ -350,6 +350,15 @@ Hoje o exercício adicionado fora da ficha (PBI-17) entra só na sessão e nunca
 - **Widget:** os cenários acima em `resumo_treino_screen_test.dart` e `registrar_sessao_screen_test.dart`.
 - **API:** salvar com `manterNaFicha` grava sessão e ficha juntas; com id de exercício que não é da sessão, recusa; ficha de outro usuário responde 404.
 - **Robot:** sem impacto, o E2E usa treino livre, que não pergunta.
+
+### Como foi entregue (branch `feat/pbi-72-manter-na-ficha`)
+
+- **API, uma chamada só:** `POST /sessoes` aceita `manterNaFicha` (ids). Cada exercício entra no fim da ficha com as séries salvas (até 12) e o alvo da última (carga e repetições, ou tempo, e o descanso). Sessão e ficha saem no mesmo `SaveChanges`, então o critério 7 ("treino salvo, mas a ficha falhou") não acontece: ou grava tudo, ou nada, e o atleta continua no Resumo com a mensagem de erro.
+- **Recusas:** 400 para id que não é exercício fora da ficha com séries nesta sessão, id que já está na ficha, treino livre e edição de sessão (`PUT`); 403 em ficha do professor; 404 em ficha de outro usuário. Nada é gravado nesses casos.
+- **Ficha do professor:** `GET /treinos/{id}` passou a devolver `somenteLeitura`; o app lê a ficha na hora de salvar e não pergunta quando é do professor (ou quando não consegue ler a ficha, sem rede).
+- **App:** `perguntarManterNaFicha` (`sessao/manter_na_ficha.dart`) no Resumo e no registro de treino já feito (lá o terceiro botão é "Voltar ao registro"). Com mais de um exercício, o diálogo lista os nomes com o resumo de cada um ("2 séries de 20 × 10") e a decisão vale para todos. O Resumo mostra a etiqueta "Fora da ficha".
+- **Histórico:** as séries da sessão continuam como fora da ficha (foi assim que o treino aconteceu); a ficha passa a ter o exercício dali em diante.
+- **Testes:** integração (`ManterNaFichaEndpointTests`: manter, isometria, só neste treino, 400, 403, 404, PUT), unitários do serviço (`ManterNaFichaTests`) e de widget (`resumo_treino_screen_test.dart`, `manter_na_ficha_test.dart`).
 
 ### Fora do escopo
 
