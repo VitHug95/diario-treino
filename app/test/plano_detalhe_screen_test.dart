@@ -134,13 +134,48 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  testWidgets('PBI-58: lápis e lixeira no topo; rodapé só com Duplicar',
+      (tester) async {
+    await tester.pumpWidget(_tela(_plano()));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Renomear plano'), findsOneWidget);
+    expect(find.byTooltip('Excluir plano'), findsOneWidget);
+    expect(find.text('Renomear'), findsNothing);
+    expect(find.text('Excluir plano'), findsNothing);
+    expect(find.text('Duplicar plano'), findsOneWidget);
+
+    // Os dois botões têm 44 px.
+    final lixeira = tester.getSize(find.byTooltip('Excluir plano'));
+    expect(lixeira.width, greaterThanOrEqualTo(44));
+    expect(lixeira.height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('PBI-58: plano do professor não mostra lápis nem lixeira',
+      (tester) async {
+    final professor = PlanoDetalhe(
+      id: 'p9',
+      nome: 'Força 5 dias',
+      inicio: DateTime(2026, 8, 1),
+      emUso: false,
+      autor: 'Rafael',
+      somenteLeitura: true,
+      treinos: [_ficha('fa', 'A', 1)],
+    );
+    await tester.pumpWidget(_tela(professor));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Renomear plano'), findsNothing);
+    expect(find.byTooltip('Excluir plano'), findsNothing);
+    expect(find.text('Copiar para editar'), findsOneWidget);
+  });
+
   testWidgets('Excluir plano em uso explica que o uso passa adiante',
       (tester) async {
     await tester.pumpWidget(_tela(_plano()));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Excluir plano'));
-    await tester.tap(find.text('Excluir plano'));
+    await tester.tap(find.byTooltip('Excluir plano'));
     await tester.pumpAndSettle();
 
     expect(find.text('Excluir plano?'), findsOneWidget);
