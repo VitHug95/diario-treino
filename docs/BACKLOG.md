@@ -893,7 +893,7 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
 | PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
-| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | a fazer: liberada pelo PO sem esperar o E2E (o passo do Robot é ajustado depois) |
+| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
 
 ### Ajustes de layout (PBI-57 a PBI-63)
 
@@ -905,9 +905,10 @@ Sete pedidos do PO em 15/10. Detalhamento, perguntas abertas e ajustes nas PBIs
 | PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | ✅ na `main` (PR #77) |
 | PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | ✅ na `main` (PR #76) |
 | PBI-59 | Início nova: semana e caixas | 23 | ✅ na `main` (PR #79), sem o atalho "Iniciar treino" (decisão do PO em aberto) |
-| PBI-60 | Dicas de treino na Início (era "caixa de novidades") | 23 | em revisão (branch `feat/pbi-60-dicas`) |
+| PBI-60 | Dicas de treino na Início (era "caixa de novidades") | 23 | ✅ na `main` (PR #80) |
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
+| PBI-63 | Finalizar treino sem seta de voltar | 24 e 25 | rodada 1 na `main` (PR #78); correção da rodada 2 em revisão (branch `fix/pbi-63-rodada-2`) |
 
 PBI-57, 62 e 61 vão juntas: a 57 tira os botões de treinar da ficha e a 61 os
 devolve no plano. Separadas, haveria um deploy sem como treinar uma ficha.
@@ -916,12 +917,14 @@ Notas de implementação: token novo `dangerSoft` (fundo do remover); as ações
 português em `core/localizacao/material_pt.dart`; `adicionarFicha` passou a
 devolver o id da ficha criada (a API já devolvia).
 
-PBI-63, notas: "Salvar mesmo assim" abre o resumo liberado para gravar a sessão
-sem séries (a API já aceitava). Só nesse caminho, com a confirmação explícita;
-fora dele continua a trava da PBI-33 ("Marque ao menos uma série"). O botão
-primário da barra segue "FINALIZAR TREINO" em caixa alta (estilo `button`),
-o mesmo rótulo que o Robot usa. Descartar volta para a tela de onde o treino
-começou (o plano, quando iniciado pelo play da PBI-61).
+PBI-63, notas (rodada 2): "Finalizar treino" vai direto ao Resumo, sem
+diálogo. O aviso "Salvar treino vazio?" fica no "Salvar treino" do Resumo e
+substitui a trava silenciosa da PBI-33 ("Marque ao menos uma série"): sem
+séries, só salva com "Salvar mesmo assim" (a API já aceitava sessão vazia).
+Descartar pelo diálogo do Resumo fecha o Resumo e a tela do treino, de volta
+ao plano. O botão primário da barra segue "FINALIZAR TREINO" em caixa alta
+(estilo `button`), o mesmo rótulo que o Robot usa. Descartar volta para a tela
+de onde o treino começou (o plano, quando iniciado pelo play da PBI-61).
 
 PBI-59, notas: tocar em qualquer dia não futuro (hoje inclusive) abre a folha
 do dia; escolher uma ficha abre o registro de treino já feito naquela data, e
@@ -929,7 +932,6 @@ do dia; escolher uma ficha abre o registro de treino já feito naquela data, e
 dia). "Último treino" e a semana vêm das sessões recentes (~60 dias): sem
 sessão nesse período, o cartão não aparece. `InicioLogica.proximaFicha` saiu
 (sem uso); `ultimaVezPorFicha` fica, usada no plano e na ficha.
-| PBI-63 | Finalizar treino sem seta de voltar | 24 | ✅ na `main` (PR #78) |
 
 ---
 

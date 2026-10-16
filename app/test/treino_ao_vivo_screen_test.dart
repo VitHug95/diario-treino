@@ -77,9 +77,24 @@ Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
         path: Rotas.treinoAoVivo,
         builder: (_, __) => const TreinoAoVivoScreen(),
       ),
+      // Resumo de mentira: volta sem nada ou devolve "descartou" (true).
       GoRoute(
         path: Rotas.resumoTreino,
-        builder: (_, s) => Scaffold(body: Text('Resumo vazio=${s.extra == true}')),
+        builder: (context, _) => Scaffold(
+          body: Column(
+            children: [
+              const Text('Resumo'),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Voltar do resumo'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Descartou no resumo'),
+              ),
+            ],
+          ),
+        ),
       ),
     ],
   );
@@ -124,24 +139,66 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-63: finalizar vazio pergunta e "Salvar mesmo assim" abre o resumo',
-      (tester) async {
+  for (final (caso, series) in [
+    ('vazio', [_serie(feita: false)]),
+    ('parcial', [_serie(feita: true), _serie(feita: false)]),
+    ('completo', [_serie(feita: true)]),
+  ]) {
+    testWidgets('PBI-63: finalizar ($caso) vai direto ao Resumo, sem diálogo',
+        (tester) async {
+      final c = await _container(series);
+      await _abrir(tester, c);
+
+      await tester.tap(find.text('FINALIZAR TREINO'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Resumo'), findsOneWidget);
+      c.dispose();
+    });
+  }
+
+  testWidgets('PBI-63: voltar do Resumo mantém o treino como estava', (tester) async {
+    final c = await _container([_serie(feita: true), _serie(feita: false)]);
+    await _abrir(tester, c);
+
+    await tester.tap(find.text('FINALIZAR TREINO'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voltar do resumo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('FINALIZAR TREINO'), findsOneWidget);
+    expect(c.read(treinoAoVivoControllerProvider)!.seriesFeitas, 1);
+    c.dispose();
+  });
+
+  testWidgets('PBI-63: descartar pelo Resumo também sai do treino', (tester) async {
     final c = await _container([_serie(feita: false)]);
     await _abrir(tester, c);
 
     await tester.tap(find.text('FINALIZAR TREINO'));
     await tester.pumpAndSettle();
-
-    expect(find.text('Salvar treino vazio?'), findsOneWidget);
-    expect(find.text('Você irá salvar sem inserir nenhum dado, tem certeza?'),
-        findsOneWidget);
-    expect(find.text('Salvar mesmo assim'), findsOneWidget);
-    expect(find.text('Voltar ao treino'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, 'Descartar treino'), findsOneWidget);
-
-    await tester.tap(find.text('Salvar mesmo assim'));
+    await tester.tap(find.text('Descartou no resumo'));
     await tester.pumpAndSettle();
-    expect(find.text('Resumo vazio=true'), findsOneWidget);
+
+    expect(find.text('Tela do plano'), findsOneWidget);
+    c.dispose();
+  });
+
+  testWidgets('PBI-63: cabeçalho escuro com nome, cronômetro e séries feitas',
+      (tester) async {
+    final c = await _container([_serie(feita: true), _serie(feita: false)]);
+    await _abrir(tester, c);
+
+    expect(find.text('TREINO EM ANDAMENTO'), findsOneWidget);
+    expect(find.text('TREINO A'), findsOneWidget);
+    expect(find.text('Começou às 19:00'), findsOneWidget);
+    expect(find.bySemanticsLabel('1 de 2 séries feitas'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Tempo de treino')), findsOneWidget);
+    expect(find.text('Adicionar exercício fora da ficha'), findsOneWidget);
+    // Barra empilhada: Finalizar acima de Descartar.
+    expect(tester.getTopLeft(find.text('FINALIZAR TREINO')).dy,
+        lessThan(tester.getTopLeft(find.text('Descartar treino')).dy));
     c.dispose();
   });
 
@@ -178,34 +235,4 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-63: finalizar parcial informa as séries pendentes',
-      (tester) async {
-    final c = await _container([_serie(feita: true), _serie(feita: false)]);
-    await _abrir(tester, c);
-
-    await tester.tap(find.text('FINALIZAR TREINO'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Finalizar treino?'), findsOneWidget);
-    expect(
-        find.text('Ainda tem 1 série sem marcar em 1 exercício. '
-            'Elas ficam como não realizadas.'),
-        findsOneWidget);
-    await tester.tap(find.text('Finalizar mesmo assim'));
-    await tester.pumpAndSettle();
-    expect(find.text('Resumo vazio=false'), findsOneWidget);
-    c.dispose();
-  });
-
-  testWidgets('PBI-63: finalizar completo abre o resumo direto', (tester) async {
-    final c = await _container([_serie(feita: true)]);
-    await _abrir(tester, c);
-
-    await tester.tap(find.text('FINALIZAR TREINO'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Finalizar treino?'), findsNothing);
-    expect(find.text('Resumo vazio=false'), findsOneWidget);
-    c.dispose();
-  });
 }

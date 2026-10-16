@@ -258,9 +258,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         parentNavigatorKey: _rootNavigatorKey,
                         path: 'resumo',
                         name: 'resumoTreino',
-                        // `extra: true` = treino vazio já confirmado (PBI-63).
-                        builder: (context, state) => ResumoTreinoScreen(
-                            salvarVazio: state.extra == true),
+                        builder: (context, state) => const ResumoTreinoScreen(),
                       ),
                     ],
                   ),

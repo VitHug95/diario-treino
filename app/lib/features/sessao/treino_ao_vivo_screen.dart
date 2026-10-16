@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/progresso/grafico_exercicio.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
@@ -52,115 +53,74 @@ class TreinoAoVivoScreen extends ConsumerWidget {
       },
       child: Scaffold(
         // Sem seta de voltar (PBI-63): a saída fica na barra fixa.
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Text(estado.treinoNome),
-        ),
         bottomNavigationBar: _BarraSaida(
-          aoFinalizar: () => _finalizar(context, ref),
+          aoFinalizar: () => _finalizar(context),
           aoDescartar: () => _descartar(context, ref),
         ),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.margemTela),
-            children: [
-              _Cabecalho(inicio: estado.inicio,
-                  feitas: estado.seriesFeitas, total: estado.totalSeries),
-              const SizedBox(height: AppSpacing.x20),
-              for (var i = 0; i < estado.exercicios.length; i++) ...[
-                _CardExercicioVivo(
-                  exercicio: estado.exercicios[i],
-                  aoTocar: () => context.push(Rotas.exercicioAoVivo, extra: i),
-                ),
-                const SizedBox(height: AppSpacing.entreCards),
-              ],
-              const SizedBox(height: AppSpacing.x8),
-              SizedBox(
-                height: AppSizes.touchMin,
-                child: OutlinedButton.icon(
-                  onPressed: () => _adicionarForaDaFicha(context, ref),
-                  icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
-                  label: const Text('Adicionar exercício fora da ficha'),
-                ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Cabecalho(
+              nome: estado.treinoNome,
+              inicio: estado.inicio,
+              feitas: estado.seriesFeitas,
+              total: estado.totalSeries,
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.margemTela),
+                children: [
+                  for (var i = 0; i < estado.exercicios.length; i++) ...[
+                    _CardExercicioVivo(
+                      exercicio: estado.exercicios[i],
+                      aoTocar: () => context.push(Rotas.exercicioAoVivo, extra: i),
+                    ),
+                    const SizedBox(height: AppSpacing.entreCards),
+                  ],
+                  BotaoTracejado(
+                    rotulo: 'Adicionar exercício fora da ficha',
+                    aoTocar: () => _adicionarForaDaFicha(context, ref),
+                  ),
+                  const SizedBox(height: AppSpacing.x12),
+                  Text(
+                    'Tudo fica salvo no aparelho. Para sair do treino, '
+                    'finalize ou descarte pelos botões abaixo.',
+                    style: AppText.caption
+                        .copyWith(color: AppColors.of(context).textSecondary),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Finalizar (PBI-63): vazio pergunta "Salvar treino vazio?"; parcial avisa
-  /// das séries pendentes; completo abre o resumo (TV-6) direto.
-  Future<void> _finalizar(BuildContext context, WidgetRef ref) async {
-    final estado = ref.read(treinoAoVivoControllerProvider);
-    if (estado == null) return;
-
-    if (estado.seriesFeitas == 0) {
-      final escolha = await dialogoTreinoVazio(context);
-      if (!context.mounted) return;
-      switch (escolha) {
-        case EscolhaTreinoVazio.salvar:
-          // O resumo salva mesmo sem séries: o atleta já confirmou.
-          context.push(Rotas.resumoTreino, extra: true);
-        case EscolhaTreinoVazio.descartar:
-          await _descartar(context, ref);
-        case EscolhaTreinoVazio.voltar:
-        case null:
-          break;
-      }
-      return;
-    }
-
-    final pendentes = estado.totalSeries - estado.seriesFeitas;
-    final exComPendencia = estado.exercicios
-        .where((e) => e.series.any((s) => !s.feita))
-        .length;
-
-    if (pendentes > 0) {
-      final plural = pendentes == 1 ? 'série sem marcar' : 'séries sem marcar';
-      final exPlural = exComPendencia == 1 ? 'exercício' : 'exercícios';
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Finalizar treino?'),
-          content: Text(
-              'Ainda tem $pendentes $plural em $exComPendencia $exPlural. '
-              'Elas ficam como não realizadas.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Voltar ao treino'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Finalizar mesmo assim'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
-    }
-
-    if (context.mounted) context.push(Rotas.resumoTreino);
+  /// Finalizar (PBI-63, rodada 2): nunca salva e nunca abre diálogo. Vai direto
+  /// ao Resumo (TV-6), que é o único passo de salvar e onde mora o aviso de
+  /// treino vazio. Se o atleta descartar por lá, o Resumo devolve `true` e esta
+  /// tela também sai, de volta ao plano.
+  Future<void> _finalizar(BuildContext context) async {
+    final descartou = await context.push<bool>(Rotas.resumoTreino);
+    if (descartou == true && context.mounted) _sair(context);
   }
 
-  /// Descartar (barra ou "Salvar treino vazio?"): confirma, apaga o rascunho e
-  /// volta para a tela de onde o treino começou (o plano, pelo play da PBI-61).
-  /// Nenhuma sessão é gravada.
+  /// Descartar pela barra: confirma, apaga o rascunho e volta para a tela de
+  /// onde o treino começou (o plano, pelo play da PBI-61). Nenhuma sessão é
+  /// gravada.
   Future<void> _descartar(BuildContext context, WidgetRef ref) async {
-    final confirmar = await confirmarPerigo(
-      context,
-      titulo: 'Descartar treino?',
-      texto: 'O que você fez neste treino será perdido.',
-      rotuloConfirmar: 'Descartar treino',
-      rotuloCancelar: 'Voltar ao treino',
-    );
+    final confirmar = await confirmarDescarte(context, rotuloCancelar: 'Voltar ao treino');
     if (!confirmar || !context.mounted) return;
 
     ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
     ref.read(descansoControllerProvider.notifier).encerrar();
-    // Navigator.pop ignora o PopScope (que só barra o voltar do sistema).
+    _sair(context);
+  }
+
+  /// Sai da tela do treino. Navigator.pop ignora o PopScope (que só barra o
+  /// voltar do sistema).
+  static void _sair(BuildContext context) {
     final navegador = Navigator.of(context);
     if (navegador.canPop()) {
       navegador.pop();
@@ -205,6 +165,7 @@ class _BarraSaida extends StatelessWidget {
     // dentro de uma Row.
     const tamanho = Size(0, AppSizes.botaoSecundario);
 
+    // Empilhados (tela 24): o primário em cima, o descartar embaixo.
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -214,28 +175,26 @@ class _BarraSaida extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.margemTela),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: aoDescartar,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: tamanho,
-                    foregroundColor: cores.danger,
-                    side: BorderSide(color: cores.danger),
-                  ),
-                  icon: const Icon(LucideIcons.trash2, size: AppSizes.iconeSm),
-                  label: const Text('Descartar treino'),
-                ),
+              FilledButton.icon(
+                onPressed: aoFinalizar,
+                style: FilledButton.styleFrom(minimumSize: tamanho),
+                icon: const Icon(LucideIcons.check, size: AppSizes.iconeSm),
+                label: const Text('FINALIZAR TREINO'),
               ),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: aoFinalizar,
-                  style: FilledButton.styleFrom(minimumSize: tamanho),
-                  icon: const Icon(LucideIcons.check, size: AppSizes.iconeSm),
-                  label: const Text('FINALIZAR TREINO'),
+              const SizedBox(height: AppSpacing.entreItens),
+              OutlinedButton.icon(
+                onPressed: aoDescartar,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: tamanho,
+                  foregroundColor: cores.danger,
+                  side: BorderSide(color: cores.danger),
                 ),
+                icon: const Icon(LucideIcons.trash2, size: AppSizes.iconeSm),
+                label: const Text('Descartar treino'),
               ),
             ],
           ),
@@ -245,10 +204,17 @@ class _BarraSaida extends StatelessWidget {
   }
 }
 
+/// Cabeçalho escuro da tela 24 (rodada 2): "TREINO EM ANDAMENTO", o nome da
+/// ficha, o cronômetro, "Começou às hh:mm" e as séries feitas. Sem seta.
 class _Cabecalho extends StatelessWidget {
-  const _Cabecalho(
-      {required this.inicio, required this.feitas, required this.total});
+  const _Cabecalho({
+    required this.nome,
+    required this.inicio,
+    required this.feitas,
+    required this.total,
+  });
 
+  final String nome;
   final DateTime inicio;
   final int feitas;
   final int total;
@@ -258,28 +224,60 @@ class _Cabecalho extends StatelessWidget {
     final cores = AppColors.of(context);
     final h = inicio.hour.toString().padLeft(2, '0');
     final m = inicio.minute.toString().padLeft(2, '0');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('TREINO EM ANDAMENTO',
-            style: AppText.overline.copyWith(color: cores.textSecondary)),
-        const SizedBox(height: AppSpacing.x6),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            CronometroVivo(inicio: inicio, estilo: AppText.displayL),
-            const Spacer(),
-            Semantics(
-              label: '$feitas de $total séries feitas',
-              child: Text('$feitas/$total séries',
-                  style: AppText.title.copyWith(color: cores.textSecondary)),
-            ),
-          ],
+    return Container(
+      color: cores.bgHeader,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.margemCabecalho, AppSpacing.x16,
+              AppSpacing.margemCabecalho, AppSpacing.x20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('TREINO EM ANDAMENTO',
+                  style: AppText.overline.copyWith(color: cores.textOnHeaderMuted)),
+              const SizedBox(height: AppSpacing.x4),
+              Semantics(
+                header: true,
+                child: Text(nome.toUpperCase(),
+                    style: AppText.displayM.copyWith(color: cores.textOnHeader)),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CronometroVivo(
+                          inicio: inicio,
+                          estilo: AppText.displayL.copyWith(color: cores.textOnHeader),
+                        ),
+                        Text('Começou às $h:$m',
+                            style: AppText.caption.copyWith(color: cores.textOnHeaderMuted)),
+                      ],
+                    ),
+                  ),
+                  Semantics(
+                    label: '$feitas de $total séries feitas',
+                    excludeSemantics: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('$feitas/$total',
+                            style: AppText.numeralS.copyWith(color: cores.textOnHeader)),
+                        Text('séries feitas',
+                            style: AppText.caption.copyWith(color: cores.textOnHeaderMuted)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.x4),
-        Text('Começou às $h:$m',
-            style: AppText.caption.copyWith(color: cores.textSecondary)),
-      ],
+      ),
     );
   }
 }

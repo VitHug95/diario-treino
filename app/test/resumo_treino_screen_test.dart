@@ -97,69 +97,138 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('sem séries feitas, salvar avisa e não encerra o treino',
-      (tester) async {
-    final c = await _container();
-    c.read(treinoAoVivoControllerProvider.notifier).iniciar(
-      treinoId: 'A',
-      treinoNome: 'Treino A',
-      treinoLivre: false,
-      data: DateTime(2026, 10, 15),
-      inicio: DateTime(2026, 10, 15, 19, 0),
-      exercicios: [_ex('Supino', [_serie(feita: false)])],
-    );
-
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: c,
-      child: MaterialApp(theme: AppTheme.claro, home: const ResumoTreinoScreen()),
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('SALVAR TREINO'));
-    await tester.pump();
-
-    expect(find.textContaining('Marque ao menos uma série'), findsOneWidget);
-    // O treino continua em andamento (não encerrou).
-    expect(c.read(treinoAoVivoControllerProvider), isNotNull);
-
-    c.dispose();
-  });
-
-  testWidgets('PBI-63: treino vazio confirmado salva e encerra o treino',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+  testWidgets('PBI-63: com dados, salvar salva direto, sem diálogo', (tester) async {
     final repo = _RepoSessao();
-    final c = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      relogioProvider.overrideWithValue(_RelogioFixo(DateTime(2026, 10, 15, 20, 0))),
-      sessaoRepositoryProvider.overrideWithValue(repo),
-    ]);
-    c.read(treinoAoVivoControllerProvider.notifier).iniciar(
-      treinoId: 'A',
-      treinoNome: 'Treino A',
-      treinoLivre: false,
-      data: DateTime(2026, 10, 15),
-      inicio: DateTime(2026, 10, 15, 19, 0),
-      exercicios: [_ex('Supino', [_serie(feita: false)])],
-    );
-
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: c,
-      child: MaterialApp(
-          theme: AppTheme.claro, home: const ResumoTreinoScreen(salvarVazio: true)),
-    ));
-    await tester.pumpAndSettle();
+    final c = await _comTreino(repo, [_serie(feita: true)]);
+    await _abrirResumo(tester, c);
 
     await tester.tap(find.text('SALVAR TREINO'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Marque ao menos uma série'), findsNothing);
+    expect(find.text('Salvar treino vazio?'), findsNothing);
     expect(repo.salvou, isTrue);
-    expect(c.read(treinoAoVivoControllerProvider), isNull);
-
+    expect(find.text('Treino registrado'), findsOneWidget);
     c.dispose();
   });
+
+  testWidgets('PBI-63: vazio pergunta; "Voltar ao resumo" não salva', (tester) async {
+    final repo = _RepoSessao();
+    final c = await _comTreino(repo, [_serie(feita: false)]);
+    await _abrirResumo(tester, c);
+
+    await tester.tap(find.text('SALVAR TREINO'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Salvar treino vazio?'), findsOneWidget);
+    expect(find.text('Você irá salvar sem inserir nenhum dado, tem certeza?'), findsOneWidget);
+    expect(find.text('Salvar mesmo assim'), findsOneWidget);
+    expect(find.text('Descartar treino'), findsOneWidget);
+
+    await tester.tap(find.text('Voltar ao resumo'));
+    await tester.pumpAndSettle();
+    expect(find.text('SALVAR TREINO'), findsOneWidget);
+    expect(repo.salvou, isFalse);
+    expect(c.read(treinoAoVivoControllerProvider), isNotNull);
+    c.dispose();
+  });
+
+  testWidgets('PBI-63: "Salvar mesmo assim" salva sem dados e abre "Treino registrado"',
+      (tester) async {
+    final repo = _RepoSessao();
+    final c = await _comTreino(repo, [_serie(feita: false)]);
+    await _abrirResumo(tester, c);
+
+    await tester.tap(find.text('SALVAR TREINO'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar mesmo assim'));
+    await tester.pumpAndSettle();
+
+    expect(repo.salvou, isTrue);
+    expect(find.text('Treino registrado'), findsOneWidget);
+    expect(c.read(treinoAoVivoControllerProvider), isNull);
+    c.dispose();
+  });
+
+  testWidgets('PBI-63: descartar no diálogo confirma e fecha o Resumo sem sessão',
+      (tester) async {
+    final repo = _RepoSessao();
+    final c = await _comTreino(repo, [_serie(feita: false)]);
+    await _abrirResumo(tester, c);
+
+    await tester.tap(find.text('SALVAR TREINO'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Descartar treino'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Descartar treino?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Descartar treino'));
+    await tester.pumpAndSettle();
+
+    // O Resumo devolveu "descartou" para a tela do treino sair também.
+    expect(find.text('Resultado: true'), findsOneWidget);
+    expect(repo.salvou, isFalse);
+    expect(c.read(treinoAoVivoControllerProvider), isNull);
+    c.dispose();
+  });
+}
+
+/// Container com um treino ao vivo de um exercício com as [series].
+Future<ProviderContainer> _comTreino(_RepoSessao repo, List<SerieEdicao> series) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  final c = ProviderContainer(overrides: [
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    relogioProvider.overrideWithValue(_RelogioFixo(DateTime(2026, 10, 15, 20, 0))),
+    sessaoRepositoryProvider.overrideWithValue(repo),
+  ]);
+  c.read(treinoAoVivoControllerProvider.notifier).iniciar(
+        treinoId: 'A',
+        treinoNome: 'Treino A',
+        treinoLivre: false,
+        data: DateTime(2026, 10, 15),
+        inicio: DateTime(2026, 10, 15, 19, 0),
+        exercicios: [_ex('Supino', series)],
+      );
+  return c;
+}
+
+/// Abre o Resumo empilhado sobre uma tela que mostra o que ele devolveu.
+Future<void> _abrirResumo(WidgetTester tester, ProviderContainer c) async {
+  await tester.pumpWidget(UncontrolledProviderScope(
+    container: c,
+    child: MaterialApp(theme: AppTheme.claro, home: const _Abridor()),
+  ));
+  await tester.tap(find.text('Abrir'));
+  await tester.pumpAndSettle();
+}
+
+class _Abridor extends StatefulWidget {
+  const _Abridor();
+
+  @override
+  State<_Abridor> createState() => _AbridorState();
+}
+
+class _AbridorState extends State<_Abridor> {
+  String _resultado = 'nada';
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Column(
+          children: [
+            Text('Resultado: $_resultado'),
+            TextButton(
+              onPressed: () async {
+                final r = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const ResumoTreinoScreen()),
+                );
+                setState(() => _resultado = '$r');
+              },
+              child: const Text('Abrir'),
+            ),
+          ],
+        ),
+      );
 }
 
 /// Repositório que só registra que a sessão foi gravada.
