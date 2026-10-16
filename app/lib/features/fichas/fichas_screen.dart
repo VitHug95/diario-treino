@@ -413,6 +413,11 @@ class _ListaExerciciosFicha extends ConsumerWidget {
               child: itens.isEmpty
                   ? _SemExercicios(cores: cores)
                   : ReorderableListView.builder(
+                      // Sem a alça automática do web/desktop: era o "=" extra
+                      // ao lado da lixeira (PBI-62). A alça é a do cartão. As
+                      // ações "Mover para cima/baixo" vêm da própria lista
+                      // (textos em core/localizacao/material_pt.dart).
+                      buildDefaultDragHandles: false,
                       padding: const EdgeInsets.all(AppSpacing.x16),
                       itemCount: itens.length,
                       onReorder: (de, para) => _reordenar(ref, itens, de, para),
@@ -478,18 +483,25 @@ class _CardExercicioFicha extends StatelessWidget {
               border: Border.all(color: cores.lineDefault),
               borderRadius: BorderRadius.circular(AppRadius.card),
             ),
-            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            // Pouco padding à esquerda: a alça de 36 px já dá o respiro.
+            padding: const EdgeInsets.fromLTRB(AppSpacing.x4, AppSpacing.paddingCardCompacto,
+                AppSpacing.paddingCardCompacto, AppSpacing.paddingCardCompacto),
             child: Row(
               children: [
+                // Alça de mover: 36 × 44, grip de seis pontos (PBI-62).
                 ReorderableDragStartListener(
                   index: indice,
                   child: Semantics(
-                    label: 'Arrastar para reordenar',
-                    child: Icon(LucideIcons.gripVertical,
-                        color: cores.iconMuted, size: AppSizes.iconeSm),
+                    label: 'Arrastar para reordenar ${exercicio.nome}',
+                    child: SizedBox(
+                      width: 36,
+                      height: AppSizes.touchMin,
+                      child: Icon(LucideIcons.gripVertical,
+                          color: cores.iconMuted, size: AppSizes.iconeSm),
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.x12),
+                const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,11 +515,24 @@ class _CardExercicioFicha extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: aoRemover,
-                  icon: Icon(LucideIcons.trash2,
-                      size: AppSizes.iconeSm, color: cores.danger),
-                  tooltip: 'Remover da ficha',
+                const SizedBox(width: AppSpacing.x8),
+                // Remover: 44 × 44, fundo vermelho suave, só a lixeira.
+                SizedBox(
+                  width: AppSizes.touchMin,
+                  height: AppSizes.touchMin,
+                  child: IconButton(
+                    onPressed: aoRemover,
+                    tooltip: 'Remover ${exercicio.nome} da ficha',
+                    icon: Icon(LucideIcons.trash2,
+                        size: AppSizes.iconeSm, color: cores.danger),
+                    style: IconButton.styleFrom(
+                      backgroundColor: cores.dangerSoft,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

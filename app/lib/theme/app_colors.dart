@@ -36,6 +36,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.dangerFill,
     required this.dangerOn,
     required this.dangerOnHeader,
+    required this.dangerSoft,
     required this.iconMuted,
   });
 
@@ -74,6 +75,10 @@ class AppColors extends ThemeExtension<AppColors> {
   /// vermelho claro nos dois temas, porque o [danger] do tema claro não tem
   /// contraste sobre o cabeçalho.
   final Color dangerOnHeader;
+
+  /// Fundo suave do botão de remover exercício da ficha (PBI-62), com a
+  /// lixeira em [danger] por cima (contraste ≥ 4,5:1 nos dois temas).
+  final Color dangerSoft;
   final Color iconMuted;
 
   static const AppColors claro = AppColors(
@@ -105,6 +110,7 @@ class AppColors extends ThemeExtension<AppColors> {
     dangerFill: CoresClaro.dangerFill,
     dangerOn: CoresClaro.dangerOn,
     dangerOnHeader: CoresClaro.dangerOnHeader,
+    dangerSoft: CoresClaro.dangerSoft,
     iconMuted: CoresClaro.iconMuted,
   );
 
@@ -137,6 +143,7 @@ class AppColors extends ThemeExtension<AppColors> {
     dangerFill: CoresEscuro.dangerFill,
     dangerOn: CoresEscuro.dangerOn,
     dangerOnHeader: CoresEscuro.dangerOnHeader,
+    dangerSoft: CoresEscuro.dangerSoft,
     iconMuted: CoresEscuro.iconMuted,
   );
 
@@ -179,6 +186,7 @@ class AppColors extends ThemeExtension<AppColors> {
       dangerFill: Color.lerp(dangerFill, other.dangerFill, t)!,
       dangerOn: Color.lerp(dangerOn, other.dangerOn, t)!,
       dangerOnHeader: Color.lerp(dangerOnHeader, other.dangerOnHeader, t)!,
+      dangerSoft: Color.lerp(dangerSoft, other.dangerSoft, t)!,
       iconMuted: Color.lerp(iconMuted, other.iconMuted, t)!,
     );
   }

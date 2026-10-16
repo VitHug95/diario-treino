@@ -39,6 +39,8 @@ abstract final class CoresClaro {
   // Lixeira sobre o cabeçalho escuro (PBI-58): o danger do tema claro não tem
   // contraste sobre bgHeader, então os dois temas usam o mesmo vermelho claro.
   static const dangerOnHeader = Color(0xFFFF8A80);
+  // Fundo do botão de remover exercício da ficha (PBI-62).
+  static const dangerSoft = Color(0xFFFDECEA);
   static const iconMuted = Color(0xFF9A9DA4);
 }
 
@@ -76,6 +78,7 @@ abstract final class CoresEscuro {
   static const dangerFill = Color(0xFFC8372B);
   static const dangerOn = Color(0xFFFFFFFF);
   static const dangerOnHeader = Color(0xFFFF8A80);
+  static const dangerSoft = Color(0xFF3A1D1B);
   static const iconMuted = Color(0xFF6E727B);
 }
 

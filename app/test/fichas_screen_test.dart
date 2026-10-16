@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:diario_treino/core/localizacao/material_pt.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
 import 'package:diario_treino/features/fichas/fichas_screen.dart';
 import 'package:diario_treino/features/fichas/plano_models.dart';
@@ -51,6 +53,7 @@ Widget _tela({
       ],
       child: MaterialApp(
         theme: tema ?? AppTheme.claro,
+        localizationsDelegates: LocalizacoesPt.delegates,
         home: _TelaPlano(fichaId: fichaId),
       ),
     );
@@ -225,10 +228,93 @@ void main() {
         contains('continuam no seu histórico'));
   });
 
+  testWidgets('PBI-62: uma alça e um remover por cartão, 44 px, em 360 de largura',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_tela(
+      plano: (ref) async => _plano([_ficha('A', 1)]),
+      detalhe: (id) => _detalhe(id, [_ex('Supino reto', 1), _ex('Crucifixo', 2)]),
+      fichaId: 'f1',
+      tema: AppTheme.escuro,
+    ));
+    await tester.pumpAndSettle();
+
+    // Sem a alça automática do Flutter (o "=" extra).
+    expect(find.byIcon(Icons.drag_handle), findsNothing);
+    expect(find.byTooltip('Remover da ficha'), findsNothing);
+
+    final remover = find.byTooltip('Remover Supino reto da ficha');
+    expect(remover, findsOneWidget);
+    expect(find.byTooltip('Remover Crucifixo da ficha'), findsOneWidget);
+    expect(tester.getSize(remover), const Size(44, 44));
+
+    final alca = find.byWidgetPredicate((w) =>
+        w is Semantics && w.properties.label == 'Arrastar para reordenar Supino reto');
+    expect(alca, findsOneWidget);
+    expect(tester.getSize(alca), const Size(36, 44));
+    // Alça e lixeira não se sobrepõem.
+    expect(tester.getRect(alca).right, lessThan(tester.getRect(remover).left));
+  });
+
+  testWidgets('PBI-62: "Mover para baixo" reordena e persiste', (tester) async {
+    final repo = _RepoReordena();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        planoAtivoProvider.overrideWith((ref) async => _plano([_ficha('A', 1)])),
+        sessoesRecentesProvider.overrideWith((ref) async => const []),
+        fichaDetalheProvider.overrideWith((ref, id) async =>
+            _detalhe(id, [_ex('Supino reto', 1), _ex('Crucifixo', 2)])),
+        fichasRepositoryProvider.overrideWithValue(repo),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.claro,
+        localizationsDelegates: LocalizacoesPt.delegates,
+        home: const _TelaPlano(fichaId: 'f1'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Ações de semântica de cada cartão, em português.
+    final acoes = tester
+        .widgetList<Semantics>(find.byWidgetPredicate((w) =>
+            w is Semantics &&
+            (w.properties.customSemanticsActions?.isNotEmpty ?? false)))
+        .map((s) => s.properties.customSemanticsActions!)
+        .toList();
+    expect(acoes, hasLength(2));
+    final primeiro = {for (final e in acoes.first.entries) e.key.label: e.value};
+    final ultimo = acoes.last.keys.map((a) => a.label);
+    expect(primeiro.keys, contains('Mover para baixo'));
+    expect(primeiro.keys, isNot(contains('Mover para cima')));
+    expect(ultimo, contains('Mover para cima'));
+
+    primeiro['Mover para baixo']!();
+    await tester.pumpAndSettle();
+    expect(repo.ordem, ['te2', 'te1']);
+  });
+
   test('Resumo da ficha: contagem e última vez', () {
     expect(resumoFicha(qtdExercicios: 4, ultimaVez: DateTime(2026, 9, 7)),
         '4 exercícios · último em 07/09');
     expect(resumoFicha(qtdExercicios: 1, ultimaVez: null), '1 exercício · nunca feito');
     expect(resumoFicha(qtdExercicios: null, ultimaVez: null), 'nunca feito');
   });
+}
+
+/// Repositório que só guarda a ordem enviada ao reordenar.
+class _RepoReordena extends FichasRepository {
+  _RepoReordena() : super(Dio());
+
+  List<String>? ordem;
+
+  @override
+  Future<void> reordenarExercicios({
+    required String treinoId,
+    required List<String> treinoExercicioIds,
+  }) async {
+    ordem = treinoExercicioIds;
+  }
 }
