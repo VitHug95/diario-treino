@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../core/rotas/app_router.dart';
-import '../../shared/dialogo_pos_registro.dart';
+import '../../shared/aviso_treino_salvo.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
@@ -479,7 +478,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
         // A sessão nova muda a recomendação, os checks da semana e a "última
         // vez" na tela inicial; invalida para refletir ao voltar (bug PBI-23A).
         _invalidarInicio();
-        if (mounted) await _confirmarRegistro(sessaoId);
+        if (mounted) _confirmarRegistro(sessaoId);
       }
     } on SessaoException catch (e) {
       _erro(e.mensagem);
@@ -543,20 +542,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
     return nome;
   }
 
-  Future<void> _confirmarRegistro(String sessaoId) async {
-    final acao = await dialogoPosRegistro(context);
-    if (!mounted) return;
-    switch (acao) {
-      case AcaoPosRegistro.verTreino:
-        context.go(Rotas.inicio);
-        context.push(Rotas.detalheSessao, extra: DetalheSessaoArgs(sessaoId: sessaoId));
-      case AcaoPosRegistro.progresso:
-        context.go(Rotas.progresso);
-      case AcaoPosRegistro.inicio:
-      case null:
-        context.go(Rotas.inicio);
-    }
-  }
+  /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
+  void _confirmarRegistro(String sessaoId) =>
+      irParaInicioComTreinoSalvo(context, sessaoId);
 
   /// Invalida os dados que a tela inicial deriva do histórico de sessões, para
   /// a recomendação/semana/última-vez refletirem a sessão recém-salva.

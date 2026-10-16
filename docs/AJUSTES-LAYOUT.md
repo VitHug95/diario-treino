@@ -285,7 +285,7 @@ _Front · R1 (junto do treino ao vivo) · Telas 24 e 25_
 
 **Finalizar (um passo só)**
 - "Finalizar treino" **nunca salva e nunca abre diálogo**: leva direto ao Resumo (tela 25). O "Sair do treino?" não existe nesta tela, e os avisos de séries pendentes saíram, porque o Resumo já mostra o que ficou sem marcar.
-- No Resumo, "Salvar treino" salva e abre "Treino registrado". "Voltar ao treino" e a seta voltam à tela do treino.
+- No Resumo, "Salvar treino" salva e leva à Início com o aviso "Treino salvo" (PBI-64). "Voltar ao treino" e a seta voltam à tela do treino.
 - **Treino vazio** (zero séries): "Salvar treino" abre "Salvar treino vazio?" com "Você irá salvar sem inserir nenhum dado, tem certeza?". Botões: "Salvar mesmo assim", "Descartar treino" (contorno vermelho) e "Voltar ao resumo".
 
 **Descartar**
@@ -295,7 +295,7 @@ _Front · R1 (junto do treino ao vivo) · Telas 24 e 25_
 
 ### Critérios de aceite
 
-1. **Seta só sai:** tocar na seta vai à Início sem diálogo; o treino não é salvo nem descartado e o cronômetro segue. 2. **Voltar do sistema:** resultado idêntico ao da seta. 3. **Retomar:** o cartão "Continuar treino" da Início volta ao treino com as séries e o tempo como estavam. 4. "Finalizar treino" abre o Resumo direto, sem diálogo e sem salvar. 5. Uma única ação de salvar entre "Finalizar treino" e "Treino registrado". 6. Zero séries: "Salvar treino" mostra "Salvar treino vazio?"; "Salvar mesmo assim" salva sem dados e abre "Treino registrado". 7. Descartar (tela do treino ou diálogo de vazio) confirma e volta ao plano sem sessão. 8. Voltar do Resumo mantém as séries como estavam. 9. Seta com rótulo "Voltar para a Início. O treino continua em andamento", barra com alvos de 48 px, diálogos com foco preso, cronômetro como `timer` com rótulo falado.
+1. **Seta só sai:** tocar na seta vai à Início sem diálogo; o treino não é salvo nem descartado e o cronômetro segue. 2. **Voltar do sistema:** resultado idêntico ao da seta. 3. **Retomar:** o cartão "Continuar treino" da Início volta ao treino com as séries e o tempo como estavam. 4. "Finalizar treino" abre o Resumo direto, sem diálogo e sem salvar. 5. Uma única ação de salvar entre "Finalizar treino" e o aviso "Treino salvo". 6. Zero séries: "Salvar treino" mostra "Salvar treino vazio?"; "Salvar mesmo assim" salva sem dados e leva à Início com o aviso "Treino salvo". 7. Descartar (tela do treino ou diálogo de vazio) confirma e volta ao plano sem sessão. 8. Voltar do Resumo mantém as séries como estavam. 9. Seta com rótulo "Voltar para a Início. O treino continua em andamento", barra com alvos de 48 px, diálogos com foco preso, cronômetro como `timer` com rótulo falado.
 
 ### Fora do escopo
 

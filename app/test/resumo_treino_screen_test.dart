@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:diario_treino/core/relogio.dart';
+import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/sessao/resumo_treino_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
@@ -9,6 +10,7 @@ import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RelogioFixo implements Relogio {
@@ -97,7 +99,7 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-63: com dados, salvar salva direto, sem diálogo', (tester) async {
+  testWidgets('PBI-64: com dados, salvar vai à Início com o aviso, sem diálogo', (tester) async {
     final repo = _RepoSessao();
     final c = await _comTreino(repo, [_serie(feita: true)]);
     await _abrirResumo(tester, c);
@@ -107,7 +109,14 @@ void main() {
 
     expect(find.text('Salvar treino vazio?'), findsNothing);
     expect(repo.salvou, isTrue);
-    expect(find.text('Treino registrado'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Tela inicial'), findsOneWidget);
+    expect(find.text('Treino salvo'), findsOneWidget);
+
+    // "Ver treino" abre o detalhe da sessão salva.
+    await tester.tap(find.text('Ver treino'));
+    await tester.pumpAndSettle();
+    expect(find.text('Detalhe s1'), findsOneWidget);
     c.dispose();
   });
 
@@ -132,7 +141,7 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-63: "Salvar mesmo assim" salva sem dados e abre "Treino registrado"',
+  testWidgets('PBI-63: "Salvar mesmo assim" salva sem dados e vai à Início com o aviso',
       (tester) async {
     final repo = _RepoSessao();
     final c = await _comTreino(repo, [_serie(feita: false)]);
@@ -144,7 +153,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.salvou, isTrue);
-    expect(find.text('Treino registrado'), findsOneWidget);
+    expect(find.text('Treino salvo'), findsOneWidget);
     expect(c.read(treinoAoVivoControllerProvider), isNull);
     c.dispose();
   });
@@ -192,11 +201,21 @@ Future<ProviderContainer> _comTreino(_RepoSessao repo, List<SerieEdicao> series)
   return c;
 }
 
-/// Abre o Resumo empilhado sobre uma tela que mostra o que ele devolveu.
+/// Abre o Resumo empilhado sobre a "Início" (que mostra o que ele devolveu),
+/// com rotas de verdade: salvar faz go para a Início (PBI-64).
 Future<void> _abrirResumo(WidgetTester tester, ProviderContainer c) async {
+  final router = GoRouter(routes: [
+    GoRoute(path: Rotas.inicio, builder: (_, __) => const _Abridor()),
+    GoRoute(path: Rotas.resumoTreino, builder: (_, __) => const ResumoTreinoScreen()),
+    GoRoute(
+      path: Rotas.detalheSessao,
+      builder: (_, s) =>
+          Scaffold(body: Text('Detalhe ${(s.extra! as DetalheSessaoArgs).sessaoId}')),
+    ),
+  ]);
   await tester.pumpWidget(UncontrolledProviderScope(
     container: c,
-    child: MaterialApp(theme: AppTheme.claro, home: const _Abridor()),
+    child: MaterialApp.router(theme: AppTheme.claro, routerConfig: router),
   ));
   await tester.tap(find.text('Abrir'));
   await tester.pumpAndSettle();
@@ -216,12 +235,11 @@ class _AbridorState extends State<_Abridor> {
   Widget build(BuildContext context) => Scaffold(
         body: Column(
           children: [
+            const Text('Tela inicial'),
             Text('Resultado: $_resultado'),
             TextButton(
               onPressed: () async {
-                final r = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => const ResumoTreinoScreen()),
-                );
+                final r = await context.push<bool>(Rotas.resumoTreino);
                 setState(() => _resultado = '$r');
               },
               child: const Text('Abrir'),

@@ -73,6 +73,7 @@ class ExercicioEmAndamento {
     required this.foraDaFicha,
     required this.realizado,
     required this.series,
+    this.concluido = false,
   });
 
   final String? treinoExercicioId;
@@ -84,6 +85,9 @@ class ExercicioEmAndamento {
   final bool realizado;
   final List<SerieEmAndamento> series;
 
+  /// "Concluir exercício" (PBI-65). Rascunhos antigos não têm o campo: falso.
+  final bool concluido;
+
   Map<String, dynamic> paraJson() => {
         'treinoExercicioId': treinoExercicioId,
         'exercicioId': exercicioId,
@@ -92,6 +96,7 @@ class ExercicioEmAndamento {
         'origemPreenchimento': origemPreenchimento,
         'foraDaFicha': foraDaFicha,
         'realizado': realizado,
+        'concluido': concluido,
         'series': series.map((s) => s.paraJson()).toList(),
       };
 
@@ -104,6 +109,7 @@ class ExercicioEmAndamento {
         origemPreenchimento: json['origemPreenchimento'] as String?,
         foraDaFicha: json['foraDaFicha'] as bool,
         realizado: json['realizado'] as bool,
+        concluido: json['concluido'] as bool? ?? false,
         series: (json['series'] as List<dynamic>)
             .cast<Map<String, dynamic>>()
             .map(SerieEmAndamento.doJson)
@@ -243,7 +249,7 @@ extension ConversaoRascunho on ExercicioEmAndamento {
                   feita: s.feita,
                 ))
             .toList(),
-      );
+      )..concluido = concluido;
 }
 
 /// Serializa um [ExercicioEdicao] vivo (com os textos atuais) para o rascunho.
@@ -256,6 +262,7 @@ ExercicioEmAndamento exercicioParaRascunho(ExercicioEdicao e) =>
       origemPreenchimento: e.origemPreenchimento,
       foraDaFicha: e.foraDaFicha,
       realizado: e.realizado,
+      concluido: e.concluido,
       series: e.series
           .map((s) => SerieEmAndamento(
                 rodada: s.rodada,

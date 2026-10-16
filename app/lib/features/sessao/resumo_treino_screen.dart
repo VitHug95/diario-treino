@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/relogio.dart';
-import '../../core/rotas/app_router.dart';
-import '../../shared/dialogo_pos_registro.dart';
+import '../../shared/aviso_treino_salvo.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -185,7 +184,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       ref.read(descansoControllerProvider.notifier).encerrar();
       _invalidarInicio();
 
-      if (mounted) await _confirmar(sessaoId);
+      if (mounted) _confirmar(sessaoId);
     } on SessaoException catch (e) {
       _erro(e.mensagem);
     } finally {
@@ -204,21 +203,8 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
     Navigator.of(context).pop(true);
   }
 
-  Future<void> _confirmar(String sessaoId) async {
-    final acao = await dialogoPosRegistro(context);
-    if (!mounted) return;
-    switch (acao) {
-      case AcaoPosRegistro.verTreino:
-        context.go(Rotas.inicio);
-        context.push(Rotas.detalheSessao,
-            extra: DetalheSessaoArgs(sessaoId: sessaoId));
-      case AcaoPosRegistro.progresso:
-        context.go(Rotas.progresso);
-      case AcaoPosRegistro.inicio:
-      case null:
-        context.go(Rotas.inicio);
-    }
-  }
+  /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
+  void _confirmar(String sessaoId) => irParaInicioComTreinoSalvo(context, sessaoId);
 
   void _invalidarInicio() {
     ref.invalidate(sessoesRecentesProvider);
@@ -320,7 +306,7 @@ class _LinhaResumoExercicio extends StatelessWidget {
     final cores = AppColors.of(context);
     final total = exercicio.series.length;
     final feitas = exercicio.series.where((s) => s.feita).length;
-    final (status, cor) = _status(total, feitas, cores, context);
+    final (status, cor) = _status(total, feitas, exercicio.concluido, cores, context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.entreItens),
@@ -352,13 +338,18 @@ class _LinhaResumoExercicio extends StatelessWidget {
     );
   }
 
-  (String, Color) _status(
-      int total, int feitas, AppColors cores, BuildContext context) {
+  (String, Color) _status(int total, int feitas, bool concluido, AppColors cores,
+      BuildContext context) {
     if (total == 0 || feitas == 0) {
       return ('Não realizado', cores.textSecondary);
     }
     if (feitas == total) {
       return ('Completo', Theme.of(context).colorScheme.primary);
+    }
+    // Encerrado pelo "Concluir exercício" (PBI-65): conta como concluído, com
+    // o progresso; as séries não marcadas ficam de fora ao salvar.
+    if (concluido) {
+      return ('Concluído $feitas/$total', Theme.of(context).colorScheme.primary);
     }
     return ('Incompleto $feitas/$total', cores.obs);
   }

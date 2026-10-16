@@ -114,8 +114,12 @@ Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Voltar do resumo'),
               ),
+              // Como o Resumo de verdade: encerra o treino e devolve true.
               TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () {
+                  c.read(treinoAoVivoControllerProvider.notifier).encerrar();
+                  Navigator.of(context).pop(true);
+                },
                 child: const Text('Descartou no resumo'),
               ),
             ],
@@ -209,6 +213,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Exercício 3 de 3'), findsOneWidget);
     expect(_abaAtual(tester), 0);
+    c.dispose();
+  });
+
+  testWidgets('PBI-65: concluir avança para o próximo em Séries, com aviso de séries',
+      (tester) async {
+    final c = await _container(const [], exercicios: [
+      _ex('Supino', [_serie(feita: true), _serie(feita: false)]),
+      _ex('Remada', [_serie(feita: true)]),
+      _ex('Agachamento', [_serie(feita: false)]),
+    ]);
+    await _abrir(tester, c);
+
+    await tester.tap(find.text('Supino'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 série sem marcar fica de fora.'), findsOneWidget);
+    final concluir = find.bySemanticsLabel('Concluir exercício, ir para o exercício 2');
+    expect(concluir, findsOneWidget);
+    expect(tester.getSize(concluir).height, greaterThanOrEqualTo(48));
+
+    // Estando em Histórico, concluir abre o próximo em Séries (PBI-66).
+    await tester.tap(find.text('Histórico'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CONCLUIR EXERCÍCIO'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exercício 2 de 3'), findsOneWidget);
+    expect(_abaAtual(tester), 0);
+    // Todas marcadas: sem aviso.
+    expect(find.textContaining('sem marcar'), findsNothing);
+
+    // Concluído com uma série feita conta como concluído; nada foi marcado
+    // por baixo dos panos.
+    final estado = c.read(treinoAoVivoControllerProvider)!;
+    expect(estado.exercicios.first.concluido, isTrue);
+    expect(estado.seriesFeitas, 2);
+    expect(estado.exerciciosConcluidos, 2);
+    c.dispose();
+  });
+
+  testWidgets('PBI-65: no último exercício, "Concluir e ir ao resumo" abre o Resumo',
+      (tester) async {
+    final c = await _container(const [], exercicios: _tres());
+    await _abrir(tester, c);
+
+    await tester.tap(find.text('Agachamento'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exercício 3 de 3'), findsOneWidget);
+    expect(find.bySemanticsLabel('Concluir e ir ao resumo'), findsOneWidget);
+
+    await tester.tap(find.text('CONCLUIR E IR AO RESUMO'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resumo'), findsOneWidget);
+    // Concluído sem nenhuma série feita continua "Não realizado".
+    expect(c.read(treinoAoVivoControllerProvider)!.exerciciosConcluidos, 0);
     c.dispose();
   });
 

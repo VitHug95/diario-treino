@@ -155,6 +155,11 @@ class ExercicioEdicao {
   /// Recolhido na tela: mostra só o resumo (PBI-16).
   bool recolhido = false;
 
+  /// "Concluir exercício" no treino ao vivo (PBI-65): o atleta encerrou o
+  /// exercício mesmo com séries sem marcar. Conta como concluído no Resumo se
+  /// tiver ao menos uma série feita; as não marcadas ficam de fora ao salvar.
+  bool concluido = false;
+
   factory ExercicioEdicao.doRascunho(RascunhoExercicio e) => ExercicioEdicao(
         treinoExercicioId: e.treinoExercicioId,
         exercicioId: e.exercicioId,
