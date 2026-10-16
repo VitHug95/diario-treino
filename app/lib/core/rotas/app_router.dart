@@ -191,8 +191,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                       );
                     },
                     routes: [
-                      // Uma ficha do plano (tela 13). `?ficha=<id>` (PBI-50)
-                      // abre a ficha selecionada, sem iniciar treino. A chave
+                      // Uma ficha do plano (tela 22, PBI-57): só edição da
+                      // ficha `?ficha=<id>`, sem iniciar treino. A chave
                       // recria a tela quando o plano ou a ficha mudam.
                       GoRoute(
                         path: 'ficha',
