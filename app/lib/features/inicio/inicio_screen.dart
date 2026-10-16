@@ -236,9 +236,10 @@ class _SemHistorico extends StatelessWidget {
 /// Vale com a flag ligada ou desligada: abrir uma ficha nunca grava rascunho
 /// nem liga o cronômetro. O início fica a cargo de botões explícitos.
 void _abrirFicha(BuildContext context, TreinoResumo ficha) {
-  // go (e não push) troca a aba da casca de navegação para Fichas; o query
-  // param `?ficha=<id>` seleciona a ficha certa (FichasScreen resolve o id).
-  context.go('${Rotas.fichas}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
+  // go (e não push) troca para a aba Planos já dentro do plano em uso (sem
+  // `id`); o `?ficha=<id>` seleciona a ficha certa (FichasScreen resolve).
+  context.go(
+      '${Rotas.planoDetalhe}?ficha=${Uri.encodeQueryComponent(ficha.id)}');
 }
 
 /// Inicia o treino de uma ficha a partir da tela inicial, por AÇÃO EXPLÍCITA
@@ -604,7 +605,9 @@ class _SemFichas extends StatelessWidget {
               style: AppText.body.copyWith(color: cores.textOnHeaderMuted)),
           const SizedBox(height: AppSpacing.x16),
           FilledButton(
-            onPressed: () => context.go(Rotas.fichas),
+            // Direto nas fichas do plano em uso (cria o primeiro ao salvar a
+            // primeira ficha), como antes da lista de planos.
+            onPressed: () => context.go(Rotas.planoDetalhe),
             child: const Text('MONTAR FICHAS'),
           ),
         ],

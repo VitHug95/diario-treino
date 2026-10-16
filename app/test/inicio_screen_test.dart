@@ -145,8 +145,9 @@ void main() {
       initialLocation: '/',
       routes: [
         GoRoute(path: '/', builder: (_, __) => const InicioScreen()),
+        // Fichas do plano em uso (PBI-45: a raiz /fichas virou a lista).
         GoRoute(
-          path: '/fichas',
+          path: '/fichas/plano',
           builder: (_, state) => Scaffold(
             body: Text('FICHAS ficha=${state.uri.queryParameters['ficha']}'),
           ),

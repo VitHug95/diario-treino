@@ -10,6 +10,7 @@ import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
+import '../../features/planos/planos_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
 import '../../features/sessao/detalhe_sessao_screen.dart';
 import '../../features/sessao/registrar_sessao_screen.dart';
@@ -22,7 +23,14 @@ abstract final class Rotas {
   const Rotas._();
 
   static const inicio = '/';
+
+  /// Raiz da aba Planos: a lista de planos (PBI-45). O caminho continua
+  /// `/fichas` para não mexer nas rotas de registro e treino ao vivo.
   static const fichas = '/fichas';
+
+  /// Fichas de um plano (`?id=<plano>`; sem id = plano em uso) com
+  /// `&ficha=<id>` opcional para abrir uma ficha selecionada (PBI-50).
+  static const planoDetalhe = '/fichas/plano';
   static const progresso = '/progresso';
   static const login = '/login';
   static const cadastro = '/cadastro';
@@ -163,13 +171,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Rotas.fichas,
                 name: 'fichas',
-                // `?ficha=<id>` (PBI-50): abre a ficha selecionada vinda do
-                // cartão da Início, sem iniciar treino. Id inexistente cai na
-                // primeira ficha (tratado na FichasScreen).
-                builder: (context, state) => FichasScreen(
-                  fichaInicialId: state.uri.queryParameters['ficha'],
-                ),
+                // Lista de planos (PBI-45, tela 18).
+                builder: (context, state) => const PlanosScreen(),
                 routes: [
+                  // Fichas de um plano. `?id=` escolhe o plano (sem id = em
+                  // uso); `?ficha=<id>` (PBI-50) abre a ficha selecionada vinda
+                  // do cartão da Início, sem iniciar treino. A chave recria a
+                  // tela quando o plano ou a ficha pedida mudam.
+                  GoRoute(
+                    path: 'plano',
+                    name: 'planoDetalhe',
+                    builder: (context, state) {
+                      final id = state.uri.queryParameters['id'];
+                      final ficha = state.uri.queryParameters['ficha'];
+                      return FichasScreen(
+                        key: ValueKey('plano:$id|ficha:$ficha'),
+                        planoId: id,
+                        fichaInicialId: ficha,
+                      );
+                    },
+                  ),
                   // Registro de sessão em TELA CHEIA (PBI-55): empilha no
                   // navigator raiz, sem a barra de abas, para o "FINALIZAR
                   // TREINO" não competir com a navegação inferior. Igual às
