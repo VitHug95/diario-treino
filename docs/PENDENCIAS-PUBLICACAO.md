@@ -16,9 +16,10 @@ Falta fechar:
 - **PBI-26 — E2E Robot completo.** Hoje o fluxo é coberto por teste em
   `flutter test`; o E2E com a Browser Library está quebrado e será reconciliado
   manualmente, aplicando as correções de bug depois dos testes manuais.
-- **PBI-24 — Conferência final de contraste.** Tema claro e escuro já existem e
-  persistem; falta a checagem final de 4,5:1 em cada componente nos dois temas.
-  Validação completa exige teste manual com tecnologia assistiva.
+
+O backup (PBI-05) e o contraste (PBI-24) foram concluídos. A validação final de
+acessibilidade com tecnologia assistiva (leitor de tela) continua sendo um passo
+manual recomendado antes do lançamento.
 
 ## Melhorias e decisões em aberto com o PO
 
