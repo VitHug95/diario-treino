@@ -41,7 +41,9 @@ abstract final class CoresClaro {
   static const dangerOnHeader = Color(0xFFFF8A80);
   // Fundo do botão de remover exercício da ficha (PBI-62).
   static const dangerSoft = Color(0xFFFDECEA);
-  static const iconMuted = Color(0xFF9A9DA4);
+  // Ícone secundário. Escurecido na PBI-24 (era 0xFF9A9DA4, 2,72:1 sobre card)
+  // para cruzar 3:1 (WCAG 1.4.11) sobre surface e página, sem perder o tom neutro.
+  static const iconMuted = Color(0xFF82858C);
 }
 
 abstract final class CoresEscuro {

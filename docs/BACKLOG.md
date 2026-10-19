@@ -451,11 +451,13 @@ de widget novos (pré-seleção + nota; estado "sem observação"). Model Dart
 
 **Notas técnicas:** ADR-08 do MAS.
 **Depende de:** PBI-02, PBI-25.
-**Status:** PARCIAL — a opção tríplice (Sistema/Claro/Escuro) foi para a tela de
-Perfil (`SegmentedButton` reusando o `TemaController`), somando-se ao botão
-sol/lua da Início e à persistência em `shared_preferences` (já existentes). Falta
-a **conferência final de contraste 4,5:1 em todas as telas do MVP nos dois
-temas** para fechar o PBI-24.
+**Status:** ✅ concluída — opção tríplice (Sistema/Claro/Escuro) em Perfil
+(`SegmentedButton` + `TemaController`), botão sol/lua na Início e persistência em
+`shared_preferences`. A **conferência de contraste** foi feita: auditados os 26
+pares texto/fundo dos dois temas, todos ≥ 4,5:1; o único ícone abaixo de 3:1
+(`iconMuted` no tema claro, 2,72:1) foi escurecido para `#82858C` (3,70:1). O
+teste `app/test/contraste_tema_test.dart` trava o mínimo e previne regressão.
+Validação final com tecnologia assistiva continua sendo manual.
 
 #### PBI-25 · Perfil e conta
 **História:** Como atleta, quero ver meus dados, sair da conta e poder excluí-la, para ter controle sobre o que fica guardado.
