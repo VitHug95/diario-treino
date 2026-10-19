@@ -1,0 +1,70 @@
+name: Backup do banco (Neon)
+
+# PBI-05: pg_dump semanal do banco de produção (Neon), guardado FORA do Neon e
+# fora da VPS — aqui, como artifact do GitHub Actions. A retenção de 63 dias com
+# cadência semanal mantém sempre pelo menos 8 cópias (9 semanas de folga).
+#
+# Secret necessário (Settings > Secrets and variables > Actions):
+#   NEON_DATABASE_URL — connection string do Neon no formato libpq, ex.:
+#     postgresql://USER:SENHA@HOST/diariotreino?sslmode=require
+#   (é a mesma credencial do banco de produção; NUNCA vai no código.)
+
+on:
+  schedule:
+    # Toda segunda-feira às 06:00 UTC (03:00 em Brasília).
+    - cron: "0 6 * * 1"
+  # Permite rodar sob demanda pela aba Actions (para o teste de restauração).
+  workflow_dispatch:
+
+concurrency:
+  group: backup-banco
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: pg_dump semanal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar o cliente PostgreSQL 17 (PGDG)
+        # O ubuntu-latest traz um pg_dump mais antigo; o Neon roda Postgres 17 e
+        # o pg_dump precisa ser >= a versão do servidor. Instala o client 17 do
+        # repositório oficial do PostgreSQL.
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Gerar o dump
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_DATABASE_URL" ]; then
+            echo "::error::Secret NEON_DATABASE_URL não configurado. Veja docs/BACKUP-RESTAURACAO.md."
+            exit 1
+          fi
+          STAMP="$(date -u +%Y%m%d-%H%M%S)"
+          FILE="diariotreino-${STAMP}.dump"
+          echo "ARQUIVO=${FILE}" >> "$GITHUB_ENV"
+          # Formato custom (-Fc): comprimido e restaurável com pg_restore de
+          # forma seletiva. Sem --no-owner/--no-privileges para preservar tudo;
+          # a restauração usa --no-owner quando o role de destino difere.
+          /usr/lib/postgresql/17/bin/pg_dump \
+            --format=custom \
+            --file="${FILE}" \
+            --verbose \
+            "$NEON_DATABASE_URL"
+          ls -lh "${FILE}"
+
+      - name: Guardar o backup (artifact, fora do Neon)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARQUIVO }}
+          path: ${{ env.ARQUIVO }}
+          # 63 dias ≈ 9 backups semanais: garante sempre >= 8 cópias.
+          retention-days: 63
+          if-no-files-found: error

@@ -13,8 +13,6 @@ Data: 19/10/2026. Última entrega: correções de uso real PBI-73 a 80.
 
 Falta fechar:
 
-- **PBI-05 — Backup do banco.** `pg_dump` semanal do Neon guardado fora. Ainda
-  não configurado.
 - **PBI-26 — E2E Robot completo.** Hoje o fluxo é coberto por teste em
   `flutter test`; o E2E com a Browser Library está quebrado e será reconciliado
   manualmente, aplicando as correções de bug depois dos testes manuais.
@@ -51,6 +49,10 @@ Falta fechar:
 
 ## Operação (herdado da publicação)
 
+- **Backup do banco (PBI-05): pronto**, falta um passo manual único — criar o
+  secret `NEON_DATABASE_URL` no GitHub para o backup semanal rodar. Ver
+  [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md). Também fazer o teste de
+  restauração uma vez antes do lançamento (procedimento no mesmo doc).
 - Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` /
   `*.workers.dev`).
 - Resetar a senha do role do Neon (foi digitada em texto no chat durante o
