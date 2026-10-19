@@ -49,10 +49,9 @@ Falta fechar:
 
 ## Operação (herdado da publicação)
 
-- **Backup do banco (PBI-05): pronto**, falta um passo manual único — criar o
-  secret `NEON_DATABASE_URL` no GitHub para o backup semanal rodar. Ver
-  [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md). Também fazer o teste de
-  restauração uma vez antes do lançamento (procedimento no mesmo doc).
+- **Backup do banco (PBI-05): concluído.** Backup semanal no CI, secret
+  configurado e restauração testada em 19/10/2026. Ver
+  [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md).
 - Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` /
   `*.workers.dev`).
 - Resetar a senha do role do Neon (foi digitada em texto no chat durante o
