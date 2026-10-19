@@ -1,6 +1,7 @@
 # Backup e restauração do banco (PBI-05)
 
-O banco de produção fica no **Neon** (Postgres 17). Um backup semanal automático
+O banco de produção fica no **Neon** (Postgres 18; o banco é `neondb`, role
+`neondb_owner`). Um backup semanal automático
 roda no GitHub Actions e guarda o dump **fora do Neon**, como artifact do próprio
 Actions. Este documento explica como funciona, como configurar uma vez e como
 restaurar — com um teste de restauração que deve ser feito antes do lançamento.
@@ -24,7 +25,7 @@ Criar o secret com a connection string do Neon no repositório:
 1. No Neon, copie a connection string do banco de produção (Dashboard → Connection
    Details). O valor **precisa começar com `postgresql://`** (ou `postgres://`),
    no formato:
-   `postgresql://USUARIO:SENHA@HOST/diariotreino?sslmode=require`
+   `postgresql://neondb_owner:SENHA@HOST/neondb?sslmode=require`
    - Cole **só a URL**, sem `psql `, sem aspas em volta e sem quebra de linha. Se
      o Neon mostrar algo como `psql 'postgresql://...'`, copie apenas a parte
      entre aspas. O workflow recusa (com erro claro) um valor que não comece com
@@ -46,8 +47,8 @@ Criar o secret com a connection string do Neon no repositório:
 
 ## Restaurar
 
-Pré-requisito: `pg_restore` **17+** (mesma major do servidor de origem). No
-Windows, vem com o PostgreSQL 17; confira com `pg_restore --version`.
+Pré-requisito: `pg_restore` **18+** (mesma major do servidor de origem, o Neon
+roda Postgres 18). Confira com `pg_restore --version`.
 
 ### Restaurar num banco novo (recomendado para testar)
 
@@ -56,7 +57,7 @@ sem tocar na produção.
 
 ```bash
 # 1. Postgres local (porta 5432)
-docker run --name pg-restore-teste -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:17-alpine
+docker run --name pg-restore-teste -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:18-alpine
 
 # 2. Cria um banco de destino vazio
 docker exec -e PGPASSWORD=postgres pg-restore-teste psql -U postgres -c "CREATE DATABASE diariotreino_restore;"
