@@ -38,6 +38,7 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
     case Mudanca.sessoes:
       ref
         ..invalidate(sessoesRecentesProvider)
+        ..invalidate(sessoesDoMesProvider)
         ..invalidate(sessoesDoPeriodoProvider)
         ..invalidate(sessaoDetalheProvider)
         ..invalidate(fichaTemSessoesProvider)

@@ -83,6 +83,10 @@ Future<Widget> _tela(
         builder: (_, s) =>
             Scaffold(body: Text('Detalhe ${(s.extra! as DetalheSessaoArgs).sessaoId}')),
       ),
+      GoRoute(
+        path: Rotas.mes,
+        builder: (_, __) => const Scaffold(body: Text('Tela do calendário')),
+      ),
     ],
   );
   return ProviderScope(
@@ -331,6 +335,21 @@ void main() {
     expect(find.text('DICA DE TREINO'), findsOneWidget);
     expect(find.text(dicasDeTreino.first), findsOneWidget);
     expect(find.bySemanticsLabel('Dica de treino: ${dicasDeTreino.first}'), findsOneWidget);
+  });
+
+  testWidgets('PBI-82: o cartão "Esta semana" tem o link "Ver mês" e navega',
+      (tester) async {
+    await tester.pumpWidget(await _tela(_planoAB, sessoes: [_sessao('s1', _hoje)]));
+    await tester.pumpAndSettle();
+
+    final verMes = find.bySemanticsLabel('Ver calendário do mês');
+    expect(verMes, findsOneWidget);
+    // Alvo de toque de 44 px.
+    expect(tester.getSize(verMes).height, greaterThanOrEqualTo(44));
+
+    await tester.tap(verMes);
+    await tester.pumpAndSettle();
+    expect(find.text('Tela do calendário'), findsOneWidget);
   });
 
   testWidgets('PBI-59: sem sessões, não há cartão de último treino', (tester) async {

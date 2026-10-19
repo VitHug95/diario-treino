@@ -9,6 +9,7 @@ import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
+import '../../features/inicio/calendario_mes_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 import '../../features/planos/plano_detalhe_screen.dart';
 import '../../features/planos/planos_screen.dart';
@@ -54,6 +55,9 @@ abstract final class Rotas {
   static const detalheSessao = '/sessoes';
   static const perfil = '/perfil';
   static const primeiroAcesso = '/primeiro-acesso';
+
+  /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
+  static const mes = '/mes';
 }
 
 /// Dados passados ao abrir o registro de sessão (via `extra`).
@@ -165,6 +169,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'perfil',
                     name: 'perfil',
                     builder: (context, state) => const PerfilScreen(),
+                  ),
+                  // Calendário do mês (PBI-82), empilhado sobre a Início.
+                  GoRoute(
+                    path: 'mes',
+                    name: 'mes',
+                    builder: (context, state) => const CalendarioMesScreen(),
                   ),
                 ],
               ),
