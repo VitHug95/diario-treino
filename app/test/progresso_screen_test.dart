@@ -211,6 +211,45 @@ void main() {
       expect(find.text('Tempo (s)'), findsOneWidget);
     });
 
+    testWidgets('PBI-73: força sem carga usa título "Repetições" e valor em reps',
+        (tester) async {
+      final soReps = ProgressoExercicio(
+        exercicioId: 'e3',
+        nome: 'Abdominal bicicleta',
+        modalidade: 'FORCA',
+        metrica: 'REPETICOES',
+        pontos: [
+          _ponto(DateTime(2026, 10, 1), 12, id: 'r1'),
+          _ponto(DateTime(2026, 10, 8), 15, id: 'r2'),
+        ],
+        resumo: const ResumoProgresso(
+            sessoes: 2, variacao: 3, sessoesComObservacao: 0),
+      );
+      for (final tema in [AppTheme.claro, AppTheme.escuro]) {
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            sessoesDoPeriodoProvider.overrideWith((ref) async => const []),
+            exerciciosComHistoricoProvider
+                .overrideWith((ref) async => [_exercicio('e3', 'Abdominal bicicleta')]),
+            progressoDoExercicioProvider.overrideWith((ref) async => soReps),
+            exercicioSelecionadoProvider.overrideWith(() => _SelecionadoFixo('e3')),
+          ],
+          child: MaterialApp(theme: tema, home: const ProgressoScreen()),
+        ));
+        await tester.pumpAndSettle();
+
+        // Gráfico desenhado (não cai no "sem dados"), eixo "Repetições".
+        expect(find.byType(LineChart), findsOneWidget);
+        expect(find.text('Repetições'), findsOneWidget);
+        expect(find.text('Carga (kg)'), findsNothing);
+        // Variação em reps, não em kg.
+        expect(find.textContaining('+3 reps'), findsOneWidget);
+        // O detalhe do ponto mais recente mostra "15 reps", sem "× ... reps" nem "kg".
+        expect(find.textContaining('15 reps'), findsWidgets);
+        expect(find.textContaining('kg'), findsNothing);
+      }
+    });
+
     testWidgets('Exercício sem dados no período mostra estado vazio',
         (tester) async {
       final vazio = ProgressoExercicio(

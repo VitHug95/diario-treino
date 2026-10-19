@@ -45,7 +45,12 @@ public sealed class ServicoProgresso
         var exercicio = basicos.GetValueOrDefault(exercicioId)
             ?? throw new RecursoNaoEncontradoException("Exercício não encontrado.");
 
-        var metrica = MetricaDaModalidade(exercicio.Modalidade);
+        // A grandeza do gráfico é decidida POR EXERCÍCIO (PBI-73), não só pela
+        // modalidade: força com carga usa a carga; força sem carga (ex.: peso
+        // corporal, abdominais) cai para repetições; isometria usa o tempo;
+        // cardio ainda não tem gráfico no MVP.
+        var metrica = await DecidirMetricaAsync(
+            usuarioLogadoId, exercicioId, exercicio.Modalidade, de, ate, ct);
         if (metrica is null)
         {
             // Modalidade sem gráfico de evolução no MVP (ex.: cardio): devolve
@@ -55,9 +60,8 @@ public sealed class ServicoProgresso
                 [], new ResumoProgresso(0, null, 0));
         }
 
-        var forca = exercicio.Modalidade == Modalidade.Forca;
         var brutos = await _progresso.ObterPontosAsync(
-            usuarioLogadoId, exercicioId, forca, de, ate, ct);
+            usuarioLogadoId, exercicioId, metrica.Value, de, ate, ct);
 
         var pontos = brutos
             .Select(b => new PontoProgresso(
@@ -73,17 +77,43 @@ public sealed class ServicoProgresso
             exercicio.Id,
             exercicio.Nome,
             exercicio.Modalidade,
-            metrica,
+            RotuloMetrica(metrica.Value),
             pontos,
             new ResumoProgresso(pontos.Count, variacao, comObs));
     }
 
-    /// <summary>Grandeza do gráfico pela modalidade: força = CARGA, isometria =
-    /// TEMPO; demais (cardio) ainda não têm gráfico no MVP.</summary>
-    private static string? MetricaDaModalidade(string modalidade) => modalidade switch
+    /// <summary>
+    /// Escolhe a grandeza do gráfico (PBI-73). Força: usa a carga só se houver
+    /// alguma série com carga no período; sem carga, repetições. Isometria:
+    /// tempo. Cardio (ou outra sem gráfico): nulo.
+    /// </summary>
+    private async Task<MetricaProgresso?> DecidirMetricaAsync(
+        Guid atletaId,
+        Guid exercicioId,
+        string modalidade,
+        DateOnly? de,
+        DateOnly? ate,
+        CancellationToken ct)
     {
-        Modalidade.Forca => "CARGA",
-        Modalidade.Isometria => "TEMPO",
-        _ => null,
+        if (modalidade == Modalidade.Isometria)
+        {
+            return MetricaProgresso.Tempo;
+        }
+        if (modalidade == Modalidade.Forca)
+        {
+            var temCarga = await _progresso.ExercicioTemCargaAsync(
+                atletaId, exercicioId, de, ate, ct);
+            return temCarga ? MetricaProgresso.Carga : MetricaProgresso.Repeticoes;
+        }
+        return null;
+    }
+
+    /// <summary>Rótulo da métrica no DTO, consumido pelo app para eixo/unidade.</summary>
+    private static string RotuloMetrica(MetricaProgresso metrica) => metrica switch
+    {
+        MetricaProgresso.Carga => "CARGA",
+        MetricaProgresso.Repeticoes => "REPETICOES",
+        MetricaProgresso.Tempo => "TEMPO",
+        _ => "CARGA",
     };
 }

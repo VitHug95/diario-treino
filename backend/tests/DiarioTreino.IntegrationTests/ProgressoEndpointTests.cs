@@ -81,6 +81,19 @@ public sealed class ProgressoEndpointTests
         marcador,
     };
 
+    // Força SEM carga (peso corporal): intensidade nula, volume = repetições.
+    private static object SerieForcaSemCarga(short rodada, decimal reps) => new
+    {
+        rodada,
+        ordem = (short)1,
+        tipo = "ESFORCO",
+        intensidadeMetricaId = PesoCorporal,
+        intensidade = (decimal?)null,
+        volumeMetricaId = Repeticoes,
+        volume = reps,
+        descansoSeg = (short?)60,
+    };
+
     private static object SerieIsometria(short rodada, decimal tempo) => new
     {
         rodada,
@@ -167,6 +180,62 @@ public sealed class ProgressoEndpointTests
         var ponto = Assert.Single(prog!.Pontos);
         Assert.Equal(40m, ponto.Valor);     // maior carga do dia, com tag ou sem
         Assert.Equal(12m, ponto.Repeticoes);
+    }
+
+    [Fact]
+    public async Task Forca_sem_carga_usa_repeticoes_e_mostra_pontos()
+    {
+        // PBI-73: exercício de força feito só com peso corporal (sem carga) não
+        // pode ficar sem gráfico. A métrica vira REPETICOES e cada ponto é a
+        // série de maior volume (reps) da sessão.
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var teSupino = await CriarFichaComExercicio(client, SupinoReto);
+
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        await CriarSessao(client, SupinoReto, teSupino, hoje.AddDays(-7),
+            [SerieForcaSemCarga(1, 10), SerieForcaSemCarga(2, 12)]);
+        await CriarSessao(client, SupinoReto, teSupino, hoje,
+            [SerieForcaSemCarga(1, 15), SerieForcaSemCarga(2, 14)]);
+
+        var prog = await client.GetFromJsonAsync<ProgressoResp>(
+            $"/api/v1/progresso/exercicios/{SupinoReto}");
+
+        Assert.Equal("FORCA", prog!.Modalidade);
+        Assert.Equal("REPETICOES", prog.Metrica);
+        Assert.Equal(2, prog.Pontos.Count);
+        // Maior volume de cada sessão, em ordem de data; sem segundo valor.
+        Assert.Equal(12m, prog.Pontos[0].Valor);
+        Assert.Null(prog.Pontos[0].Repeticoes);
+        Assert.Equal(15m, prog.Pontos[1].Valor);
+        Assert.Null(prog.Pontos[1].Repeticoes);
+        Assert.Equal(2, prog.Resumo.Sessoes);
+        Assert.Equal(3m, prog.Resumo.Variacao); // 15 - 12
+    }
+
+    [Fact]
+    public async Task Qualquer_carga_no_periodo_mantem_o_grafico_em_carga()
+    {
+        // Mistura: uma sessão com carga e outra sem. Havendo QUALQUER carga no
+        // período, o gráfico fica em CARGA (as sessões sem carga não viram ponto).
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var teSupino = await CriarFichaComExercicio(client, SupinoReto);
+
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        await CriarSessao(client, SupinoReto, teSupino, hoje.AddDays(-3),
+            [SerieForcaSemCarga(1, 15)]);
+        await CriarSessao(client, SupinoReto, teSupino, hoje,
+            [SerieForca(1, 40, 8)]);
+
+        var prog = await client.GetFromJsonAsync<ProgressoResp>(
+            $"/api/v1/progresso/exercicios/{SupinoReto}");
+
+        Assert.Equal("CARGA", prog!.Metrica);
+        // Só a sessão com carga vira ponto (a de maior carga = 40 × 8).
+        var ponto = Assert.Single(prog.Pontos);
+        Assert.Equal(40m, ponto.Valor);
+        Assert.Equal(8m, ponto.Repeticoes);
     }
 
     [Fact]
