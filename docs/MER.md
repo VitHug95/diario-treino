@@ -29,18 +29,18 @@ pronto.
 **PBI-31 / ADR-10 concluído.** Tabelas `membro` (8) e `musculo` (15) existem; o
 antigo texto livre `grupo_muscular` foi **removido** (coluna dropada na etapa 4).
 
-Migrations versionadas até aqui: `InitialCreate`, `HabilitaUnaccent`,
+**Também aplicado:** `plano_treino.em_uso` com o índice único parcial `ux_plano_atleta_em_uso` no lugar do antigo por `ativo` (PBI-44), `serie_executada.marcador` e `rodada_marcador` (TV-1), `volume_alvo_max` (TV-2) e o reparo de dados do plano em uso (PBI-77).
+
+Migrations versionadas, em ordem: `InitialCreate`, `HabilitaUnaccent`,
 `CatalogoExerciciosCompleto` (carga dos 89 exercícios), `MembroMusculoEtapa1`
 (cria `membro`/`musculo`, classifica o catálogo), `MembroMusculoEtapa4RemoveGrupo`
-(remove `grupo_muscular`).
+(remove `grupo_muscular`), `TagDeSerie`, `FaixaRepeticoes`, `PlanosVariosEmUso`
+(preenche `em_uso = ativo` nos planos existentes) e `ReparoPlanoEmUso`
+(`20261019145756`): para cada atleta com plano ativo e nenhum em uso, marca em uso
+o plano ativo com a sessão mais recente (empate: início mais novo). É idempotente
+e não tem reversão, de propósito.
 
-**Planejado, ainda NÃO aplicado em produção:**
-- Coluna `plano_treino.em_uso` e troca do índice único de `plano_treino`
-  (PBI-44, épico Planos). Hoje existe um plano ativo por atleta
-  (`ux_plano_atleta_ativo`, filtro `ativo`); passa a existir no máximo um plano
-  **em uso** por atleta (`ux_plano_atleta_em_uso`, filtro `em_uso`), e `ativo`
-  volta a significar apenas "plano existente com histórico". Migration
-  `PlanosVariosEmUso` (preenche `em_uso = ativo` nos planos existentes).
+**Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
 ---
 
@@ -384,6 +384,7 @@ Restrições:
 - Índice único parcial `(atleta_id) WHERE em_uso`, no lugar de `(atleta_id) WHERE ativo`.
 - `CHECK (NOT em_uso OR ativo)`.
 - A migration preenche `em_uso` com o valor de `ativo` dos planos existentes.
+- A `ReparoPlanoEmUso` (PBI-77) marca em uso, para quem tem plano ativo e nenhum em uso, o plano ativo com a sessão mais recente.
 
 ### 3.7 `treino`
 Ficha (A, B, C) dentro do plano.
@@ -496,17 +497,18 @@ Lista fixa dos 10 marcadores (aprovada pelo PO, 15/10): `VALIDA`, `AQUECIMENTO`,
 ## 5. Regras de negócio que dependem do modelo
 
 1. **Pré-preenchimento:** ao abrir a ficha X para registrar, cada exercício recebe as séries da sessão mais recente do mesmo atleta que contenha aquele exercício. Sem histórico, usa os alvos de `etapa_prescrita`.
-2. **Evolução de força (implementado, PBI-20):** por sessão, a série de esforço de **maior carga** (`intensidade`), com o `volume` (repetições) **daquela** série — desempate por maior volume. Decisão do PO (14/10): usa a maior carga, não o volume total, e cada ponto mostra as reps feitas com aquela carga.
+2. **Evolução de força (implementado, PBI-20):** por sessão, a série de esforço de **maior carga** (`intensidade`), com o `volume` (repetições) **daquela** série — desempate por maior volume. Decisão do PO (14/10): usa a maior carga, não o volume total, e cada ponto mostra as reps feitas com aquela carga. A grandeza é decidida **por exercício** (PBI-73): se o exercício tem alguma série de esforço com carga no período, vale a regra acima; sem carga (peso corporal, abdominais), o ponto é o maior `volume` (repetições) da sessão, sem segundo valor, e o DTO devolve `metrica = REPETICOES`.
 3. **Evolução de isometria (implementado, PBI-20):** maior `volume` (tempo) por sessão.
 4. **Evolução de cardio:** tempo total por zona no período. *(Incremento 2, ainda não implementado.)*
 5. **Observação no gráfico (implementado, PBI-21):** cada `PontoProgresso` carrega `sessao.observacao` e o `sessaoId`; pontos com observação são destacados e abrem a nota do dia + link para o detalhe da sessão.
 6. **Acesso:** toda consulta filtra por `atleta_id` após passar pela regra de controle de acesso do MAS (seção 11.3).
 7. **Integridade de métrica:** a métrica gravada na série precisa pertencer ao eixo correto (validado na aplicação, porque `CHECK` não consulta outra tabela).
 8. **Tag de série (TV-1):** `serie_executada.marcador` e `rodada_marcador` só identificam "como" a série foi feita. **Não** entram em nenhum cálculo — o gráfico de progresso (regras 2 e 3) continua por `tipo = ESFORCO` e maior carga/tempo, independente da tag. Pré-preenchimento da tag no registro: tag da ficha para a rodada; sem ficha, tag da última sessão daquele exercício; sem nenhuma, `VALIDA`.
-9. **Plano em uso (PBI-44):** só um por atleta, trocado numa transação. O primeiro plano do atleta nasce em uso. A sequência A, B, C da Início, o "próximo da sequência" e a lista de fichas olham o plano em uso. Iniciar ficha de plano fora de uso é permitido e a sessão fica ligada à ficha (`sessao.treino_id`).
+9. **Plano em uso (PBI-44):** só um por atleta, trocado numa transação. Um plano novo nasce em uso quando o atleta não tem nenhum plano em uso (PBI-77); planos escondidos (`ativo = false`) não contam. Com um plano já em uso, o novo nasce fora de uso. A sequência A, B, C da Início, o "próximo da sequência" e a lista de fichas olham o plano em uso. Iniciar ficha de plano fora de uso é permitido e a sessão fica ligada à ficha (`sessao.treino_id`).
 10. **Excluir plano (PBI-44):** se nenhuma ficha do plano tem sessão, apaga de verdade (cascata para ficha, exercício e etapa). Se alguma tem, marca `ativo = false` e `em_uso = false`, porque `sessao.treino_id` é `Restrict`. Se era o em uso, o uso passa para o plano com a sessão mais recente; sem outro plano, a Início mostra o Primeiro acesso.
 11. **Somente leitura (PBI-44):** plano com `autor_id <> atleta_id` não aceita criar, editar, excluir ou reordenar ficha e exercício pelo atleta (403 `plano-somente-leitura`, depois de passar pelo controle de acesso; outro usuário continua 404). Leitura, iniciar e registrar sessão continuam liberados. Copiar cria um plano novo com autor = atleta.
 12. **Excluir conta:** apaga sessões e depois todos os planos do atleta, inclusive os escondidos (comportamento atual de `ExcluirContaAsync`).
+13. **Exercício único (PBI-74):** cada exercício aparece uma vez por ficha (`treino_exercicio`) e uma vez por sessão (`serie_executada` agrupada por `exercicio_id`). A regra é da aplicação (409 ao adicionar à ficha, 400 ao salvar a sessão), sem constraint única no banco. Dados anteriores à regra podem ter repetição.
 
 ## 6. Exemplo de dados
 
