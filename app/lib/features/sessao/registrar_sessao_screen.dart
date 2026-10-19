@@ -343,7 +343,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
   Future<void> _adicionarForaDaFicha() async {
     final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
       MaterialPageRoute(
-        builder: (_) => SelecionarExercicioScreen(destino: widget.treinoNome),
+        builder: (_) => SelecionarExercicioScreen(
+          destino: widget.treinoNome,
+          // PBI-74: o que já está no treino não pode entrar de novo.
+          idsIndisponiveis: {for (final e in _exercicios) e.exercicioId},
+          rotuloIndisponivel: 'Já está no treino',
+        ),
       ),
     );
     if (escolhidos == null || !mounted) return;

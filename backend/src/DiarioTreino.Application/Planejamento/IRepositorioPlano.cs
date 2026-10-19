@@ -79,6 +79,10 @@ public interface IRepositorioPlano
 
     public void AdicionarTreinoExercicio(TreinoExercicio treinoExercicio);
 
+    /// <summary>Indica se o exercício do catálogo já está na ficha (PBI-74).
+    /// Cada exercício aparece uma única vez por ficha.</summary>
+    public Task<bool> ExercicioJaNaFichaAsync(Guid treinoId, Guid exercicioId, CancellationToken ct);
+
     public void RemoverTreinoExercicio(TreinoExercicio treinoExercicio);
 
     /// <summary>Exercício prescrito por id, ou nulo.</summary>

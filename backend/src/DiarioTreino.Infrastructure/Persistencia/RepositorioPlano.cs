@@ -339,6 +339,10 @@ public sealed class RepositorioPlano : IRepositorioPlano
     public void AdicionarTreinoExercicio(TreinoExercicio treinoExercicio) =>
         _db.TreinoExercicios.Add(treinoExercicio);
 
+    public Task<bool> ExercicioJaNaFichaAsync(Guid treinoId, Guid exercicioId, CancellationToken ct) =>
+        _db.TreinoExercicios.AnyAsync(
+            te => te.TreinoId == treinoId && te.ExercicioId == exercicioId, ct);
+
     public void RemoverTreinoExercicio(TreinoExercicio treinoExercicio) =>
         _db.TreinoExercicios.Remove(treinoExercicio);
 

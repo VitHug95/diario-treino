@@ -22,9 +22,22 @@ import 'exercicio_resumo.dart';
 /// [destino] aparece acima do título (a ficha ou o treino que recebe os
 /// exercícios).
 class SelecionarExercicioScreen extends ConsumerStatefulWidget {
-  const SelecionarExercicioScreen({super.key, this.destino});
+  const SelecionarExercicioScreen({
+    super.key,
+    this.destino,
+    this.idsIndisponiveis = const {},
+    this.rotuloIndisponivel = 'Já está na ficha',
+  });
 
   final String? destino;
+
+  /// Ids de exercícios que já estão na ficha/sessão (PBI-74): aparecem
+  /// desabilitados e não podem ser escolhidos.
+  final Set<String> idsIndisponiveis;
+
+  /// Texto do selo mostrado no item indisponível ("Já está na ficha" ou
+  /// "Já está no treino").
+  final String rotuloIndisponivel;
 
   @override
   ConsumerState<SelecionarExercicioScreen> createState() =>
@@ -213,10 +226,13 @@ class _SelecionarExercicioScreenState
                           rotulo: 'Criar exercício novo', aoTocar: _criarExercicio);
                     }
                     final e = itens[i - 1];
+                    final indisponivel = widget.idsIndisponiveis.contains(e.id);
                     return _ItemSelecionavel(
                       exercicio: e,
                       escolhido: _escolhido(e),
-                      aoTocar: () => _alternar(e),
+                      indisponivel: indisponivel,
+                      rotuloIndisponivel: widget.rotuloIndisponivel,
+                      aoTocar: indisponivel ? null : () => _alternar(e),
                     );
                   },
                 );
@@ -262,11 +278,19 @@ class _ItemSelecionavel extends StatelessWidget {
     required this.exercicio,
     required this.escolhido,
     required this.aoTocar,
+    this.indisponivel = false,
+    this.rotuloIndisponivel = 'Já está na ficha',
   });
 
   final ExercicioResumo exercicio;
   final bool escolhido;
-  final VoidCallback aoTocar;
+
+  /// Nulo quando o item não pode ser tocado (indisponível).
+  final VoidCallback? aoTocar;
+
+  /// PBI-74: já está na ficha/sessão — mostrado esmaecido, sem alternar.
+  final bool indisponivel;
+  final String rotuloIndisponivel;
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +302,47 @@ class _ItemSelecionavel extends StatelessWidget {
       if (musculo != null && musculo.isNotEmpty) musculo,
       e.formaDeMedir,
     ].join(' · ');
+
+    // Item indisponível: fundo neutro, conteúdo esmaecido e selo com o motivo.
+    if (indisponivel) {
+      return Semantics(
+        button: false,
+        enabled: false,
+        label: '${e.nome}. $rotuloIndisponivel',
+        excludeSemantics: true,
+        child: Opacity(
+          opacity: 0.55,
+          child: Container(
+            decoration: BoxDecoration(
+              color: esquema.surface,
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
+            child: Row(
+              children: [
+                _QuadradoMembro(nome: e.membroNome),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.nome, style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(rotuloIndisponivel,
+                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                Icon(LucideIcons.check,
+                    size: AppSizes.iconeSm, color: cores.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Semantics(
       button: true,

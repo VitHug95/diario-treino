@@ -102,6 +102,50 @@ public sealed class SessaoEndpointTests
     }
 
     [Fact]
+    public async Task Sessao_com_o_mesmo_exercicio_em_dois_blocos_responde_400()
+    {
+        // PBI-74: o mesmo exercício não pode aparecer duas vezes na sessão.
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+
+        var ontem = DateOnly.FromDateTime(DateTime.UtcNow.Date).AddDays(-1);
+        var criar = await client.PostAsJsonAsync("/api/v1/sessoes", new
+        {
+            treinoId = (Guid?)null,
+            data = ontem,
+            duracaoMin = (short?)null,
+            observacao = (string?)null,
+            exercicios = new[]
+            {
+                new
+                {
+                    exercicioId = SupinoReto,
+                    treinoExercicioId = (Guid?)null,
+                    series = new[]
+                    {
+                        new { rodada = (short)1, ordem = (short)1, tipo = "ESFORCO",
+                              intensidadeMetricaId = CargaKg, intensidade = 40m,
+                              volumeMetricaId = Repeticoes, volume = 8m, descansoSeg = (short?)null },
+                    },
+                },
+                new
+                {
+                    exercicioId = SupinoReto, // repetido de propósito
+                    treinoExercicioId = (Guid?)null,
+                    series = new[]
+                    {
+                        new { rodada = (short)1, ordem = (short)1, tipo = "ESFORCO",
+                              intensidadeMetricaId = CargaKg, intensidade = 42m,
+                              volumeMetricaId = Repeticoes, volume = 6m, descansoSeg = (short?)null },
+                    },
+                },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, criar.StatusCode);
+    }
+
+    [Fact]
     public async Task Rascunho_sem_alvos_e_sem_historico_abre_com_uma_serie_em_branco()
     {
         // PBI-33: antes vinha sem séries e abria tudo como "não realizado",

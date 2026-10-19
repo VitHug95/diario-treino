@@ -21,6 +21,14 @@ public sealed class CriarSessaoValidator : AbstractValidator<CriarSessaoRequest>
 
         RuleForEach(x => x.Exercicios).SetValidator(new ExercicioSessaoValidator());
 
+        // PBI-74: cada exercício aparece uma única vez por sessão (consequência
+        // de "uma vez por ficha"). Dois blocos com o mesmo ExercicioId são
+        // recusados antes de gravar.
+        RuleFor(x => x.Exercicios)
+            .Must(ex => ex.Select(e => e.ExercicioId).Distinct().Count() == ex.Count)
+            .When(x => x.Exercicios is not null)
+            .WithMessage("Este exercício já está no treino.");
+
         // PBI-72: manter na ficha só faz sentido com ficha; o resto (id na
         // sessão, fora da ficha, com série) é conferido no serviço.
         RuleFor(x => x.ManterNaFicha)
