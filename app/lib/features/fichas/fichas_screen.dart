@@ -11,6 +11,7 @@ import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../catalogo/catalogo_repository.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../inicio/inicio_logica.dart';
@@ -352,11 +353,27 @@ class _ListaExerciciosFicha extends ConsumerWidget {
   }
 
   /// A tela de alvos grava pelo comando, que já atualiza a ficha.
+  ///
+  /// PBI-78: abre SEMPRE com o dado mais atual da ficha (lido do provider pelo
+  /// id), nunca com um objeto capturado antes. Assim, mesmo um toque que chega
+  /// enquanto a ficha ainda está recarregando após uma gravação não abre um
+  /// editor "em branco" com o estado antigo. Enquanto o detalhe recarrega
+  /// (AsyncLoading) ou se o exercício já não existe, o toque é ignorado.
   Future<void> _editarAlvos(
       BuildContext context, WidgetRef ref, TreinoExercicioResumo te) async {
+    final detalhe = ref.read(fichaDetalheProvider(treinoId));
+    // Ficha recarregando: ignora o toque (evita abrir com dado defasado).
+    if (detalhe.isLoading) return;
+
+    final atual = detalhe.value?.exercicios
+        .where((e) => e.id == te.id)
+        .firstOrNull;
+    // Exercício saiu da ficha nesse meio-tempo: nada a editar.
+    if (atual == null) return;
+
     await Navigator.of(context).push<ResultadoAlvos>(
       MaterialPageRoute(
-        builder: (_) => EditarAlvosScreen(treinoId: treinoId, exercicio: te),
+        builder: (_) => EditarAlvosScreen(treinoId: treinoId, exercicio: atual),
       ),
     );
   }
@@ -535,14 +552,18 @@ class _CardExercicioFicha extends StatelessWidget {
 }
 
 /// Linha-resumo dos alvos no card. Sem alvo definido, convida a configurar.
-class _ResumoAlvo extends StatelessWidget {
+///
+/// Mostra a faixa de volume (TV-2) e a unidade de cada métrica, no mesmo padrão
+/// do resumo do editor (PBI-79). A unidade vem do catálogo de métricas (por
+/// código); enquanto ele não chegou, cai no nome da métrica.
+class _ResumoAlvo extends ConsumerWidget {
   const _ResumoAlvo({required this.exercicio, required this.cores});
 
   final TreinoExercicioResumo exercicio;
   final AppColors cores;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final alvo = exercicio.alvo;
     if (alvo == null) {
       return Row(
@@ -557,13 +578,31 @@ class _ResumoAlvo extends StatelessWidget {
       );
     }
 
+    // Unidade por código (ex.: kg, rep, s). Sem o catálogo ainda, usa o nome.
+    final metricas = ref.watch(metricasProvider).value;
+    String unidadeDe(String codigo, String nomeFallback) {
+      final u = metricas?.where((m) => m.codigo == codigo).firstOrNull?.unidade;
+      // "-" (peso corporal) não é unidade exibível.
+      if (u == null) return nomeFallback.toLowerCase();
+      return u == '-' ? '' : u;
+    }
+
     final partes = <String>['${exercicio.rodadas} ${exercicio.rodadas == 1 ? 'série' : 'séries'}'];
+
+    // Volume: faixa "8 a 12 rep" (TV-2) ou alvo único "10 rep".
     if (alvo.volumeAlvo != null) {
-      partes.add('${_num(alvo.volumeAlvo!)} ${alvo.volumeMetricaNome.toLowerCase()}');
+      final unidadeVol = unidadeDe(alvo.volumeMetricaCodigo, alvo.volumeMetricaNome);
+      final volume = formatarVolumeAlvo(alvo.volumeAlvo, alvo.volumeAlvoMax, unidadeVol);
+      if (volume.isNotEmpty) partes.add(volume);
     }
+
+    // Intensidade: "65 kg". Peso corporal (unidade vazia) não entra.
     if (alvo.intensidadeAlvo != null) {
-      partes.add('${_num(alvo.intensidadeAlvo!)} ${alvo.intensidadeMetricaNome.toLowerCase()}');
+      final unidadeInt = unidadeDe(alvo.intensidadeMetricaCodigo, alvo.intensidadeMetricaNome);
+      final valor = _num(alvo.intensidadeAlvo!);
+      partes.add(unidadeInt.isEmpty ? valor : '$valor $unidadeInt');
     }
+
     var texto = partes.join(' · ');
     if (exercicio.descansoSeg != null) {
       texto = '$texto · ${exercicio.descansoSeg} s';
