@@ -3,7 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 /// Casca com a navegação inferior (Início / Planos / Progresso), que envolve as
-/// três abas principais. Mantém o estado de cada aba via StatefulShellRoute.
+/// três abas principais.
+///
+/// Tocar numa aba sempre abre a RAIZ dela (PBI-80): mesmo que o atleta tenha
+/// entrado num plano/ficha e saído, voltar à aba mostra a lista, não a tela em
+/// que parou. As telas de tela cheia (registro e treino ao vivo) ficam no
+/// navigator raiz, acima desta barra, então trocar de aba nunca as descarta.
 class ShellNavegacao extends StatelessWidget {
   const ShellNavegacao({super.key, required this.navigationShell});
 
@@ -15,9 +20,11 @@ class ShellNavegacao extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
+        // initialLocation: true SEMPRE — tocar numa aba volta à raiz dela,
+        // trocando de aba ou não (PBI-80), em vez de restaurar a pilha guardada.
         onDestinationSelected: (i) => navigationShell.goBranch(
           i,
-          initialLocation: i == navigationShell.currentIndex,
+          initialLocation: true,
         ),
         destinations: const [
           NavigationDestination(
