@@ -130,6 +130,12 @@ por catálogo respeitados (`ux_exercicio_nome_catalogo`).
 - Mantém pelo menos as últimas 8 cópias.
 - Procedimento de restauração documentado e testado uma vez antes do lançamento.
 
+**Status:** ✅ na `main` — workflow `.github/workflows/backup.yml` (`pg_dump`
+semanal, artifact com retenção de 63 dias = ≥ 8 cópias, fora do Neon) e
+procedimento em [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md). Falta o passo
+manual único: criar o secret `NEON_DATABASE_URL` e rodar o teste de restauração
+uma vez (checklist no doc).
+
 **Depende de:** PBI-04.
 
 ### Épico E1: Acesso

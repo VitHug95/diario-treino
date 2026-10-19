@@ -39,7 +39,7 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 
 O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios filtrado por membro, vários planos com um em uso, fichas com alvos, registro de sessão (editar, excluir, exercício fora da ficha, "Manter na ficha?"), treino livre, primeiro acesso, treino ao vivo série por série, tela inicial com semana, último treino e dicas, progresso completo e perfil com tema e exclusão de conta. De 16 a 19/10 entraram as correções de uso real (PBI-73 a 80): plano novo nasce em uso, um exercício por ficha e por sessão, editor de alvos e resumo da ficha, gráfico de exercício sem carga, "Manter na ficha?" avisando quando não lê a ficha e tocar numa aba abrindo a raiz dela.
 
-**Falta no Incremento 1:** backup do banco (PBI-05), E2E Robot completo (PBI-26) e a conferência final de contraste nos dois temas (PBI-24). Também em aberto: troca de métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75) e o modo educador (PBI-48, épico E7). O **Incremento 2** (cardio e resumo do período) ainda não começou.
+**Falta no Incremento 1:** E2E Robot completo (PBI-26) e a conferência final de contraste nos dois temas (PBI-24). O backup do banco (PBI-05) está pronto — `pg_dump` semanal no CI guardado fora do Neon; falta só criar o secret `NEON_DATABASE_URL` uma vez (ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md)). Também em aberto: troca de métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75) e o modo educador (PBI-48, épico E7). O **Incremento 2** (cardio e resumo do período) ainda não começou.
 
 O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o modelo de dados, no [MAS.md](MAS.md) e [MER.md](MER.md).
 
@@ -50,7 +50,8 @@ O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o 
 - Cadastro de fichas A/B/C com exercícios ✅
 - Registro da sessão com carga pré-preenchida e observação ✅
 - Gráfico de carga por exercício com filtro de período ✅
-- Falta: backup do banco, E2E Robot completo e conferência final de contraste
+- Backup semanal do banco ✅ (falta criar o secret `NEON_DATABASE_URL` uma vez)
+- Falta: E2E Robot completo e conferência final de contraste
 
 **Incremento 2** — não iniciado
 - Registro de cardio
@@ -95,8 +96,9 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 - [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
 - [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
 - [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md): tudo que entrou na `main`, PR por PR, com as migrations
-- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (backup, E2E, contraste, cardio, modo educador)
+- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (E2E, contraste, cardio, modo educador)
 - [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
+- [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md): backup semanal do banco e como restaurar (PBI-05)
 
 O modelo de dados oficial é o do MER. Este README guarda a visão de produto e as decisões em alto nível.
 
