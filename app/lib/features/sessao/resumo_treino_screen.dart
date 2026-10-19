@@ -174,7 +174,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       treinoNome: estado.treinoNome,
       exercicios: paraSalvar,
     );
-    if (manterNaFicha == null || !mounted) return;
+    if (manterNaFicha.ids == null || !mounted) return;
 
     setState(() => _salvando = true);
     try {
@@ -190,7 +190,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
         duracaoMin: duracao,
         observacao: obs,
         exercicios: paraSalvar,
-        manterNaFicha: manterNaFicha,
+        manterNaFicha: manterNaFicha.ids!,
       );
 
       // Só encerra o treino ao vivo (apaga rascunho + descanso) DEPOIS de a
@@ -198,7 +198,16 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       ref.read(treinoAoVivoControllerProvider.notifier).encerrar();
       ref.read(descansoControllerProvider.notifier).encerrar();
 
-      if (mounted) _confirmar(sessaoId);
+      // PBI-76: se a ficha não pôde ser lida para o "Manter na ficha?", o
+      // treino foi salvo mesmo assim e o aviso diz isso.
+      if (mounted) {
+        _confirmar(
+          sessaoId,
+          mensagem: manterNaFicha.leituraFalhou
+              ? 'Treino salvo. Não deu para conferir a ficha.'
+              : 'Treino salvo',
+        );
+      }
     } on SessaoException catch (e) {
       _erro(e.mensagem);
     } finally {
@@ -218,7 +227,8 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
   }
 
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
-  void _confirmar(String sessaoId) => irParaInicioComTreinoSalvo(context, sessaoId);
+  void _confirmar(String sessaoId, {String mensagem = 'Treino salvo'}) =>
+      irParaInicioComTreinoSalvo(context, sessaoId, mensagem: mensagem);
 
   void _erro(String msg) {
     if (!mounted) return;
