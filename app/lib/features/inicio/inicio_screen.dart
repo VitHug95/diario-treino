@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +8,7 @@ import '../../core/flags.dart';
 import '../../core/relogio.dart';
 import '../../core/rotas/app_router.dart';
 import '../../core/tema/tema_controller.dart';
+import '../../shared/calendario/marca_dia.dart';
 import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -159,6 +158,7 @@ class _Conteudo extends StatelessWidget {
               sessoes: InicioLogica.sessoesDoDia(dia, lista),
               fichas: fichas,
               planoNome: plano?.nome),
+          aoVerMes: () => context.push(Rotas.mes),
         ),
         // PBI-71: registrar fica sempre à mão, com ou sem plano.
         const SizedBox(height: AppSpacing.entreCards),
@@ -244,11 +244,15 @@ class _CartaoSemana extends StatelessWidget {
     required this.sessoes,
     required this.aoTentar,
     required this.aoTocarDia,
+    required this.aoVerMes,
   });
 
   final AsyncValue<List<SessaoResumo>> sessoes;
   final VoidCallback aoTentar;
   final void Function(DateTime dia, List<SessaoResumo> sessoes) aoTocarDia;
+
+  /// Abre o calendário do mês (PBI-82).
+  final VoidCallback aoVerMes;
 
   @override
   Widget build(BuildContext context) {
@@ -273,13 +277,52 @@ class _CartaoSemana extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
             child: Row(
               children: [
-                Expanded(
+                Flexible(
                   child: Text('ESTA SEMANA',
+                      overflow: TextOverflow.ellipsis,
                       style: AppText.overline.copyWith(color: cores.textSecondary)),
                 ),
-                if (treinados != null)
-                  Text('$treinados ${treinados == 1 ? 'dia treinado' : 'dias treinados'}',
-                      style: AppText.caption.copyWith(color: cores.textStrong)),
+                if (treinados != null) ...[
+                  const SizedBox(width: AppSpacing.x8),
+                  Flexible(
+                    child: Text(
+                        '$treinados ${treinados == 1 ? 'dia treinado' : 'dias treinados'}',
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: AppText.caption.copyWith(color: cores.textStrong)),
+                  ),
+                ],
+                const SizedBox(width: AppSpacing.x4),
+                // "Ver mês": abre o calendário (PBI-82). Alvo de 44 px. O texto
+                // encolhe antes do ícone; o ícone sempre garante o toque.
+                Semantics(
+                  button: true,
+                  label: 'Ver calendário do mês',
+                  excludeSemantics: true,
+                  child: InkWell(
+                    onTap: aoVerMes,
+                    borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                          minHeight: AppSizes.touchMin, minWidth: AppSizes.touchMin),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.calendar,
+                                size: AppSizes.iconeSm, color: cores.primaryText),
+                            const SizedBox(width: AppSpacing.x4),
+                            Text('Ver mês',
+                                style: AppText.caption.copyWith(
+                                    color: cores.primaryText,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -353,7 +396,11 @@ class _FaixaSemana extends StatelessWidget {
                               fontWeight: dia.ehHoje ? FontWeight.w700 : null,
                             )),
                         const SizedBox(height: AppSpacing.x6),
-                        _MarcaDia(dia: dia, cores: cores),
+                        MarcaDia(
+                          treinou: dia.treinou,
+                          ehHoje: dia.ehHoje,
+                          futuro: dia.futuro,
+                        ),
                       ],
                     ),
                   ),
@@ -371,72 +418,6 @@ class _FaixaSemana extends StatelessWidget {
     if (dia.futuro) return 'Dia $dd, ainda não chegou';
     return 'Dia $dd, sem treino. Toque para registrar';
   }
-}
-
-/// Marca do dia, conforme o estado (ver [_FaixaSemana]).
-class _MarcaDia extends StatelessWidget {
-  const _MarcaDia({required this.dia, required this.cores});
-
-  final DiaSemana dia;
-  final AppColors cores;
-
-  static const _tamanho = 28.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final esquema = Theme.of(context).colorScheme;
-    if (dia.treinou) {
-      return Container(
-        width: _tamanho,
-        height: _tamanho,
-        decoration: BoxDecoration(color: esquema.primary, shape: BoxShape.circle),
-        child: Icon(LucideIcons.check, size: AppSizes.iconeSm, color: esquema.onPrimary),
-      );
-    }
-    if (dia.futuro) {
-      return CustomPaint(
-        size: const Size.square(_tamanho),
-        painter: _CirculoTracejado(cor: cores.lineDashed),
-      );
-    }
-    return Container(
-      width: _tamanho,
-      height: _tamanho,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        // Hoje: anel azul mais grosso. Passado sem treino: círculo vazio.
-        border: dia.ehHoje
-            ? Border.all(color: cores.primaryText, width: 2)
-            : Border.all(color: cores.lineDashed, width: 1.5),
-      ),
-    );
-  }
-}
-
-/// Círculo tracejado do dia futuro.
-class _CirculoTracejado extends CustomPainter {
-  _CirculoTracejado({required this.cor});
-
-  final Color cor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const tracos = 12;
-    const preenchido = 0.55; // fração de cada passo que é traço
-    final raio = size.width / 2 - 0.75;
-    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: raio);
-    final pincel = Paint()
-      ..color = cor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    const passo = 2 * math.pi / tracos;
-    for (var i = 0; i < tracos; i++) {
-      canvas.drawArc(rect, i * passo, passo * preenchido, false, pincel);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_CirculoTracejado old) => old.cor != cor;
 }
 
 /// Cartão "Último treino": ficha (ou "Treino livre"), data e quantidade de

@@ -284,6 +284,17 @@ final sessoesRecentesProvider =
   return ref.watch(sessaoRepositoryProvider).listarSessoes(de: de);
 });
 
+/// Sessões de um mês (calendário, PBI-82). A chave da família é o mês
+/// normalizado ao dia 1 (`DateTime(ano, mes)`). Busca do primeiro ao último dia
+/// do mês; o último dia entra no filtro (o back compara por data). Um mês cabe
+/// numa resposta sem paginação.
+final sessoesDoMesProvider =
+    FutureProvider.autoDispose.family<List<SessaoResumo>, DateTime>((ref, mes) {
+  final primeiro = DateTime(mes.year, mes.month, 1);
+  final ultimo = DateTime(mes.year, mes.month + 1, 0);
+  return ref.watch(sessaoRepositoryProvider).listarSessoes(de: primeiro, ate: ultimo);
+});
+
 /// Período escolhido na lista de sessões (aba Progresso, PBI-22).
 enum PeriodoSessoes {
   dias15('15 dias', 15),
