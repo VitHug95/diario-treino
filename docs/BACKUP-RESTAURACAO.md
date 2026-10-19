@@ -108,7 +108,7 @@ Fazer **uma vez**, e repetir se o schema mudar muito:
 
 | Data do teste | Dump usado | Resultado |
 |---|---|---|
-| _(preencher)_ | _(arquivo)_ | _(ok / ajustes)_ |
+| 19/10/2026 | `diariotreino-20261019-203209.dump` (backup #5) | OK. Restaurado num Postgres 18 local; `pg_restore` sem erros; contagens conferidas (usuario 3, sessao 1, exercicio 96, plano_treino 4, serie_executada 25, metrica 6). |
 
 ## Limitações e evolução
 
