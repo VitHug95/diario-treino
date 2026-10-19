@@ -22,8 +22,13 @@ restaurar — com um teste de restauração que deve ser feito antes do lançame
 Criar o secret com a connection string do Neon no repositório:
 
 1. No Neon, copie a connection string do banco de produção (Dashboard → Connection
-   Details). Ela vem no formato libpq, algo como:
+   Details). O valor **precisa começar com `postgresql://`** (ou `postgres://`),
+   no formato:
    `postgresql://USUARIO:SENHA@HOST/diariotreino?sslmode=require`
+   - Cole **só a URL**, sem `psql `, sem aspas em volta e sem quebra de linha. Se
+     o Neon mostrar algo como `psql 'postgresql://...'`, copie apenas a parte
+     entre aspas. O workflow recusa (com erro claro) um valor que não comece com
+     `postgresql://`, justamente para evitar o `pg_dump` cair no socket local.
 2. No GitHub: repo → **Settings** → **Secrets and variables** → **Actions** →
    **New repository secret**.
    - Name: `NEON_DATABASE_URL`

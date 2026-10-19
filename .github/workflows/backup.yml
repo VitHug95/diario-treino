@@ -41,12 +41,25 @@ jobs:
 
       - name: Gerar o dump
         env:
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          # pg_dump lê a conexão de PGDATABASE nativamente. Passar a connection
+          # string por aqui (em vez de argumento posicional) evita que o
+          # pg_dump a trate como nome de banco e tente o socket local.
+          PGDATABASE: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          if [ -z "$NEON_DATABASE_URL" ]; then
+          if [ -z "$PGDATABASE" ]; then
             echo "::error::Secret NEON_DATABASE_URL não configurado. Veja docs/BACKUP-RESTAURACAO.md."
             exit 1
           fi
+          # Diagnóstico sem vazar o segredo: confirma que a string começa com o
+          # esquema esperado. Se não começar, o valor do secret está no formato
+          # errado (precisa ser postgresql://USER:SENHA@HOST/BANCO?sslmode=require).
+          case "$PGDATABASE" in
+            postgresql://*|postgres://*)
+              echo "Connection string reconhecida (esquema postgres URI)." ;;
+            *)
+              echo "::error::NEON_DATABASE_URL não começa com postgresql:// — confira o formato no docs/BACKUP-RESTAURACAO.md."
+              exit 1 ;;
+          esac
           STAMP="$(date -u +%Y%m%d-%H%M%S)"
           FILE="diariotreino-${STAMP}.dump"
           echo "ARQUIVO=${FILE}" >> "$GITHUB_ENV"
@@ -56,8 +69,7 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_dump \
             --format=custom \
             --file="${FILE}" \
-            --verbose \
-            "$NEON_DATABASE_URL"
+            --verbose
           ls -lh "${FILE}"
 
       - name: Guardar o backup (artifact, fora do Neon)
