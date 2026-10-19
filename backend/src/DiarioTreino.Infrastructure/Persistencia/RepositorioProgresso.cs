@@ -13,10 +13,27 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
         _db = db;
     }
 
+    public async Task<bool> ExercicioTemCargaAsync(
+        Guid atletaId,
+        Guid exercicioId,
+        DateOnly? de,
+        DateOnly? ate,
+        CancellationToken ct)
+    {
+        var series = _db.SeriesExecutadas.Where(se =>
+            se.ExercicioId == exercicioId
+            && se.Tipo == TipoEtapa.Esforco
+            && se.Intensidade != null
+            && se.Sessao!.AtletaId == atletaId);
+        if (de is { } d) series = series.Where(se => se.Sessao!.Data >= d);
+        if (ate is { } a) series = series.Where(se => se.Sessao!.Data <= a);
+        return await series.AnyAsync(ct);
+    }
+
     public async Task<IReadOnlyList<PontoBruto>> ObterPontosAsync(
         Guid atletaId,
         Guid exercicioId,
-        bool forca,
+        MetricaProgresso metrica,
         DateOnly? de,
         DateOnly? ate,
         CancellationToken ct)
@@ -29,7 +46,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
         if (de is { } d) sessoes = sessoes.Where(s => s.Data >= d);
         if (ate is { } a) sessoes = sessoes.Where(s => s.Data <= a);
 
-        if (forca)
+        if (metrica == MetricaProgresso.Carga)
         {
             // Por sessão: a série de esforço de MAIOR carga (intensidade) e as
             // repetições (volume) DAQUELA série. Empate de carga: desempata pela
@@ -63,8 +80,9 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
                 .ToList();
         }
 
-        // Isometria: por sessão, o MAIOR tempo sustentado (volume) entre as
-        // séries de esforço do exercício.
+        // Repetições (força sem carga) ou Tempo (isometria): por sessão, o MAIOR
+        // volume (reps/tempo) entre as séries de esforço do exercício. Sem
+        // segundo valor (Repeticoes = nulo), pois o próprio Valor é o volume.
         var pontosIso = await sessoes
             .Select(s => new
             {

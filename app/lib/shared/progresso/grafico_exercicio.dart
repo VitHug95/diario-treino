@@ -84,9 +84,20 @@ class GraficoExercicio extends StatefulWidget {
 class _GraficoExercicioState extends State<GraficoExercicio> {
   late int _selecionado;
 
+  // Modo do gráfico pela métrica do DTO (PBI-73): CARGA (kg, com reps),
+  // REPETICOES (reps, força sem carga) ou TEMPO (s, isometria).
   bool get _ehCarga => widget.progresso.metrica == 'CARGA';
-  String get _unidade => _ehCarga ? 'kg' : 's';
-  String get _tituloEixo => _ehCarga ? 'Carga (kg)' : 'Tempo (s)';
+  bool get _ehRepeticoes => widget.progresso.metrica == 'REPETICOES';
+  String get _unidade => _ehCarga
+      ? 'kg'
+      : _ehRepeticoes
+          ? 'reps'
+          : 's';
+  String get _tituloEixo => _ehCarga
+      ? 'Carga (kg)'
+      : _ehRepeticoes
+          ? 'Repetições'
+          : 'Tempo (s)';
   List<PontoProgresso> get _pontos => widget.progresso.pontos;
 
   @override
