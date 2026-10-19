@@ -90,7 +90,7 @@ Future<void> _abrir(
 
 class _Botao extends StatefulWidget {
   const _Botao({required this.onTap});
-  final Future<List<String>?> Function() onTap;
+  final Future<ResultadoManterNaFicha> Function() onTap;
 
   @override
   State<_Botao> createState() => _BotaoState();
@@ -104,7 +104,10 @@ class _BotaoState extends State<_Botao> {
         TextButton(
           onPressed: () async {
             final r = await widget.onTap();
-            setState(() => _resultado = r == null ? 'voltou' : r.join(','));
+            setState(() {
+              final base = r.ids == null ? 'voltou' : r.ids!.join(',');
+              _resultado = r.leituraFalhou ? '$base (ficha não lida)' : base;
+            });
           },
           child: const Text('salvar'),
         ),
@@ -174,11 +177,57 @@ void main() {
     expect(find.text('Manter na ficha?'), findsNothing);
   });
 
-  testWidgets('sem conseguir ler a ficha, salva só neste treino', (tester) async {
+  testWidgets('sem conseguir ler a ficha, salva mas sinaliza (PBI-76)', (tester) async {
     await _abrir(tester, treinoId: 'B', exercicios: [coice],
         ficha: () async => throw Exception('sem rede'));
 
+    // Não pergunta (não dá para conferir), salva só neste treino, mas agora
+    // sinaliza que a ficha não foi lida — o chamador avisa o atleta.
     expect(find.text('Manter na ficha?'), findsNothing);
-    expect(find.text('resultado: '), findsOneWidget);
+    expect(find.text('resultado:  (ficha não lida)'), findsOneWidget);
+  });
+
+  testWidgets('PBI-76: os três botões aparecem e são tocáveis em 360 px e fonte 1,3x',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        fichaDetalheProvider.overrideWith((ref, id) => Future.value(TreinoDetalhe(
+            id: id, nome: 'B', descricao: null, ordem: 1, exercicios: const []))),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.claro,
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(360, 800), textScaler: TextScaler.linear(1.3)),
+          child: Scaffold(
+            body: Consumer(builder: (context, ref, _) {
+              return _Botao(onTap: () => perguntarManterNaFicha(
+                    context, ref,
+                    treinoId: 'B', treinoNome: 'Treino B',
+                    exercicios: [coice], rotuloVoltar: 'Voltar ao registro',
+                  ));
+            }),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('salvar'));
+    await tester.pumpAndSettle();
+
+    // Os três botões visíveis e com alvo de toque adequado.
+    final manter = find.widgetWithText(FilledButton, 'MANTER NA FICHA');
+    final soNeste = find.widgetWithText(OutlinedButton, 'Só neste treino');
+    final voltar = find.widgetWithText(TextButton, 'Voltar ao registro');
+    expect(manter, findsOneWidget);
+    expect(soNeste, findsOneWidget);
+    expect(voltar, findsOneWidget);
+    expect(tester.getSize(manter).height, greaterThanOrEqualTo(44));
+    expect(tester.getSize(soNeste).height, greaterThanOrEqualTo(44));
+    // Empilhados: cada um começa abaixo do anterior (coluna, não linha).
+    expect(tester.getTopLeft(soNeste).dy, greaterThan(tester.getTopLeft(manter).dy));
+    expect(tester.getTopLeft(voltar).dy, greaterThan(tester.getTopLeft(soNeste).dy));
   });
 }

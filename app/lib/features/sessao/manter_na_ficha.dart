@@ -11,6 +11,23 @@ import 'sessao_repository.dart';
 /// Escolha no "Manter na ficha?" (PBI-72).
 enum EscolhaManterNaFicha { manter, soNesteTreino, voltar }
 
+/// Resultado de [perguntarManterNaFicha] (PBI-72/76).
+///
+/// - [ids] nulo = o atleta escolheu "voltar" (não salvar).
+/// - [ids] vazio = salvar só neste treino, ou não houve o que perguntar.
+/// - [leituraFalhou] true = não deu para ler a ficha (sem rede): o treino
+///   ainda é salvo, mas a tela avisa que não dá para confirmar o "manter".
+class ResultadoManterNaFicha {
+  const ResultadoManterNaFicha(this.ids, {this.leituraFalhou = false});
+
+  final List<String>? ids;
+  final bool leituraFalhou;
+
+  /// Atalho: só os ids quando houve escolha (ou lista vazia). Nulo = voltar.
+  static const ResultadoManterNaFicha voltar = ResultadoManterNaFicha(null);
+  static const ResultadoManterNaFicha nenhum = ResultadoManterNaFicha(<String>[]);
+}
+
 /// Exercícios adicionados fora da ficha que serão salvos (têm ao menos uma
 /// série que vai para o servidor). Exercício sem série marcada não conta.
 List<ExercicioEdicao> exerciciosForaDaFichaSalvos(List<ExercicioEdicao> exercicios) {
@@ -24,15 +41,16 @@ List<ExercicioEdicao> exerciciosForaDaFichaSalvos(List<ExercicioEdicao> exercici
   ];
 }
 
-/// Pergunta "Manter na ficha?" ao salvar (PBI-72) e devolve os ids a manter:
-/// lista vazia = salvar só neste treino (ou nem precisou perguntar); `null` =
-/// voltar sem salvar.
+/// Pergunta "Manter na ficha?" ao salvar (PBI-72). Devolve um
+/// [ResultadoManterNaFicha]: ids a manter (lista vazia = só neste treino),
+/// nulo = voltar sem salvar, e um sinal quando a ficha não pôde ser lida.
 ///
 /// Só pergunta quando a sessão veio de uma ficha editável (não do professor)
 /// e há exercício fora da ficha com série salva. Treino livre ([treinoId]
 /// nulo) e edição de sessão antiga não chamam isto. Se não der para ler a
-/// ficha (sem rede), não pergunta: o treino é salvo como sempre.
-Future<List<String>?> perguntarManterNaFicha(
+/// ficha (sem rede), o treino é salvo como sempre, mas o chamador recebe
+/// [ResultadoManterNaFicha.leituraFalhou] para avisar o atleta (PBI-76).
+Future<ResultadoManterNaFicha> perguntarManterNaFicha(
   BuildContext context,
   WidgetRef ref, {
   required String? treinoId,
@@ -40,20 +58,23 @@ Future<List<String>?> perguntarManterNaFicha(
   required List<ExercicioEdicao> exercicios,
   String rotuloVoltar = 'Voltar ao resumo',
 }) async {
-  if (treinoId == null) return const [];
+  if (treinoId == null) return ResultadoManterNaFicha.nenhum;
   var candidatos = exerciciosForaDaFichaSalvos(exercicios);
-  if (candidatos.isEmpty) return const [];
+  if (candidatos.isEmpty) return ResultadoManterNaFicha.nenhum;
 
   try {
     final ficha = await ref.read(fichaDetalheProvider(treinoId).future);
-    if (ficha.somenteLeitura) return const [];
+    if (ficha.somenteLeitura) return ResultadoManterNaFicha.nenhum;
     // Já está na ficha (adicionado "fora" mas é o mesmo exercício): não repete.
     final naFicha = ficha.exercicios.map((e) => e.exercicioId).toSet();
     candidatos = candidatos.where((e) => !naFicha.contains(e.exercicioId)).toList();
-  } catch (_) {
-    return const [];
+  } catch (e, pilha) {
+    // PBI-76: não engole mais o erro em silêncio. Registra e sinaliza para o
+    // chamador avisar o atleta — o treino segue sendo salvo.
+    debugPrint('Falha ao ler a ficha para "Manter na ficha?": $e\n$pilha');
+    return const ResultadoManterNaFicha(<String>[], leituraFalhou: true);
   }
-  if (candidatos.isEmpty || !context.mounted) return const [];
+  if (candidatos.isEmpty || !context.mounted) return ResultadoManterNaFicha.nenhum;
 
   final escolha = await showDialog<EscolhaManterNaFicha>(
     context: context,
@@ -64,9 +85,10 @@ Future<List<String>?> perguntarManterNaFicha(
     ),
   );
   return switch (escolha) {
-    EscolhaManterNaFicha.manter => [for (final e in candidatos) e.exercicioId],
-    EscolhaManterNaFicha.soNesteTreino => const [],
-    EscolhaManterNaFicha.voltar || null => null,
+    EscolhaManterNaFicha.manter =>
+      ResultadoManterNaFicha([for (final e in candidatos) e.exercicioId]),
+    EscolhaManterNaFicha.soNesteTreino => ResultadoManterNaFicha.nenhum,
+    EscolhaManterNaFicha.voltar || null => ResultadoManterNaFicha.voltar,
   };
 }
 
@@ -141,33 +163,44 @@ class DialogoManterNaFicha extends StatelessWidget {
             ],
           );
 
+    // Ações numa Column única (largura total): garante os três botões
+    // empilhados e tocáveis mesmo em tela estreita (360 px) e fonte ampliada
+    // (PBI-76) — sem depender do OverflowBar tentar enfileirar primeiro.
     return AlertDialog(
       title: const Text('Manter na ficha?'),
       content: texto,
-      actionsOverflowDirection: VerticalDirection.down,
+      actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.x16, 0, AppSpacing.x16, AppSpacing.x12),
       actions: [
-        SizedBox(
-          width: double.infinity,
-          height: AppSizes.botaoSecundario,
-          child: FilledButton(
-            onPressed: () => fechar(EscolhaManterNaFicha.manter),
-            child: const Text('MANTER NA FICHA'),
-          ),
-        ),
-        SizedBox(
-          width: double.infinity,
-          height: AppSizes.botaoSecundario,
-          child: OutlinedButton(
-            onPressed: () => fechar(EscolhaManterNaFicha.soNesteTreino),
-            child: const Text('Só neste treino'),
-          ),
-        ),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: () => fechar(EscolhaManterNaFicha.voltar),
-            child: Text(rotuloVoltar),
-          ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: AppSizes.botaoSecundario,
+              child: FilledButton(
+                onPressed: () => fechar(EscolhaManterNaFicha.manter),
+                child: const Text('MANTER NA FICHA'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            SizedBox(
+              width: double.infinity,
+              height: AppSizes.botaoSecundario,
+              child: OutlinedButton(
+                onPressed: () => fechar(EscolhaManterNaFicha.soNesteTreino),
+                child: const Text('Só neste treino'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x4),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => fechar(EscolhaManterNaFicha.voltar),
+                child: Text(rotuloVoltar),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -15,14 +15,18 @@ import '../core/rotas/app_router.dart';
 ///
 /// O SnackBar com ação é anunciado pelo leitor de tela e não some sozinho
 /// enquanto a navegação acessível está ligada.
-void irParaInicioComTreinoSalvo(BuildContext context, String sessaoId) {
+void irParaInicioComTreinoSalvo(
+  BuildContext context,
+  String sessaoId, {
+  String mensagem = 'Treino salvo',
+}) {
   final messenger = ScaffoldMessenger.of(context);
   final router = GoRouter.of(context);
   router.go(Rotas.inicio);
   messenger
     ..clearSnackBars()
     ..showSnackBar(SnackBar(
-      content: const Text('Treino salvo'),
+      content: Text(mensagem),
       duration: const Duration(seconds: 6),
       action: SnackBarAction(
         label: 'Ver treino',

@@ -440,6 +440,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
     // PBI-72: "Manter na ficha?" ao registrar treino de ficha. Não pergunta
     // em treino livre nem ao editar uma sessão antiga.
     var manterNaFicha = const <String>[];
+    var fichaNaoConferida = false;
     if (!_editando && !_treinoLivre) {
       final escolha = await perguntarManterNaFicha(
         context,
@@ -449,8 +450,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
         exercicios: _exercicios,
         rotuloVoltar: 'Voltar ao registro',
       );
-      if (escolha == null || !mounted) return;
-      manterNaFicha = escolha;
+      if (escolha.ids == null || !mounted) return;
+      manterNaFicha = escolha.ids!;
+      fichaNaoConferida = escolha.leituraFalhou;
     }
 
     setState(() => _salvando = true);
@@ -491,7 +493,14 @@ class _FormularioState extends ConsumerState<_Formulario> {
           await _criarFichaDoTreino();
         }
 
-        if (mounted) _confirmarRegistro(sessaoId);
+        if (mounted) {
+          _confirmarRegistro(
+            sessaoId,
+            mensagem: fichaNaoConferida
+                ? 'Treino salvo. Não deu para conferir a ficha.'
+                : 'Treino salvo',
+          );
+        }
       }
     } on SessaoException catch (e) {
       _erro(e.mensagem);
@@ -555,8 +564,8 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
-  void _confirmarRegistro(String sessaoId) =>
-      irParaInicioComTreinoSalvo(context, sessaoId);
+  void _confirmarRegistro(String sessaoId, {String mensagem = 'Treino salvo'}) =>
+      irParaInicioComTreinoSalvo(context, sessaoId, mensagem: mensagem);
 
   void _erro(String msg) {
     if (!mounted) return;
