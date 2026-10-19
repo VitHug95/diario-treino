@@ -11,13 +11,13 @@
 
 Registrar as decisões de arquitetura do aplicativo, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
 
-### 1.1 Estado de implementação (15/10/2026)
+### 1.1 Estado de implementação (19/10/2026)
 
-O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon). Resumo do que a arquitetura já tem no ar vs. o que falta:
+O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com deploy automático da API e do front a cada merge na `main` (ADR-09). A última entrega é a PBI-80 (PR #98).
 
-**Concluído e na `main`:** fundação back/front (PBI-01/02/03), publicação (PBI-04) com **deploy automático** de API e front no CI (ADR-09), autenticação Firebase + `/me` (PBI-06), controle de acesso centralizado (PBI-07), login/cadastro (PBI-08), catálogo buscar/criar (PBI-10/11) com **carga de 89 exercícios globais**, fichas (PBI-12/13/14), registro de sessão com edição e treino fora da ficha (PBI-15/16/17/18), tela inicial com fichas e rotação (PBI-23), **progresso completo** — gráfico de evolução + observação no ponto + lista de sessões (PBI-20/21/22), design system (temas claro/escuro por tokens), correções de uso real (PBI-32/33) e o épico **Treino ao vivo, série por série** (TV-1 a TV-6: tag de série, faixa de repetições e o fluxo ao vivo com cronômetro, série por série, descanso e resumo). Teste de fluxo via `flutter test` no lugar do E2E Robot (PBI-26 parcial).
+**Concluído e na `main`:** fundação back/front (PBI-01 a 03), publicação (PBI-04), autenticação Firebase, `/me` e controle de acesso centralizado (PBI-06 a 08), catálogo com 89 exercícios globais, busca, criação e filtro por membro e músculo (PBI-10, 11, 31, 32, 54), fichas (PBI-12 a 14, 36), registro de sessão com edição, exercício fora da ficha e treino livre (PBI-15 a 19), primeiro acesso (PBI-09), tela inicial com semana, último treino e dicas (PBI-23, 59, 60), progresso com gráfico, observação no ponto e lista de sessões (PBI-20 a 22), perfil, tema e exclusão de conta (PBI-25 e parte da 24), treino em andamento (PBI-37), épico **Treino ao vivo, série por série** (TV-1 a TV-6 = PBI-38 a 43), épico **Planos** com vários planos e um em uso (PBI-44 a 47, 49), ajustes de layout (PBI-50 a 55 e 57 a 67), correções e fluxos de entrada (PBI-68 a 72: sem plano, criar plano, Registrar treino, "Manter na ficha?", atualização das telas pela origem da mudança) e as correções de uso real de 16 a 19/10 (**PBI-73, 74, 76, 77, 78, 79 e 80**).
 
-**Pendente:** backup do banco (PBI-05), primeiro acesso (PBI-09), treino livre (PBI-19), **tema completo com persistência e opção em Perfil (PBI-24)**, **perfil e conta — ver dados / sair / excluir conta (PBI-25)**, E2E Robot completo (PBI-26), filtro por membro (PBI-31, ADR-10), métrica flexível no registro (PBI-34), cronograma semanal (PBI-35) e todo o incremento 2 de cardio (PBI-27 a PBI-30).
+**Pendente:** backup do banco (PBI-05), conferência final de contraste 4,5:1 nos dois temas (fecha a PBI-24), E2E Robot completo (PBI-26; hoje há teste de fluxo em `flutter test`), trocar a métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75), modo educador (PBI-48 e épico E7) e todo o incremento 2 de cardio (PBI-27 a 30).
 
 ## 2. Visão do produto em uma frase
 
@@ -122,6 +122,12 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Contexto:** o grupo muscular era texto livre e opcional. Em uso real já apareceram variações ("pernas", "Pernas", "peito" em minúsculo) e exercícios sem grupo. Além disso, o seletor filtrava por modalidade, que não é como a pessoa procura um exercício na hora de registrar: ela pensa "treinei perna", não "fiz força".
 - **Decisão:** o exercício passa a ter um **membro** obrigatório, escolhido de uma lista fixa (Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade), e um **músculo** opcional ligado ao membro. Os chips do seletor e do catálogo filtram por membro. A **modalidade continua igual**: segue definindo como o exercício é medido (ADR-06) e aparece na legenda de cada item, só deixa de ser filtro.
 - **Consequência:** filtro confiável e base pronta para contar séries por músculo no futuro. Exige migration que converte o texto existente e uma tela de cadastro com seleção em vez de campo livre. A lista final será validada pelo Vinicius; mudanças nela são migrations de seed, sem mudança de código.
+
+### ADR-11: Tocar numa aba abre a raiz dela
+- **Status:** implementado (PBI-80).
+- **Contexto:** o `StatefulShellRoute` guarda a pilha de cada aba. Com `initialLocation` verdadeiro só na aba atual, quem abria uma ficha, ia para a Início e voltava a Planos caía na ficha, não na lista de planos. Relato do Vitor em 19/10/2026.
+- **Decisão:** o `onDestinationSelected` da barra inferior chama `goBranch(i, initialLocation: true)` sempre. As telas de tela cheia (registro e treino ao vivo) ficam no navigator raiz, acima da barra, então trocar de aba nunca as descarta.
+- **Consequência:** a aba sempre abre previsível e não há estado de navegação escondido. O custo é perder a posição dentro da aba (formulário aberto em outra aba fecha). Se o PO preferir que a aba lembre onde parou, reverter é voltar a condição `i == navigationShell.currentIndex`. Testes de E2E que abriam uma ficha, trocavam de aba e voltavam esperando a tela anterior precisam abrir a raiz.
 
 ## 7. Visão de contexto (C4 nível 1)
 
@@ -313,31 +319,31 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | POST | `/exercicios` | Cria exercício próprio (exige `membroId`; `musculoId` opcional) | ✅ |
 | GET | `/planos` | Planos do atleta (id, nome, início, emUso, autor, somenteLeitura, nº de fichas e de exercícios) | ✅ (PBI-44) |
 | GET | `/planos/{id}` | Detalhe do plano com as fichas | ✅ (PBI-44) |
-| POST | `/planos` | Com `{ nome }` cria o plano (o primeiro nasce em uso). Sem corpo, mantém o comportamento antigo (idempotente) para o E2E | ✅ (PBI-44) |
+| POST | `/planos` | Com `{ nome }` cria o plano (nasce em uso quando o atleta não tem plano em uso, PBI-77). Sem corpo, mantém o comportamento antigo (idempotente) para o E2E | ✅ (PBI-44) |
 | PUT | `/planos/{id}` | Renomeia (403 em plano do professor) | ✅ (PBI-44) |
 | POST | `/planos/{id}/em-uso` | Define como em uso, em transação | ✅ (PBI-44) |
 | POST | `/planos/{id}/duplicar` | Cria "Nome (cópia)" fora de uso, sem sessões | ✅ (PBI-44) |
 | DELETE | `/planos/{id}` | Exclui (apaga ou esconde, regra 10 do MER; 403 em plano do professor) | ✅ (PBI-44) |
-| GET | `/planos/ativo` | Alias do plano em uso até o front migrar | ✅ |
+| GET | `/planos/ativo` | Alias do plano em uso até o front migrar; 204 quando nenhum plano está em uso | ✅ |
 | POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
 | POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
 | GET | `/treinos/{id}` | Detalhe da ficha com exercícios e `somenteLeitura` (ficha de plano do professor, PBI-72) | ✅ |
 | PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
 | DELETE | `/treinos/{id}` | **Apaga** a ficha sem sessões, **arquiva** a com sessões | ✅ |
-| POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha | ✅ |
+| POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha; 409 "Este exercício já está na ficha." se ele já estiver (PBI-74) | ✅ |
 | PUT | `/treinos/{id}/exercicios/ordem` | Reordena exercícios | ✅ |
 | DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha | ✅ |
 | PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
 | GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
 | GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
 | GET | `/exercicios/{id}/historico?limite=` | Últimas sessões com o exercício (aba Histórico do treino ao vivo) | ✅ (TV-4) |
-| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor | ✅ |
+| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor; 400 "Este exercício já está no treino." se dois blocos trazem o mesmo exercício (PBI-74) | ✅ |
 | GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
 | PUT | `/sessoes/{id}` | Edita sessão (com `manterNaFicha` responde 400: editar não mexe na ficha) | ✅ |
 | DELETE | `/sessoes/{id}` | Exclui sessão | ✅ |
 | GET | `/sessoes?de=&ate=` | Sessões do período | ✅ |
 | GET | `/progresso/exercicios` | Exercícios com histórico (seletor do gráfico) | ✅ |
-| GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício, com reps, `sessaoId` e observação por ponto | ✅ |
+| GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício, com reps, `sessaoId` e observação por ponto. `metrica` é `CARGA`, `REPETICOES` (força sem carga no período) ou `TEMPO` (isometria), decidida por exercício (PBI-73) | ✅ |
 | GET | `/progresso/resumo?de=&ate=` | Contagem de treinos e sessões de cardio | 🔵 PBI-30 |
 | GET | `/alunos` | Alunos com vínculo ativo | 🟣 |
 | POST | `/vinculos` | Convida aluno | 🟣 |
@@ -407,6 +413,8 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 | Definição de zona (FC, pace ou percepção) | Afeta modelo do modo corrida | Pergunta enviada ao Vinicius |
 | Privacidade das observações frente ao educador | Afeta regra de acesso | Decidir antes do modo educador |
 | ~~Métrica do gráfico (maior carga ou volume)~~ | ~~Afeta consulta de progresso~~ | **Resolvido (PO, 14/10):** maior carga da sessão + reps daquela série; isometria = maior tempo. Implementado no PBI-20 |
+| Exercício só de repetições no gráfico: melhor série ou total da sessão | Muda a consulta de progresso | Implementada a **melhor série** (maior número de repetições da sessão, PBI-73). Decisão do PO pendente |
+| Exercício repetido em fichas e sessões antigas | Tela com item duplicado ao abrir dado antigo | A unicidade (PBI-74) vive na aplicação, sem constraint no banco. Dados anteriores podem ter repetição e continuam abrindo |
 
 ## 19. Evolução prevista
 

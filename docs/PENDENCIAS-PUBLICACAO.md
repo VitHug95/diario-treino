@@ -1,154 +1,58 @@
-# Pendências para publicar (PBI-04) — handoff para a máquina com rede liberada
+# Pendências do projeto
 
-Documento de passagem. O objetivo é **publicar o Diário de Treino** para o
-cliente testar o fluxo de registro de treino (Sprints 1–3 já prontas e na
-`main`). Esta máquina atual tem Docker/rede bloqueados, então nada que dependa
-de rede foi testado aqui — a validação real acontece na máquina liberada.
+O que ainda falta no Diário de Treino, consolidado do [BACKLOG](BACKLOG.md),
+[MAS](MAS.md) e [MER](MER.md). A publicação (PBI-04) está **concluída**: API no
+Fly, front no Cloudflare, banco no Neon, com deploy automático a cada merge na
+`main` (ver [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md)).
 
-Data do handoff: ver `git log`. Branch deste documento: `feat/pbi-04-publicacao`.
+Data: 19/10/2026. Última entrega: correções de uso real PBI-73 a 80.
 
 ---
 
-## 1. Onde o projeto está
+## Incremento 1 (MVP) — em finalização
 
-- **Sprints 1, 2 e 3 completas e mergeadas na `main`.** O app cobre: login
-  (Firebase), catálogo de exercícios, criar exercício, fichas, alvos, registrar
-  treino (com pré-preenchimento, editar séries, exercício fora da ficha) e
-  ver/editar/excluir sessão.
-- Último merge: PR #21 (PBI-18 front). `main` em dia com `origin/main`.
-- **Falta publicar (PBI-04).** Nunca foi publicado; só roda local.
+Falta fechar:
 
-## 2. Bug encontrado e já corrigido (CORS)
+- **PBI-05 — Backup do banco.** `pg_dump` semanal do Neon guardado fora. Ainda
+  não configurado.
+- **PBI-26 — E2E Robot completo.** Hoje o fluxo é coberto por teste em
+  `flutter test`; o E2E com a Browser Library está quebrado e será reconciliado
+  manualmente, aplicando as correções de bug depois dos testes manuais.
+- **PBI-24 — Conferência final de contraste.** Tema claro e escuro já existem e
+  persistem; falta a checagem final de 4,5:1 em cada componente nos dois temas.
+  Validação completa exige teste manual com tecnologia assistiva.
 
-Ao rodar o app no navegador, as telas que falam com a API davam
-"Não foi possível carregar as fichas". Causa: **a API não tinha CORS**, então o
-navegador bloqueava as chamadas do app web (origem diferente da API).
+## Melhorias e decisões em aberto com o PO
 
-- **Correção já feita** em `backend/src/DiarioTreino.Api/Program.cs` e
-  `appsettings.json` (chave `Cors:OrigensPermitidas`).
-- Em desenvolvimento, a API libera qualquer `localhost`.
-- Em produção, as origens vêm da variável de ambiente
-  `Cors__OrigensPermitidas__0` (o domínio do front publicado).
-- **Decisão a tomar:** esse fix pode virar um PR próprio (`fix/cors-api`) e ir
-  para a `main` antes do PBI-04, ou seguir junto na branch de publicação. Ele é
-  independente e resolve o bug mesmo sem publicar.
+- **PBI-34 — Trocar a métrica no registro.** Escolher outra métrica (ex.: tempo
+  no lugar de reps) na hora de registrar.
+- **PBI-35 — Cronograma semanal.** Planejar quais fichas em quais dias.
+- **PBI-75 — Aviso "Ficha criada" como pop menor.** Hoje o aviso é maior do que
+  o PO quer.
+- **PBI-73 (decisão pendente)** — exercício só de repetições no gráfico: está
+  implementada a **melhor série** (maior nº de repetições da sessão). O PO ainda
+  pode preferir o total de repetições da sessão.
+- Série adicionada copiando a anterior; "Treino salvo" com ou sem "Ver treino".
 
-## 3. Por que não dá para testar nesta máquina
+## Dados antigos a observar (não bloqueiam)
 
-O app precisa de **API + Postgres** no ar ao mesmo tempo. O Postgres local sobe
-por Docker (`backend/docker-compose.yml`, porta 5432), e o Docker está
-bloqueado aqui (WSL quebrado + rede). Sem banco, a API responde mas falha ao
-consultar. Por isso o caminho de teste do cliente é a **publicação** (Neon faz o
-papel do banco), não o ambiente local.
+- **Exercício repetido (PBI-74).** A unicidade por ficha e por sessão vive na
+  aplicação, sem constraint no banco. Fichas ou sessões criadas antes da regra
+  podem ter repetição; elas continuam abrindo normalmente, só não é possível
+  criar novos casos.
 
-## 4. Hospedagem escolhida
+## Modo educador e incremento 2 — não iniciados
 
-**Fly.io (API) + Netlify (front web) + Neon (banco Postgres).**
+- **Modo educador (PBI-48, épico E7).** O banco já conhece educador, vínculo e
+  autoria de plano; falta a camada de telas e os endpoints de aluno/vínculo.
+- **Incremento 2 — Cardio (PBI-27 a 30).** Registro por zonas e resumo do
+  período por zona. Modelo de dados preparado (duas métricas por série), telas e
+  consultas ainda não feitas.
 
-- Os **dados ficam no Neon** (banco gerenciado). Fly e Netlify são
-  descartáveis/reconstruíveis sem perder dados.
-- Plano free do Fly pode "adormecer" a API por inatividade: a 1ª chamada após
-  ociosidade demora alguns segundos a dezenas de segundos para a API acordar.
-  Isso é lentidão pontual, **não** perda de dados. Para eliminar: subir
-  `min_machines_running = 1` no fly.toml (pode ter custo), ou plano pago baixo.
-- Nome/domínio ainda provisório: usar os subdomínios grátis
-  (`*.fly.dev`, `*.netlify.app`). Domínio próprio depois.
+## Operação (herdado da publicação)
 
-Arquivos de deploy já versionados nesta branch:
-- `backend/Dockerfile` — imagem da API (.NET 10, multi-stage).
-- `backend/fly.toml` — config do Fly (porta 8080, health check em `/health`).
-- `app/netlify.toml` — build e publish do front (SPA redirect incluso).
-
-## 5. Passo a passo na máquina liberada (precisa de rede/credenciais)
-
-### 5.1 Neon (banco)
-- [ ] Criar conta/projeto no Neon e um banco (ex.: `diariotreino`).
-- [ ] Copiar a connection string. O Neon dá uma URL `postgres://user:senha@host/db?sslmode=require`.
-      Converter para o formato que o Npgsql espera:
-      `Host=HOST;Database=DB;Username=USER;Password=SENHA;SSL Mode=Require;Trust Server Certificate=true`
-
-### 5.2 Fly (API)
-- [ ] Instalar o `flyctl` e `fly auth login`.
-- [ ] Na pasta `backend/`, ajustar `app` no `fly.toml` para um nome único.
-- [ ] `fly launch --no-deploy` (ou `fly apps create <nome>`), confirmando a região `gru`.
-- [ ] Definir os segredos (NÃO vão no git):
-      ```
-      fly secrets set ConnectionStrings__DiarioTreino="Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true"
-      fly secrets set Cors__OrigensPermitidas__0="https://SEU-FRONT.netlify.app"
-      fly secrets set Firebase__ProjectId="diario-treino-c21b6"
-      ```
-- [ ] `fly deploy` (usa o Dockerfile). No 1º start, a API aplica as migrations
-      no Neon automaticamente (produção). Conferir nos logs: `fly logs`.
-- [ ] Testar: `https://SEU-APP.fly.dev/health` deve responder 200.
-
-### 5.3 Netlify (front)
-- [ ] No `app/netlify.toml`, trocar a URL do `--dart-define=API_BASE_URL` pela
-      URL real da API no Fly (`https://SEU-APP.fly.dev/api/v1`).
-- [ ] O build do Netlify precisa do Flutter (a imagem padrão não traz). Opções:
-      instalar o Flutter no `command` (git clone do SDK) ou usar um plugin/imagem
-      com Flutter. Documentar a escolha ao configurar.
-- [ ] Conectar o repo no Netlify com base `app/` e publicar. Anotar a URL
-      `https://SEU-FRONT.netlify.app`.
-- [ ] Confirmar que a URL do front bate com o `Cors__OrigensPermitidas__0` do Fly
-      (senão o navegador bloqueia por CORS).
-
-### 5.4 Firebase
-- [ ] Firebase Console → Authentication → Settings → Authorized domains →
-      adicionar `SEU-FRONT.netlify.app`. Sem isso o login quebra fora do localhost.
-
-### 5.5 Teste local completo (opcional, agora dá — Docker liberado)
-- [ ] `docker compose up -d` em `backend/` (sobe o Postgres local).
-- [ ] `dotnet run --project backend/src/DiarioTreino.Api/DiarioTreino.Api.csproj`
-- [ ] `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:5289/api/v1`
-      — com o CORS já corrigido, as fichas devem carregar.
-
-## 6. O que o Kiro JÁ preparou nesta branch (código, sem rede)
-
-- [x] **CORS** na API (`Program.cs` + `appsettings.json`). Build 0/0.
-- [x] **Migrations no startup** em produção
-      (`src/DiarioTreino.Api/Infraestrutura/MigracoesStartup.cs`, chamado no
-      `Program.cs`). Controlado por `Banco:AplicarMigracoesNoStartup`
-      (padrão: liga em Production). Build 0/0.
-- [x] **Dockerfile** da API (`backend/Dockerfile`, multi-stage net10.0).
-- [x] **fly.toml** (`backend/fly.toml`).
-- [x] **netlify.toml** (`app/netlify.toml`).
-
-Ainda em aberto (opcional para o 1º teste manual):
-- [ ] Deploy automático no CI a cada merge na `main` (critério do PBI-04).
-
-> ATENÇÃO: o **Dockerfile**, o **fly.toml** e a **aplicação de migrations** NÃO
-> foram testados nesta máquina (Docker bloqueado). O primeiro teste real será no
-> `fly deploy`. Prever ao menos uma rodada de ajuste (caminhos, porta, SDK).
-
-## 7. Ordem sugerida na máquina liberada
-
-1. `git pull` na `main` (e na branch `feat/pbi-04-publicacao` se o preparo do
-   item 6 já tiver sido feito e pushado).
-2. Decidir a hospedagem (item 4) e avisar o Kiro para gerar os arquivos de
-   deploy certos, se ainda não existirem.
-3. Criar o projeto no Neon; guardar a connection string.
-4. Verificar o Docker funcionando: `docker compose up -d` em `backend/` sobe o
-   Postgres local — bom para um teste local completo antes de publicar
-   (agora com o CORS corrigido, o app web deve carregar as fichas).
-5. Subir a API no host com as variáveis do item 5.
-6. Publicar o front web com `--dart-define=API_BASE_URL=...`.
-7. Liberar o domínio no Firebase (item 5).
-8. Testar o fluxo no navegador: login → criar ficha → registrar treino → ver
-   treino. Esse é o incremento para mandar ao cliente.
-
-## 8. Critérios de aceite do PBI-04 (do BACKLOG)
-
-- Domínio apontando para o host (ou subdomínio do host no teste).
-- HTTPS (automático no host gerenciado; Caddy na VPS).
-- API em container, separada de outros serviços.
-- Banco de produção no Neon; connection string só em variável de ambiente.
-- Deploy automático a cada merge na `main` (pode ficar para um segundo momento).
-- Reinício da API se o `/health` falhar (o host gerenciado cobre; na VPS,
-  healthcheck no compose).
-
-## 9. Observações de segurança
-
-- A connection string do Neon e qualquer segredo ficam **só nas variáveis de
-  ambiente do host** — nunca commitados. O `firebase_options.dart` versionado é
-  OK (credenciais web do Firebase são públicas por design).
-- CORS em produção deve listar **apenas** o domínio do front, não liberar geral.
+- Domínio próprio (hoje usa os subdomínios grátis `*.fly.dev` /
+  `*.workers.dev`).
+- Resetar a senha do role do Neon (foi digitada em texto no chat durante o
+  setup inicial).
+- Ruído de log cosmético na API (`libgssapi_krb5.so.2`), não afeta a conexão.

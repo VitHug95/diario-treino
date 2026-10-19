@@ -22,7 +22,7 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 - Observação sobre o modelo do treino: intervalado, contínuo, intensidade
 
 **Acompanhamento**
-- Gráfico de desempenho por exercício (evolução de carga)
+- Gráfico de desempenho por exercício (evolução de carga; sem carga, de repetições)
 - Quantidade de treinos realizados no período
 - Clique em um ponto do gráfico abre a observação daquele dia
 - Filtro com atalhos (últimos 10, 15 e 30 dias) e período livre, desde o cadastro até hoje
@@ -35,13 +35,11 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 - Tem acesso ao treino e ao progresso de cada aluno vinculado
 - Pode exportar os dados do aluno em PDF
 
-## Estado atual (15/10/2026)
+## Estado atual (19/10/2026)
 
-O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios, fichas, registro de sessão (editar/excluir), tela inicial com rotação de fichas e o progresso completo (gráfico de evolução, observação no ponto, lista de sessões). Também está no ar o épico **Treino ao vivo, série por série** (TV-1 a TV-6).
+O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios filtrado por membro, vários planos com um em uso, fichas com alvos, registro de sessão (editar, excluir, exercício fora da ficha, "Manter na ficha?"), treino livre, primeiro acesso, treino ao vivo série por série, tela inicial com semana, último treino e dicas, progresso completo e perfil com tema e exclusão de conta. De 16 a 19/10 entraram as correções de uso real (PBI-73 a 80): plano novo nasce em uso, um exercício por ficha e por sessão, editor de alvos e resumo da ficha, gráfico de exercício sem carga, "Manter na ficha?" avisando quando não lê a ficha e tocar numa aba abrindo a raiz dela.
 
-**Pronto:** login/cadastro · catálogo (buscar/criar) · fichas A/B/C com alvos · registro de sessão com pré-preenchimento, edição e exercício fora da ficha · tela inicial · gráfico de evolução por exercício + observação no ponto + lista de sessões · temas claro/escuro (com botão na Início).
-
-**Falta no Incremento 1:** primeiro acesso (tela de boas-vindas), treino livre sem ficha, tela de Perfil (ver dados/sair/excluir conta), tema completo (opção em Perfil + conferência de contraste), backup do banco, E2E Robot completo, e o filtro de exercícios por membro (ADR-10). O **Incremento 2** (cardio e resumo do período) ainda não começou.
+**Falta no Incremento 1:** backup do banco (PBI-05), E2E Robot completo (PBI-26) e a conferência final de contraste nos dois temas (PBI-24). Também em aberto: troca de métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75) e o modo educador (PBI-48, épico E7). O **Incremento 2** (cardio e resumo do período) ainda não começou.
 
 O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o modelo de dados, no [MAS.md](MAS.md) e [MER.md](MER.md).
 
@@ -52,7 +50,7 @@ O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o 
 - Cadastro de fichas A/B/C com exercícios ✅
 - Registro da sessão com carga pré-preenchida e observação ✅
 - Gráfico de carga por exercício com filtro de período ✅
-- Falta: primeiro acesso, treino livre, perfil/conta, tema completo, backup
+- Falta: backup do banco, E2E Robot completo e conferência final de contraste
 
 **Incremento 2** — não iniciado
 - Registro de cardio
@@ -97,8 +95,7 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 - [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
 - [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
 - [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md): tudo que entrou na `main`, PR por PR, com as migrations
-- [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md): pedidos de layout do PO (PBI-57 a 67)
-- [CORRECOES-FLUXOS.md](CORRECOES-FLUXOS.md): correções e fluxos de entrada (PBI-67 a 72)
+- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (backup, E2E, contraste, cardio, modo educador)
 - [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
 
 O modelo de dados oficial é o do MER. Este README guarda a visão de produto e as decisões em alto nível.
@@ -116,6 +113,10 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 - **Feedback depende do tipo de exercício.** Carga: evolução de carga com reps. Isometria: tempo sustentado na mesma intensidade. Intervalado: rodadas cumpridas e tempo mantido na zona-alvo. Zona sozinha não mostra evolução, porque é relativa à pessoa.
 - **Tema claro e escuro (layouts A e B aprovados).** Segue o sistema por padrão, com botão de troca na tela inicial e opção em Perfil.
 - **Exercícios filtrados por membro (ADR-10).** Membro obrigatório de lista fixa (Peito, Costas, Ombros, Braços, Pernas, Core, Cardio, Mobilidade) e músculo opcional. A modalidade continua definindo como o exercício é medido, mas deixa de ser filtro.
+- **Um exercício por ficha e por sessão (PBI-74).** O seletor mostra quem já está presente como indisponível e a API recusa a repetição (409 na ficha, 400 na sessão).
+- **O gráfico escolhe a grandeza por exercício (PBI-73).** Com carga, evolui a carga; sem carga (peso corporal), evolui as repetições; isometria, o tempo.
+- **Plano novo nasce em uso quando não há plano em uso (PBI-77).** Planos escondidos por terem histórico não contam.
+- **Tocar numa aba abre a raiz dela (ADR-11, PBI-80).**
 - **Identidade no Firebase, autorização no nosso banco.** O token diz quem é a pessoa; o Postgres diz o que ela pode fazer.
 - **Autorização centralizada em uma regra só:** pode ver dados do atleta quem for o próprio atleta ou educador com vínculo ativo. Todo endpoint passa por ela, inclusive a exportação em PDF.
 - **PDF é uma visão dos mesmos dados da tela de progresso**, gerado a partir da mesma consulta, para o relatório nunca divergir do que aparece no app.

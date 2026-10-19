@@ -884,8 +884,10 @@ merge. Branch `feat/treino-ao-vivo-r2`. `flutter analyze` 0; 115 widget verdes;
 
 ### Épico Planos: vários por atleta (PBI-44 a PBI-49)
 
-Detalhamento completo (contexto, escopo, critérios de aceite, decisões do PO e
-riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
+Épico concluído (exceto a PBI-48, no modo educador). As decisões do PO e as
+regras do plano em uso estão no [MAS](MAS.md) (ADRs) e no [MER](MER.md)
+(seção 5). O que entrou em cada PR está em
+[HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
 
 | PBI | Título | Toca em | Release | Status |
 |---|---|---|---|---|
@@ -898,9 +900,8 @@ riscos) em [EPICO-PLANOS.md](EPICO-PLANOS.md).
 
 ### Ajustes de layout (PBI-57 a PBI-67)
 
-Onze pedidos do PO em 15/10 (rodadas 1 a 4). Detalhamento, perguntas abertas e ajustes nas PBIs
-46, 47, 49, 50, 52 e 53 em [AJUSTES-LAYOUT.md](AJUSTES-LAYOUT.md). O que entrou em cada PR está em
-[HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
+Onze pedidos do PO em 15/10 (rodadas 1 a 4), todos concluídos. O que entrou em
+cada PR está em [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
 
 | PBI | Título | Telas | Status |
 |---|---|---|---|
@@ -962,9 +963,7 @@ nunca há dois treinos abertos. Tokens novos `AppSizes.borda` e
 
 ### Correções e fluxos de entrada (PBI-67 a PBI-72)
 
-Pedidos do PO em 16/10, com as respostas dele. Detalhamento, decisões a
-revisar e impacto no E2E em [CORRECOES-FLUXOS.md](CORRECOES-FLUXOS.md).
-Ordem: 70, depois 68 e 69 juntas, depois 71 e 72.
+Pedidos do PO em 16/10, com as respostas dele, todos concluídos (PR #86 a #91).
 
 | PBI | Título | Telas | Status |
 |---|---|---|---|

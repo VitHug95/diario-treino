@@ -2,8 +2,7 @@
 
 Registro de tudo que entrou na `main`, PR por PR, do início do projeto (02/10/2026) até
 a PBI-72 (PR #91), 16/10/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
-critérios de aceite) está no [BACKLOG](BACKLOG.md) e, para as PBIs 57 a 67, em
-[AJUSTES-LAYOUT](AJUSTES-LAYOUT.md).
+critérios de aceite) está no [BACKLOG](BACKLOG.md).
 
 Como manter: a cada PR mergeado, acrescente uma linha na tabela do período e, se mudar o
 banco, na seção de migrations. Os números #53 e #64 não aparecem porque esses PRs foram
@@ -154,4 +153,4 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 - PBI-26: E2E completo com Robot. Os passos que esperam "Treino registrado" ou "Ir para o Início" precisam esperar o aviso "Treino salvo" (PBI-64), e o passo de escolher exercício mudou com a PBI-49.
 - PBI-48 e o épico do educador (E7), na próxima sprint.
 - PBI-34 (trocar a métrica no registro), PBI-35 (cronograma semanal) e cardio (PBI-27 a 30).
-- Perguntas abertas ao PO em `AJUSTES-LAYOUT.md` (atalho "Iniciar treino", "Minimizar", escopo da PBI-58 e outras).
+- Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).
