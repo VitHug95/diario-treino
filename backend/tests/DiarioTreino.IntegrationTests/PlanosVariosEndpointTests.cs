@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using DiarioTreino.Domain.Execucao;
 using DiarioTreino.Domain.Planejamento;
+using DiarioTreino.Infrastructure.Persistencia;
 using DiarioTreino.IntegrationTests.Infraestrutura;
 using Microsoft.EntityFrameworkCore;
 
@@ -241,6 +242,201 @@ public sealed class PlanosVariosEndpointTests
         var planos = await client.GetFromJsonAsync<List<PlanoDaListaResposta>>("/api/v1/planos");
         Assert.Single(planos!);
         Assert.True(planos![0].EmUso);
+    }
+
+    // ---- PBI-77: criar plano depois de excluir todos volta a ter em uso ----
+
+    [Fact]
+    public async Task Criar_plano_apos_excluir_o_unico_com_historico_nasce_em_uso()
+    {
+        var (api, client, uid) = Autenticar(_postgres);
+        await using var _api = api;
+
+        // Plano em uso com uma ficha e uma sessão (ganha histórico).
+        var planoId = await CriarPlanoNomeado(client, "Hipertrofia");
+        var criarFicha = await client.PostAsJsonAsync(
+            $"/api/v1/planos/{planoId}/treinos", new { nome = "A", descricao = (string?)null });
+        var treinoId = (await criarFicha.Content.ReadFromJsonAsync<CriadoResposta>())!.Id;
+        var atletaId = await IdDoUsuario(uid);
+        await using (var seed = _postgres.CriarContexto())
+        {
+            seed.Sessoes.Add(new Sessao
+            {
+                Id = Guid.NewGuid(),
+                AtletaId = atletaId,
+                RegistradoPorId = atletaId,
+                TreinoId = treinoId,
+                Data = DateOnly.FromDateTime(DateTime.UtcNow),
+                CriadoEm = DateTimeOffset.UtcNow,
+                AtualizadoEm = DateTimeOffset.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        // Exclui o único plano: como tem sessão, vira ativo=false, em_uso=false.
+        var excluir = await client.DeleteAsync($"/api/v1/planos/{planoId}");
+        Assert.Equal(HttpStatusCode.NoContent, excluir.StatusCode);
+
+        // Antes do fix, GET /planos/ativo responderia 204 aqui (nenhum em uso).
+        var novoId = await CriarPlanoNomeado(client, "Meu plano");
+
+        var ativo = await client.GetAsync("/api/v1/planos/ativo");
+        Assert.Equal(HttpStatusCode.OK, ativo.StatusCode);
+        var corpo = await ativo.Content.ReadFromJsonAsync<PlanoDetalheResposta>();
+        Assert.Equal(novoId, corpo!.Id);
+
+        await using var db = _postgres.CriarContexto();
+        var emUso = await db.PlanosTreino.Where(p => p.AtletaId == atletaId && p.EmUso).ToListAsync();
+        Assert.Single(emUso);
+        Assert.Equal(novoId, emUso[0].Id);
+    }
+
+    // ---- PBI-77: migration de reparo com dois atletas ----
+
+    [Fact]
+    public async Task Reparo_marca_em_uso_do_atleta_preso_e_nao_toca_no_normal()
+    {
+        // Simula o estado anterior ao fix e roda o MESMO SQL da migration de
+        // reparo (20261019145756_ReparoPlanoEmUso). Atleta A: dois planos
+        // ativos sem nenhum em uso (um com sessão mais recente). Atleta B:
+        // normal, já com um plano em uso — não pode ser tocado.
+        var atletaA = await CriarUsuario();
+        var atletaB = await CriarUsuario();
+
+        Guid aAntigo, aRecente, bEmUso, bOutro;
+        await using (var db = _postgres.CriarContexto())
+        {
+            // Atleta A: dois planos ATIVOS, nenhum em uso.
+            aAntigo = InserirPlano(db, atletaA, "A antigo", ativo: true, emUso: false,
+                inicio: new DateOnly(2026, 1, 1));
+            aRecente = InserirPlano(db, atletaA, "A recente", ativo: true, emUso: false,
+                inicio: new DateOnly(2026, 2, 1));
+            // Atleta B: um em uso + um fora de uso (estado saudável).
+            bEmUso = InserirPlano(db, atletaB, "B em uso", ativo: true, emUso: true,
+                inicio: new DateOnly(2026, 1, 1));
+            bOutro = InserirPlano(db, atletaB, "B outro", ativo: true, emUso: false,
+                inicio: new DateOnly(2026, 3, 1));
+            await db.SaveChangesAsync();
+
+            // Dá ao plano "A antigo" uma sessão MAIS RECENTE que a do "A recente",
+            // para o reparo escolher por sessão, não por data de início.
+            var tAntigo = InserirFicha(db, aAntigo);
+            var tRecente = InserirFicha(db, aRecente);
+            await db.SaveChangesAsync();
+            InserirSessao(db, atletaA, tAntigo, new DateOnly(2026, 5, 1));
+            InserirSessao(db, atletaA, tRecente, new DateOnly(2026, 4, 1));
+            await db.SaveChangesAsync();
+        }
+
+        // Executa o SQL de reparo (idêntico ao da migration).
+        await using (var db = _postgres.CriarContexto())
+        {
+            await db.Database.ExecuteSqlRawAsync(SqlReparoPbi77);
+        }
+
+        await using (var db = _postgres.CriarContexto())
+        {
+            // Atleta A: exatamente um em uso, e é o "A antigo" (sessão mais recente).
+            var emUsoA = await db.PlanosTreino
+                .Where(p => p.AtletaId == atletaA && p.EmUso).Select(p => p.Id).ToListAsync();
+            Assert.Single(emUsoA);
+            Assert.Equal(aAntigo, emUsoA[0]);
+
+            // Atleta B: intocado — segue com o mesmo plano em uso.
+            var emUsoB = await db.PlanosTreino
+                .Where(p => p.AtletaId == atletaB && p.EmUso).Select(p => p.Id).ToListAsync();
+            Assert.Single(emUsoB);
+            Assert.Equal(bEmUso, emUsoB[0]);
+        }
+    }
+
+    // SQL idêntico ao da migration 20261019145756_ReparoPlanoEmUso.
+    private const string SqlReparoPbi77 = @"
+        WITH sem_em_uso AS (
+            SELECT p.atleta_id
+            FROM plano_treino p
+            GROUP BY p.atleta_id
+            HAVING bool_or(p.em_uso) = false
+               AND bool_or(p.ativo) = true
+        ),
+        escolhido AS (
+            SELECT DISTINCT ON (p.atleta_id) p.id
+            FROM plano_treino p
+            JOIN sem_em_uso s ON s.atleta_id = p.atleta_id
+            LEFT JOIN treino t ON t.plano_id = p.id
+            LEFT JOIN sessao se ON se.treino_id = t.id
+            WHERE p.ativo = true
+            GROUP BY p.atleta_id, p.id, p.inicio
+            ORDER BY p.atleta_id,
+                     MAX(se.data) DESC NULLS LAST,
+                     p.inicio DESC,
+                     p.id
+        )
+        UPDATE plano_treino
+        SET em_uso = true
+        WHERE id IN (SELECT id FROM escolhido);
+    ";
+
+    private async Task<Guid> CriarUsuario()
+    {
+        await using var db = _postgres.CriarContexto();
+        var u = new DiarioTreino.Domain.Identidade.Usuario
+        {
+            Id = Guid.NewGuid(),
+            FirebaseUid = $"uid-{Guid.NewGuid():n}",
+            Nome = "Atleta",
+            Email = $"a-{Guid.NewGuid():n}@teste.local",
+            Ativo = true,
+            CriadoEm = DateTimeOffset.UtcNow,
+        };
+        db.Usuarios.Add(u);
+        await db.SaveChangesAsync();
+        return u.Id;
+    }
+
+    private static Guid InserirPlano(
+        DiarioTreinoDbContext db, Guid atletaId, string nome, bool ativo, bool emUso, DateOnly inicio)
+    {
+        var id = Guid.NewGuid();
+        db.PlanosTreino.Add(new PlanoTreino
+        {
+            Id = id,
+            AutorId = atletaId,
+            AtletaId = atletaId,
+            Nome = nome,
+            Inicio = inicio,
+            Ativo = ativo,
+            EmUso = emUso,
+        });
+        return id;
+    }
+
+    private static Guid InserirFicha(DiarioTreinoDbContext db, Guid planoId)
+    {
+        var id = Guid.NewGuid();
+        db.Treinos.Add(new Treino
+        {
+            Id = id,
+            PlanoId = planoId,
+            Nome = "Ficha",
+            Ordem = 1,
+            Ativo = true,
+        });
+        return id;
+    }
+
+    private static void InserirSessao(DiarioTreinoDbContext db, Guid atletaId, Guid treinoId, DateOnly data)
+    {
+        db.Sessoes.Add(new Sessao
+        {
+            Id = Guid.NewGuid(),
+            AtletaId = atletaId,
+            RegistradoPorId = atletaId,
+            TreinoId = treinoId,
+            Data = data,
+            CriadoEm = DateTimeOffset.UtcNow,
+            AtualizadoEm = DateTimeOffset.UtcNow,
+        });
     }
 
     private async Task<(Guid ProfessorId, Guid PlanoId)> InserirProfessorEPlano(Guid atletaId)
