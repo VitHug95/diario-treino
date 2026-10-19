@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:diario_treino/core/localizacao/material_pt.dart';
 import 'package:diario_treino/features/catalogo/catalogo_repository.dart';
 import 'package:diario_treino/features/catalogo/exercicio_resumo.dart';
+import 'package:diario_treino/features/catalogo/metrica.dart';
 import 'package:diario_treino/features/fichas/fichas_repository.dart';
 import 'package:diario_treino/features/fichas/fichas_screen.dart';
 import 'package:diario_treino/features/fichas/plano_models.dart';
@@ -344,7 +345,141 @@ void main() {
     expect(resumoFicha(qtdExercicios: 1, ultimaVez: null), '1 exercício · nunca feito');
     expect(resumoFicha(qtdExercicios: null, ultimaVez: null), 'nunca feito');
   });
+
+  // ---- PBI-79: resumo do alvo no card da ficha ----
+
+  testWidgets('PBI-79: resumo mostra a faixa de repetições e "65 kg"', (tester) async {
+    for (final tema in [AppTheme.claro, AppTheme.escuro]) {
+      await tester.pumpWidget(_telaComMetricas(
+        detalhe: (id) => _detalhe(id, [
+          _exComAlvo('Crucifixo inclinado', rodadas: 3, descansoSeg: 120,
+              volumeAlvo: 8, volumeAlvoMax: 12, intensidadeAlvo: 65),
+        ]),
+        tema: tema,
+      ));
+      await tester.pumpAndSettle();
+
+      // Faixa de repetições, carga com unidade "kg" (não "carga") e descanso.
+      expect(find.text('3 séries · 8 a 12 rep · 65 kg · 120 s'), findsOneWidget);
+      expect(find.textContaining('carga'), findsNothing);
+    }
+  });
+
+  testWidgets('PBI-79: alvo sem máximo aparece sem faixa', (tester) async {
+    await tester.pumpWidget(_telaComMetricas(
+      detalhe: (id) => _detalhe(id, [
+        _exComAlvo('Supino reto', rodadas: 3, descansoSeg: null,
+            volumeAlvo: 8, volumeAlvoMax: null, intensidadeAlvo: 50),
+      ]),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 séries · 8 rep · 50 kg'), findsOneWidget);
+  });
+
+  testWidgets('PBI-79: exercício de peso corporal não mostra "carga"', (tester) async {
+    await tester.pumpWidget(_telaComMetricas(
+      detalhe: (id) => _detalhe(id, [
+        _exComAlvo('Flexão', rodadas: 4, descansoSeg: 60,
+            volumeAlvo: 15, volumeAlvoMax: null, intensidadeAlvo: null,
+            intensidadeCodigo: 'PESO_CORPORAL', intensidadeNome: 'Peso corporal'),
+      ]),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('4 séries · 15 rep · 60 s'), findsOneWidget);
+    expect(find.textContaining('carga'), findsNothing);
+    expect(find.textContaining('peso corporal'), findsNothing);
+  });
+
+  // ---- PBI-78: o editor abre com o dado ATUAL da ficha, não um capturado ----
+
+  testWidgets('PBI-78: tocar no cartão abre o editor com os valores gravados',
+      (tester) async {
+    // O provider devolve o alvo gravado (3 séries, 8 a 12, 65 kg). O editor,
+    // ao abrir, deve mostrar esses valores — não um estado em branco.
+    await tester.pumpWidget(_telaComMetricas(
+      detalhe: (id) => _detalhe(id, [
+        _exComAlvo('Crucifixo inclinado', rodadas: 3, descansoSeg: 120,
+            volumeAlvo: 8, volumeAlvoMax: 12, intensidadeAlvo: 65),
+      ]),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Crucifixo inclinado'));
+    await tester.pumpAndSettle();
+
+    // Abriu o editor com os valores gravados, não em branco. O topo do editor
+    // mostra "3 séries" e a carga 65 (um editor em branco teria "1" e vazios).
+    expect(find.text('Alvos do exercício'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget); // contador de séries
+    final valores = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .map((t) => t.controller?.text ?? '')
+        .toList();
+    expect(valores, contains('65')); // campo de carga, preenchido
+  });
 }
+
+/// Métricas do seed (unidades reais) para o resumo do alvo (PBI-79).
+const _metricasSeed = [
+  Metrica(id: 1, codigo: 'CARGA_KG', nome: 'Carga', unidade: 'kg', eixo: 'INTENSIDADE'),
+  Metrica(id: 2, codigo: 'PESO_CORPORAL', nome: 'Peso corporal', unidade: '-', eixo: 'INTENSIDADE'),
+  Metrica(id: 10, codigo: 'REPETICOES', nome: 'Repetições', unidade: 'rep', eixo: 'VOLUME'),
+  Metrica(id: 11, codigo: 'TEMPO_SEG', nome: 'Tempo', unidade: 's', eixo: 'VOLUME'),
+];
+
+/// Tela da ficha com `metricasProvider` resolvido (para o resumo do alvo).
+Widget _telaComMetricas({
+  required TreinoDetalhe Function(String treinoId) detalhe,
+  ThemeData? tema,
+}) =>
+    ProviderScope(
+      overrides: [
+        planoAtivoProvider.overrideWith((ref) async => _plano([_ficha('A', 1)])),
+        sessoesRecentesProvider.overrideWith((ref) async => const []),
+        metricasProvider.overrideWith((ref) async => _metricasSeed),
+        fichaDetalheProvider.overrideWith((ref, treinoId) async => detalhe(treinoId)),
+      ],
+      child: MaterialApp(
+        theme: tema ?? AppTheme.claro,
+        localizationsDelegates: LocalizacoesPt.delegates,
+        home: const _TelaPlano(fichaId: 'f1'),
+      ),
+    );
+
+TreinoExercicioResumo _exComAlvo(
+  String nome, {
+  required int rodadas,
+  required int? descansoSeg,
+  required double? volumeAlvo,
+  required double? volumeAlvoMax,
+  required double? intensidadeAlvo,
+  String intensidadeCodigo = 'CARGA_KG',
+  String intensidadeNome = 'Carga',
+}) =>
+    TreinoExercicioResumo(
+      id: 'te-$nome',
+      exercicioId: 'e-$nome',
+      nome: nome,
+      grupoMuscular: 'peito',
+      modalidade: 'FORCA',
+      ordem: 1,
+      rodadas: rodadas,
+      descansoSeg: descansoSeg,
+      instrucao: null,
+      alvo: AlvoExercicio(
+        intensidadeMetricaId: 1,
+        intensidadeMetricaCodigo: intensidadeCodigo,
+        intensidadeMetricaNome: intensidadeNome,
+        intensidadeAlvo: intensidadeAlvo,
+        volumeMetricaId: 10,
+        volumeMetricaCodigo: 'REPETICOES',
+        volumeMetricaNome: 'Repetições',
+        volumeAlvo: volumeAlvo,
+        volumeAlvoMax: volumeAlvoMax,
+      ),
+    );
 
 /// Repositório que só guarda a ordem enviada ao reordenar.
 class _RepoReordena extends FichasRepository {
