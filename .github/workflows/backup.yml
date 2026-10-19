@@ -41,19 +41,16 @@ jobs:
 
       - name: Gerar o dump
         env:
-          # pg_dump lê a conexão de PGDATABASE nativamente. Passar a connection
-          # string por aqui (em vez de argumento posicional) evita que o
-          # pg_dump a trate como nome de banco e tente o socket local.
-          PGDATABASE: ${{ secrets.NEON_DATABASE_URL }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          if [ -z "$PGDATABASE" ]; then
+          if [ -z "$NEON_DATABASE_URL" ]; then
             echo "::error::Secret NEON_DATABASE_URL não configurado. Veja docs/BACKUP-RESTAURACAO.md."
             exit 1
           fi
           # Diagnóstico sem vazar o segredo: confirma que a string começa com o
           # esquema esperado. Se não começar, o valor do secret está no formato
           # errado (precisa ser postgresql://USER:SENHA@HOST/BANCO?sslmode=require).
-          case "$PGDATABASE" in
+          case "$NEON_DATABASE_URL" in
             postgresql://*|postgres://*)
               echo "Connection string reconhecida (esquema postgres URI)." ;;
             *)
@@ -63,13 +60,16 @@ jobs:
           STAMP="$(date -u +%Y%m%d-%H%M%S)"
           FILE="diariotreino-${STAMP}.dump"
           echo "ARQUIVO=${FILE}" >> "$GITHUB_ENV"
-          # Formato custom (-Fc): comprimido e restaurável com pg_restore de
-          # forma seletiva. Sem --no-owner/--no-privileges para preservar tudo;
-          # a restauração usa --no-owner quando o role de destino difere.
+          # A URI vai como ARGUMENTO POSICIONAL (dbname): o pg_dump faz o parsing
+          # dela como conninfo (host, porta, usuário, sslmode). Passar via
+          # PGDATABASE não funciona — ali a URI é tratada como nome de banco e o
+          # pg_dump cai no socket local. Formato custom (-Fc): comprimido e
+          # restaurável seletivamente.
           /usr/lib/postgresql/18/bin/pg_dump \
             --format=custom \
             --file="${FILE}" \
-            --verbose
+            --verbose \
+            "$NEON_DATABASE_URL"
           ls -lh "${FILE}"
 
       - name: Guardar o backup (artifact, fora do Neon)
