@@ -310,9 +310,21 @@ class _ListaExerciciosFicha extends ConsumerWidget {
 
   /// Seletor com vários exercícios (PBI-49): adiciona na ordem escolhida. Se
   /// algum falhar, os outros ficam e o aviso diz quais não entraram.
-  Future<void> _adicionar(BuildContext context, WidgetRef ref, String nomeFicha) async {
+  Future<void> _adicionar(
+    BuildContext context,
+    WidgetRef ref,
+    String nomeFicha,
+    Set<String> idsNaFicha,
+  ) async {
     final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
-      MaterialPageRoute(builder: (_) => SelecionarExercicioScreen(destino: nomeFicha)),
+      MaterialPageRoute(
+        builder: (_) => SelecionarExercicioScreen(
+          destino: nomeFicha,
+          // PBI-74: não deixa escolher quem já está na ficha.
+          idsIndisponiveis: idsNaFicha,
+          rotuloIndisponivel: 'Já está na ficha',
+        ),
+      ),
     );
     if (escolhidos == null || escolhidos.isEmpty) return;
 
@@ -415,7 +427,8 @@ class _ListaExerciciosFicha extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x16),
               child: BotaoTracejado(
                 rotulo: 'Adicionar exercício à ficha',
-                aoTocar: () => _adicionar(context, ref, ficha.nome),
+                aoTocar: () => _adicionar(context, ref, ficha.nome,
+                    {for (final te in itens) te.exercicioId}),
               ),
             ),
           ],

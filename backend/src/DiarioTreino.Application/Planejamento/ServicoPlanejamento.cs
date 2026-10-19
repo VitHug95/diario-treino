@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Application.Comum;
 using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Planejamento;
 
@@ -473,6 +474,12 @@ public sealed class ServicoPlanejamento
         if (!await _exercicios.ExisteDisponivelAsync(exercicioId, usuarioLogadoId, ct))
         {
             throw new RecursoNaoEncontradoException("Exercício não encontrado.");
+        }
+
+        // PBI-74: cada exercício aparece uma única vez por ficha.
+        if (await _repositorio.ExercicioJaNaFichaAsync(treinoId, exercicioId, ct))
+        {
+            throw new ConflitoException("Este exercício já está na ficha.");
         }
 
         var maiorOrdem = await _repositorio.ObterMaiorOrdemExercicioAsync(treinoId, ct);

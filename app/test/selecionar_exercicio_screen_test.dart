@@ -174,6 +174,46 @@ void main() {
     expect(find.text('Criar exercício novo'), findsOneWidget);
   });
 
+  testWidgets('PBI-74: exercício já na ficha aparece desabilitado e não entra', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        catalogoProvider.overrideWith((ref) async => _tres),
+        membrosProvider.overrideWith((ref) async => _membros),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.claro,
+          home: const SelecionarExercicioScreen(
+            destino: 'Treino A',
+            idsIndisponiveis: {'Supino reto'},
+            rotuloIndisponivel: 'Já está na ficha',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // O selo aparece e o item não pode ser escolhido.
+    expect(find.text('Já está na ficha'), findsOneWidget);
+    expect(find.bySemanticsLabel('Adicionar Supino reto'), findsNothing);
+    expect(find.bySemanticsLabel('Supino reto. Já está na ficha'), findsOneWidget);
+
+    // Tocar no indisponível não seleciona nada.
+    await tester.tap(find.text('Supino reto'));
+    await tester.pumpAndSettle();
+    expect(find.text('ESCOLHA OS EXERCÍCIOS'), findsOneWidget);
+
+    // Um disponível ainda pode ser escolhido.
+    await tester.tap(find.text('Crucifixo'));
+    await tester.pumpAndSettle();
+    expect(find.text('ADICIONAR 1 EXERCÍCIO'), findsOneWidget);
+  });
+
   testWidgets('Abre com a busca limpa mesmo se havia filtro anterior', (tester) async {
     final container = ProviderContainer(
       overrides: [

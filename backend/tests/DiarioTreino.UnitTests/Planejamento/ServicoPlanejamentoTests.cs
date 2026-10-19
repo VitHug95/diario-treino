@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Application.Comum;
 using DiarioTreino.Application.Planejamento;
 using DiarioTreino.Domain.Planejamento;
 
@@ -120,6 +121,10 @@ public sealed class ServicoPlanejamentoTests
             => Task.FromResult(Treinos.FirstOrDefault(t => t.Id == treinoId));
 
         public void AdicionarTreinoExercicio(TreinoExercicio te) => TreinoExercicios.Add(te);
+
+        public Task<bool> ExercicioJaNaFichaAsync(Guid treinoId, Guid exercicioId, CancellationToken ct)
+            => Task.FromResult(TreinoExercicios.Any(
+                te => te.TreinoId == treinoId && te.ExercicioId == exercicioId));
 
         public void RemoverTreinoExercicio(TreinoExercicio te) => TreinoExercicios.Remove(te);
 
@@ -324,6 +329,32 @@ public sealed class ServicoPlanejamentoTests
         var te = Assert.Single(repo.TreinoExercicios);
         Assert.Equal((short)2, te.Ordem);
         Assert.Equal(treinoId, te.TreinoId);
+    }
+
+    [Fact]
+    public async Task Adicionar_exercicio_ja_na_ficha_lanca_conflito()
+    {
+        // PBI-74: cada exercício aparece uma única vez por ficha.
+        var dono = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var exercicioId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = dono,
+            TreinoExercicios =
+            {
+                new TreinoExercicio
+                {
+                    Id = Guid.NewGuid(),
+                    TreinoId = treinoId,
+                    ExercicioId = exercicioId,
+                    Ordem = 1,
+                },
+            },
+        };
+
+        await Assert.ThrowsAsync<ConflitoException>(() =>
+            Montar(repo).AdicionarExercicioAsync(dono, treinoId, exercicioId, CancellationToken.None));
     }
 
     [Fact]

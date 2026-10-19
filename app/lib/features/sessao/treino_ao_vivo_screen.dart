@@ -120,10 +120,18 @@ class TreinoAoVivoScreen extends ConsumerWidget {
   static void _irParaInicio(BuildContext context) => context.go(Rotas.inicio);
 
   Future<void> _adicionarForaDaFicha(BuildContext context, WidgetRef ref) async {
-    final nomeTreino = ref.read(treinoAoVivoControllerProvider)?.treinoNome;
+    final estado = ref.read(treinoAoVivoControllerProvider);
+    final nomeTreino = estado?.treinoNome;
     final escolhidos = await Navigator.of(context).push<List<ExercicioResumo>>(
       MaterialPageRoute(
-        builder: (_) => SelecionarExercicioScreen(destino: nomeTreino),
+        builder: (_) => SelecionarExercicioScreen(
+          destino: nomeTreino,
+          // PBI-74: o que já está no treino não pode entrar de novo.
+          idsIndisponiveis: {
+            for (final e in estado?.exercicios ?? const []) e.exercicioId,
+          },
+          rotuloIndisponivel: 'Já está no treino',
+        ),
       ),
     );
     if (escolhidos == null || escolhidos.isEmpty) return;

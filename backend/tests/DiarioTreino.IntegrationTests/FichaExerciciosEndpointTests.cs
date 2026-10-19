@@ -76,6 +76,25 @@ public sealed class FichaExerciciosEndpointTests
     }
 
     [Fact]
+    public async Task Adicionar_o_mesmo_exercicio_duas_vezes_responde_409()
+    {
+        // PBI-74: cada exercício aparece uma única vez por ficha.
+        var (api, client, _) = Autenticar(_postgres);
+        await using var _api = api;
+        var treinoId = await CriarFicha(client);
+
+        var primeira = await AddExercicio(client, treinoId, SupinoReto);
+        Assert.Equal(HttpStatusCode.Created, primeira.StatusCode);
+
+        var segunda = await AddExercicio(client, treinoId, SupinoReto);
+        Assert.Equal(HttpStatusCode.Conflict, segunda.StatusCode);
+
+        // A ficha continua com um único exercício.
+        var ficha = await client.GetFromJsonAsync<FichaResp>($"/api/v1/treinos/{treinoId}");
+        Assert.Single(ficha!.Exercicios);
+    }
+
+    [Fact]
     public async Task Reordenar_troca_a_ordem_dos_exercicios()
     {
         var (api, client, _) = Autenticar(_postgres);

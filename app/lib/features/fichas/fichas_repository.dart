@@ -247,6 +247,8 @@ class FichasRepository {
     return switch (status) {
       400 => 'Confira os campos: algo está inválido.',
       404 => 'Ficha não encontrada.',
+      // PBI-74: exercício repetido na ficha.
+      409 => 'Este exercício já está na ficha.',
       null => 'Sem conexão. Verifique sua internet e tente de novo.',
       _ => 'Não foi possível concluir. Tente novamente.',
     };

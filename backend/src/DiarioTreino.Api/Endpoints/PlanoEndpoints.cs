@@ -1,4 +1,5 @@
 using DiarioTreino.Api.Autenticacao;
+using DiarioTreino.Application.Comum;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
 using FluentValidation;
@@ -269,9 +270,17 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var teId = await planejamento.AdicionarExercicioAsync(
-                perfil.Id, id, request.ExercicioId, ct);
-            return Results.Created($"/api/v1/treinos/{id}/exercicios/{teId}", new { id = teId });
+            try
+            {
+                var teId = await planejamento.AdicionarExercicioAsync(
+                    perfil.Id, id, request.ExercicioId, ct);
+                return Results.Created($"/api/v1/treinos/{id}/exercicios/{teId}", new { id = teId });
+            }
+            catch (ConflitoException ex)
+            {
+                // PBI-74: exercício já na ficha → 409 (o app trata como "já estava").
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
         })
         .WithName("AdicionarExercicioFicha").WithTags("Fichas")
         .WithSummary("Adiciona um exercício do catálogo à ficha");
