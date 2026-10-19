@@ -18,10 +18,12 @@ public sealed class ServicoPlanejamentoTests
         public short MaiorOrdemExercicio;
 
         public Task<PlanoTreino?> ObterPlanoEmUsoAsync(Guid atletaId, CancellationToken ct)
-            => Task.FromResult(PlanoAtivo);
-
-        public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct)
-            => Task.FromResult(Planos.Count > 0);
+        {
+            // Reflete o estado real: o plano EM USO do atleta vem da lista.
+            // Mantém o atalho PlanoAtivo para os testes que não populam Planos.
+            var emUso = Planos.FirstOrDefault(p => p.AtletaId == atletaId && p.EmUso);
+            return Task.FromResult(emUso ?? PlanoAtivo);
+        }
 
         public Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct)
             => Task.FromResult(Planos
@@ -577,6 +579,54 @@ public sealed class ServicoPlanejamentoTests
 
         Assert.True(plano.EmUso);
         Assert.True(repo.Planos.Single().EmUso);
+    }
+
+    [Fact]
+    public async Task Plano_nomeado_nasce_em_uso_quando_so_restam_planos_escondidos()
+    {
+        // PBI-77: o atleta excluiu todos os planos (que viraram ativo=false por
+        // terem histórico) e cria um novo. Mesmo havendo plano escondido, o novo
+        // nasce em uso, porque não há NENHUM plano EM USO.
+        var atleta = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(new PlanoTreino
+        {
+            Id = Guid.NewGuid(),
+            AtletaId = atleta,
+            AutorId = atleta,
+            Nome = "Antigo (excluído)",
+            Ativo = false,
+            EmUso = false,
+        });
+
+        var novo = await Montar(repo).CriarPlanoNomeadoAsync(atleta, "Meu plano", CancellationToken.None);
+
+        Assert.True(novo.EmUso);
+        Assert.True(repo.Planos.Single(p => p.Nome == "Meu plano").EmUso);
+    }
+
+    [Fact]
+    public async Task Primeira_ficha_apos_excluir_tudo_cria_plano_em_uso()
+    {
+        // PBI-77 pelo caminho da primeira ficha (AdicionarFichaAsync, ramo "Meu
+        // plano"): com só plano escondido, o "Meu plano" criado nasce em uso.
+        var atleta = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(new PlanoTreino
+        {
+            Id = Guid.NewGuid(),
+            AtletaId = atleta,
+            AutorId = atleta,
+            Nome = "Antigo (excluído)",
+            Ativo = false,
+            EmUso = false,
+        });
+
+        await Montar(repo).AdicionarFichaAsync(
+            atleta, null, new SalvarTreinoRequest("A", null), CancellationToken.None);
+
+        var meuPlano = repo.Planos.Single(p => p.Nome == "Meu plano");
+        Assert.True(meuPlano.EmUso);
     }
 
     [Fact]

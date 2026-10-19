@@ -34,9 +34,6 @@ public sealed class RepositorioPlano : IRepositorioPlano
         return plano;
     }
 
-    public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct) =>
-        _db.PlanosTreino.AnyAsync(p => p.AtletaId == atletaId, ct);
-
     public async Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct)
     {
         // Planos ativos do atleta (os excluídos-com-histórico, ativo=false,

@@ -74,16 +74,18 @@ public sealed class ServicoPlanejamento
     }
 
     /// <summary>
-    /// Cria um plano com nome (PBI-44). O primeiro plano do atleta nasce em uso;
-    /// os seguintes nascem fora de uso (não mexem no plano já em uso). Devolve o
-    /// resumo do plano criado.
+    /// Cria um plano com nome (PBI-44). Nasce em uso quando o atleta não tem
+    /// nenhum plano EM USO (PBI-77): assim, quem excluiu todos os planos e cria
+    /// um novo volta a ter plano em uso, mesmo que ainda existam planos
+    /// escondidos (ativo=false) no histórico. Com um plano já em uso, o novo
+    /// nasce fora de uso. Devolve o resumo do plano criado.
     /// </summary>
     public async Task<PlanoDetalhe> CriarPlanoNomeadoAsync(
         Guid atletaId,
         string nome,
         CancellationToken ct)
     {
-        var primeiro = !await _repositorio.AtletaTemAlgumPlanoAsync(atletaId, ct);
+        var primeiro = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct) is null;
         var plano = new PlanoTreino
         {
             Id = Guid.NewGuid(),
@@ -215,9 +217,9 @@ public sealed class ServicoPlanejamento
             var emUso = await _repositorio.ObterPlanoEmUsoAsync(usuarioLogadoId, ct);
             if (emUso is null)
             {
-                // Sem plano em uso: cria "Meu plano". Nasce em uso só se for o
-                // primeiro plano do atleta.
-                var primeiro = !await _repositorio.AtletaTemAlgumPlanoAsync(usuarioLogadoId, ct);
+                // Sem plano em uso: cria "Meu plano" e ele nasce em uso (PBI-77).
+                // Chegamos aqui justamente porque ObterPlanoEmUsoAsync devolveu
+                // nulo, então não há conflito com o índice único parcial.
                 emUso = new PlanoTreino
                 {
                     Id = Guid.NewGuid(),
@@ -226,7 +228,7 @@ public sealed class ServicoPlanejamento
                     Nome = "Meu plano",
                     Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
                     Ativo = true,
-                    EmUso = primeiro,
+                    EmUso = true,
                     Treinos = [],
                 };
                 _repositorio.AdicionarPlano(emUso);
@@ -290,8 +292,8 @@ public sealed class ServicoPlanejamento
     public async Task<PlanoAtivo> CriarPlanoAsync(Guid atletaId, CancellationToken ct)
     {
         // Sem corpo: idempotente — devolve o plano em uso se já houver (contrato
-        // antigo preservado para o E2E, até o front migrar). O primeiro plano do
-        // atleta nasce em uso.
+        // antigo preservado para o E2E, até o front migrar). Sem plano em uso, o
+        // plano criado nasce em uso (PBI-77), mesmo que haja planos escondidos.
         var existente = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct);
         if (existente is not null)
         {
@@ -301,7 +303,6 @@ public sealed class ServicoPlanejamento
             return new PlanoAtivo(existente.Id, existente.Nome, treinos);
         }
 
-        var primeiro = !await _repositorio.AtletaTemAlgumPlanoAsync(atletaId, ct);
         var plano = new PlanoTreino
         {
             Id = Guid.NewGuid(),
@@ -310,7 +311,7 @@ public sealed class ServicoPlanejamento
             Nome = "Meu plano",
             Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
             Ativo = true,
-            EmUso = primeiro,
+            EmUso = true,
             Treinos = [],
         };
         _repositorio.AdicionarPlano(plano);

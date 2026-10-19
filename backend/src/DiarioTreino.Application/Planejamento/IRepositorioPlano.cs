@@ -9,10 +9,6 @@ public interface IRepositorioPlano
     /// ativas (ordenadas), ou nulo se nenhum plano está em uso (PBI-44).</summary>
     public Task<PlanoTreino?> ObterPlanoEmUsoAsync(Guid atletaId, CancellationToken ct);
 
-    /// <summary>Indica se o atleta já tem ao menos um plano (de qualquer estado).
-    /// O primeiro plano do atleta nasce em uso (PBI-44).</summary>
-    public Task<bool> AtletaTemAlgumPlanoAsync(Guid atletaId, CancellationToken ct);
-
     /// <summary>Planos ativos do atleta para a lista (PBI-44): em uso primeiro,
     /// depois pelo início mais recente. Com autoria e contagens.</summary>
     public Task<List<PlanoDaLista>> ListarPlanosDoAtletaAsync(Guid atletaId, CancellationToken ct);
