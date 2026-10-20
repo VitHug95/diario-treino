@@ -29,21 +29,51 @@ public static class AutenticacaoFirebase
 
         var issuer = $"https://securetoken.google.com/{projectId}";
 
+        // Modo emulador (SOMENTE para o E2E no CI): quando
+        // Firebase:AuthEmulatorHost está definido, a API aceita tokens emitidos
+        // pelo Firebase Auth Emulator. O emulador não assina os tokens com as
+        // chaves do Google, então a validação da assinatura é dispensada; as
+        // demais checagens (emissor, audiência, validade) continuam valendo.
+        // Em produção a variável fica vazia e nada disto é ativado.
+        var emulatorHost = configuration["Firebase:AuthEmulatorHost"];
+        var usandoEmulador = !string.IsNullOrWhiteSpace(emulatorHost);
+
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = issuer;
-                options.TokenValidationParameters = new TokenValidationParameters
+                if (usandoEmulador)
                 {
-                    ValidateIssuer = true,
-                    ValidIssuer = issuer,
-                    ValidateAudience = true,
-                    ValidAudience = projectId,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ClockSkew = TimeSpan.FromSeconds(30),
-                };
+                    // O emulador emite com o mesmo issuer; sem metadados HTTPS e
+                    // sem validar a chave de assinatura (tokens de teste).
+                    options.RequireHttpsMetadata = false;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = issuer,
+                        ValidateAudience = true,
+                        ValidAudience = projectId,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = false,
+                        SignatureValidator = (token, _) =>
+                            new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(token),
+                        ClockSkew = TimeSpan.FromSeconds(30),
+                    };
+                }
+                else
+                {
+                    options.Authority = issuer;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = issuer,
+                        ValidateAudience = true,
+                        ValidAudience = projectId,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ClockSkew = TimeSpan.FromSeconds(30),
+                    };
+                }
             });
 
         services.AddAuthorization();

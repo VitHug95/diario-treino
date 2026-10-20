@@ -38,6 +38,14 @@ app/ios/Runner/GoogleService-Info.plist
 *.pem
 appsettings.*.local.json
 
+# ---------- E2E (Robot Framework / Browser) ----------
+e2e/resultados/
+e2e/resultados-dryrun/
+e2e/browser/
+e2e/node_modules/
+e2e/.venv/
+e2e/playwright-log.txt
+
 # ---------- Sistema operacional ----------
 Thumbs.db
 .DS_Store
