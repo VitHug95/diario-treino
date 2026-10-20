@@ -10,7 +10,7 @@ import '../../theme/theme_tokens.dart';
 /// (calendário, PBI-82). Quatro estados que NÃO dependem só da cor:
 /// - treinou: círculo cheio com check;
 /// - hoje (sem treino): anel azul;
-/// - passado sem treino: círculo de borda fina;
+/// - passado sem treino: círculo de borda fina com um "X" dentro;
 /// - futuro: círculo tracejado.
 ///
 /// Recebe os três estados soltos (e não um modelo de dia) para servir tanto à
@@ -48,16 +48,28 @@ class MarcaDia extends StatelessWidget {
         painter: CirculoTracejado(cor: cores.lineDashed),
       );
     }
+    // Hoje (sem treino): anel azul, sem X.
+    if (ehHoje) {
+      return Container(
+        width: tamanho,
+        height: tamanho,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: cores.primaryText, width: 2),
+        ),
+      );
+    }
+
+    // Passado sem treino: círculo de borda fina com um "X" dentro.
     return Container(
       width: tamanho,
       height: tamanho,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        // Hoje: anel azul mais grosso. Passado sem treino: círculo vazio.
-        border: ehHoje
-            ? Border.all(color: cores.primaryText, width: 2)
-            : Border.all(color: cores.lineDashed, width: 1.5),
+        border: Border.all(color: cores.lineDashed, width: 1.5),
       ),
+      child: Icon(LucideIcons.x, size: tamanho * 0.5, color: cores.lineDashed),
     );
   }
 }

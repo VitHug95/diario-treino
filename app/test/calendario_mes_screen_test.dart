@@ -9,6 +9,7 @@ import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class _RelogioFixo implements Relogio {
   _RelogioFixo(this.valor);
@@ -119,6 +120,19 @@ void main() {
 
     expect(find.text('0 dias treinados'), findsOneWidget);
     expect(find.text('15'), findsOneWidget); // a grade existe
+  });
+
+  testWidgets('dia passado sem treino mostra um "X"; treinou/hoje/futuro não',
+      (tester) async {
+    await tester.pumpWidget(_tela(sessoesPorMes: {
+      (2026, 10): [_sessao(DateTime(2026, 10, 1))],
+    }));
+    await tester.pumpAndSettle();
+
+    // Outubro/2026 tem vários dias passados sem treino (2 a 18, menos o 1).
+    expect(find.byIcon(LucideIcons.x), findsWidgets);
+    // O dia que treinou usa o check, não o X.
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
   });
 
   testWidgets('rótulos falados dos estados do dia', (tester) async {
