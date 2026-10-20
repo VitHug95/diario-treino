@@ -177,6 +177,7 @@ jobs:
           flutter pub get
           flutter build web --release \
             --dart-define=API_BASE_URL=http://127.0.0.1:8080/api/v1 \
+            --dart-define=TREINO_AO_VIVO=false \
             --dart-define=USE_AUTH_EMULATOR=true \
             --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
             --dart-define=AUTH_EMULATOR_PORT=9099
