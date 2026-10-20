@@ -27,6 +27,14 @@ Future<void> main() async {
   if (usarAuthEmulator) {
     await FirebaseAuth.instance
         .useAuthEmulator(authEmulatorHost, authEmulatorPorta);
+    // Atalho de login do E2E (SOMENTE com o emulador): entra já autenticado,
+    // sem passar pela digitação na tela de cadastro. O teste E2E do PBI-26 roda
+    // com integration_test (tester.enterText na árvore de widgets) e não exerce
+    // a tela de login — por isso o usuário é provisionado aqui no boot. Com o
+    // usuário logado, o redirect do go_router cai direto na Início e o
+    // TokenInterceptor anexa o ID token do emulador às chamadas da API.
+    // Em produção (usarAuthEmulator=false) nada disto roda.
+    await _autenticarParaE2E();
   }
 
   final prefs = await SharedPreferences.getInstance();
@@ -39,4 +47,33 @@ Future<void> main() async {
       child: const DiarioTreinoApp(),
     ),
   );
+}
+
+/// Login automático do E2E (PBI-26), usado só com o Firebase Auth Emulator.
+/// Tenta entrar com um usuário fixo de teste; se ele ainda não existe no
+/// emulador, cria e entra. Qualquer falha é apenas registrada (o app abre na
+/// tela de login e o teste falha de forma visível) — nunca derruba o boot.
+Future<void> _autenticarParaE2E() async {
+  const email = 'e2e@teste.local';
+  const senha = 'Teste@12345';
+  final auth = FirebaseAuth.instance;
+  try {
+    try {
+      await auth.signInWithEmailAndPassword(email: email, password: senha);
+    } on FirebaseAuthException catch (e) {
+      // Primeira execução: o usuário ainda não existe no emulador.
+      if (e.code == 'user-not-found' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'invalid-login-credentials') {
+        final cred = await auth.createUserWithEmailAndPassword(
+            email: email, password: senha);
+        await cred.user?.updateDisplayName('Atleta E2E');
+        await cred.user?.reload();
+      } else {
+        rethrow;
+      }
+    }
+  } catch (e) {
+    debugPrint('E2E auto-login falhou: $e');
+  }
 }
