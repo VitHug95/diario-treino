@@ -70,11 +70,18 @@ jobs:
         run: flutter build web --release
 
   # E2E do fluxo principal (PBI-26) contra uma stack efêmera no próprio runner:
-  # Postgres (service) + Firebase Auth Emulator + API .NET + Flutter web + Robot.
-  # continue-on-error: não bloqueia o merge enquanto a suíte amadurece; publica
-  # os artefatos do Robot (log/report/screenshots) em falha.
+  # Postgres (service) + Firebase Auth Emulator + API .NET + Flutter.
+  #
+  # O teste roda com integration_test (flutter drive + ChromeDriver), não mais
+  # Robot/Playwright: o Flutter web usa CanvasKit (o renderer HTML foi removido
+  # no 3.29) e os campos de texto não aceitam entrada via DOM de forma
+  # confiável, o que inviabilizava preencher o cadastro/série pelo navegador.
+  # O integration_test digita pela árvore de widgets (tester.enterText). O app
+  # entra já autenticado pelo atalho de login do boot (main.dart, modo emulador).
+  #
+  # continue-on-error: não bloqueia o merge enquanto a suíte amadurece.
   e2e:
-    name: E2E (Robot + navegador)
+    name: E2E (integration_test + Chrome)
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     continue-on-error: true
@@ -82,7 +89,6 @@ jobs:
     env:
       PROJECT_ID: demo-diario-treino
       API_PORT: "8080"
-      WEB_PORT: "8000"
       AUTH_EMULATOR_PORT: "9099"
     services:
       postgres:
@@ -114,14 +120,15 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Configurar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # Chrome + ChromeDriver para o flutter drive rodar o app no navegador.
+      - name: Configurar Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          install-chromedriver: true
       # --- Firebase Auth Emulator ---
       - name: Instalar firebase-tools
         run: npm install -g firebase-tools
@@ -153,6 +160,8 @@ jobs:
           FIREBASE__PROJECTID: demo-diario-treino
           FIREBASE__AUTHEMULATORHOST: "127.0.0.1:9099"
           FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099"
+          # O app é servido pelo flutter drive (web-server) numa porta efêmera;
+          # libera localhost amplamente no CORS do E2E para não depender da porta.
           CORS__ORIGENSPERMITIDAS__0: "http://127.0.0.1:8000"
           CORS__ORIGENSPERMITIDAS__1: "http://localhost:8000"
         run: |
@@ -169,62 +178,52 @@ jobs:
           if [ -z "$ok" ]; then
             echo "::error::A API não respondeu em /health em 90s"; cat "$RUNNER_TEMP/api.log"; exit 1
           fi
-      # --- Flutter web apontado à API local e ao emulador ---
-      - name: Build web (dart-defines do E2E)
-        working-directory: app
+      # --- integration_test via flutter drive + ChromeDriver ---
+      - name: ChromeDriver (background)
         run: |
+          chromedriver --port=4444 > "$RUNNER_TEMP/chromedriver.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf "http://127.0.0.1:4444/status" > /dev/null; then
+              echo "ChromeDriver no ar."; ok=1; break
+            fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::ChromeDriver não subiu em 30s"; cat "$RUNNER_TEMP/chromedriver.log"; exit 1
+          fi
+      - name: Rodar o E2E (integration_test)
+        working-directory: app
+        timeout-minutes: 12
+        run: |
+          # firebase_options.dart é gitignored (um por ambiente); usa o de E2E.
           cp lib/firebase_options.e2e.dart lib/firebase_options.dart
           flutter pub get
-          flutter build web --release \
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/fluxo_pbi26_test.dart \
+            -d web-server \
+            --browser-name=chrome \
+            --headless \
             --dart-define=API_BASE_URL=http://127.0.0.1:8080/api/v1 \
             --dart-define=TREINO_AO_VIVO=false \
             --dart-define=USE_AUTH_EMULATOR=true \
             --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
             --dart-define=AUTH_EMULATOR_PORT=9099
-      - name: Servir o web (background)
-        working-directory: app/build/web
-        run: |
-          python -m http.server "$WEB_PORT" --bind 127.0.0.1 > "$RUNNER_TEMP/web.log" 2>&1 &
-          for i in $(seq 1 30); do
-            if curl -sf "http://127.0.0.1:${WEB_PORT}/" > /dev/null; then
-              echo "Web no ar."; ok=1; break
-            fi
-            sleep 1
-          done
-          if [ -z "$ok" ]; then
-            echo "::error::O servidor web não respondeu em 30s"; cat "$RUNNER_TEMP/web.log"; exit 1
-          fi
-      # --- Robot Framework ---
-      - name: Instalar Robot + Browser
-        working-directory: e2e
-        run: |
-          pip install -r requirements.txt
-          # Dependências de SO do navegador do Playwright no runner Ubuntu.
-          sudo npx --yes playwright install-deps chromium
-          # Baixa só o Chromium (o init da Browser library instala o navegador).
-          rfbrowser init chromium
-      - name: Rodar a suíte E2E
-        working-directory: e2e
-        timeout-minutes: 8
-        run: |
-          robot --variable BASE_URL:http://127.0.0.1:8000 \
-            --outputdir resultados suites/
       - name: Logs dos serviços (diagnóstico em falha)
         if: failure()
         run: |
           echo "===== API ====="; tail -n 200 "$RUNNER_TEMP/api.log" 2>/dev/null || true
           echo "===== EMULATOR ====="; tail -n 100 "$RUNNER_TEMP/emulator.log" 2>/dev/null || true
-          echo "===== WEB ====="; tail -n 50 "$RUNNER_TEMP/web.log" 2>/dev/null || true
-      - name: Publicar artefatos do Robot
+          echo "===== CHROMEDRIVER ====="; tail -n 50 "$RUNNER_TEMP/chromedriver.log" 2>/dev/null || true
+      - name: Publicar logs dos serviços
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-resultados
           path: |
-            e2e/resultados/
             ${{ runner.temp }}/api.log
-            ${{ runner.temp }}/web.log
             ${{ runner.temp }}/emulator.log
+            ${{ runner.temp }}/chromedriver.log
           if-no-files-found: ignore
 
   # Publica o front (Flutter web) no Cloudflare (Workers Static Assets) SOMENTE
