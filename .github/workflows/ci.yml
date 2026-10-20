@@ -124,17 +124,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-      # Chrome + ChromeDriver na MESMA versão (Chrome for Testing), para o
-      # flutter drive rodar o app no navegador. Importante usar o Chrome que
-      # esta action instala (via CHROME_EXECUTABLE no passo do flutter drive) e
-      # o chromedriver pelo caminho exato que ela devolve — senão o Flutter pega
-      # o /opt/google/chrome do runner (versão diferente) e o driver recusa a
-      # sessão por incompatibilidade de major.
-      - name: Configurar Chrome + ChromeDriver
-        id: chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          install-chromedriver: true
+      # Chrome + ChromeDriver: usa os que o runner ubuntu já traz, casados por
+      # construção (o Chrome fica em /opt/google/chrome e o ChromeDriver em
+      # $CHROMEWEBDRIVER, na mesma versão). Tentar instalar outro Chrome/driver
+      # (Chrome for Testing) causava mismatch de major — o flutter drive insiste
+      # no Chrome do sistema. Aqui só confirmamos as versões no log.
+      - name: Conferir Chrome + ChromeDriver do runner
+        run: |
+          echo "Chrome:       $(google-chrome --version 2>/dev/null || /opt/google/chrome/chrome --version)"
+          echo "CHROMEWEBDRIVER=$CHROMEWEBDRIVER"
+          echo "ChromeDriver: $($CHROMEWEBDRIVER/chromedriver --version)"
       # --- Firebase Auth Emulator ---
       - name: Instalar firebase-tools
         run: npm install -g firebase-tools
@@ -186,12 +185,9 @@ jobs:
           fi
       # --- integration_test via flutter drive + ChromeDriver ---
       - name: ChromeDriver (background)
-        env:
-          CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: |
-          echo "ChromeDriver: $CHROMEDRIVER"
-          echo "Chrome:       ${{ steps.chrome.outputs.chrome-path }}"
-          "$CHROMEDRIVER" --port=4444 > "$RUNNER_TEMP/chromedriver.log" 2>&1 &
+          # ChromeDriver do runner, casado com o Chrome do sistema.
+          "$CHROMEWEBDRIVER/chromedriver" --port=4444 > "$RUNNER_TEMP/chromedriver.log" 2>&1 &
           for i in $(seq 1 30); do
             if curl -sf "http://127.0.0.1:4444/status" > /dev/null; then
               echo "ChromeDriver no ar."; ok=1; break
@@ -204,11 +200,6 @@ jobs:
       - name: Rodar o E2E (integration_test)
         working-directory: app
         timeout-minutes: 12
-        env:
-          # Garante que o flutter drive use o Chrome (for Testing) que a action
-          # instalou — a mesma major do ChromeDriver acima — e não o Chrome do
-          # sistema (/opt/google/chrome), que tem versão diferente.
-          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
         run: |
           # firebase_options.dart é gitignored (um por ambiente); usa o de E2E.
           cp lib/firebase_options.e2e.dart lib/firebase_options.dart
