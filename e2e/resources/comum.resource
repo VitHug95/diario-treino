@@ -26,30 +26,29 @@ ${CADASTRADO}       ${FALSE}
 
 *** Keywords ***
 Digitar no campo
-    [Documentation]    Campo de texto do Flutter web vem como input disabled até
-    ...                receber foco. Focar liga o input; o resto é digitado pelo
-    ...                teclado. Fill Text puro falha no input disabled, por isso
-    ...                não é usado aqui.
-    ...                Nota de versão: nesta Browser Library o keyword Click NÃO
-    ...                aceita force; quem aceita force é o Fill Text. Para focar
-    ...                usamos Focus (dispara o foco do Flutter e habilita o input).
+    [Documentation]    Preenche um campo de texto do Flutter web.
     ...
-    ...                Digitação: usa Keyboard Input `type` (digita caractere a
-    ...                caractere, com keydown/keypress/keyup reais), NÃO
-    ...                `insertText`. O Flutter web espelha o valor do <input> no
-    ...                framework a partir dos eventos de teclado; `insertText`
-    ...                injeta o texto no DOM sem esses eventos, e o Flutter não
-    ...                registra o valor — o cadastro era enviado "vazio" e a
-    ...                validação barrava o fluxo (1º run do CI: a tela continuava
-    ...                no cadastro com as mensagens de campo obrigatório). O
-    ...                `delay` dá tempo do framework processar cada tecla; o
-    ...                Sleep final garante o valor comitado antes do próximo passo.
+    ...                ALVO: precisa ser o seletor do <input> REAL, não o nó de
+    ...                semântica. Em Flutter web com a árvore de semântica ligada,
+    ...                o Semantics(label:, textField:) que embrulha o TextField faz
+    ...                o PRÓPRIO <input> receber o aria-label (flutter#172206). Um
+    ...                seletor como [aria-label="Nome"] pode casar no nó
+    ...                <flt-semantics> (não editável) em vez do <input> — focar e
+    ...                digitar ali não alimenta o TextEditingController, e o campo
+    ...                fica vazio. Por isso os chamadores passam input[aria-label=...]
+    ...                (ou //input[@aria-label=...]).
+    ...
+    ...                MÉTODO: Fill Text (Playwright `fill`) foca o elemento e
+    ...                dispara o evento `input`, que é o que o Flutter web escuta
+    ...                para espelhar o valor no framework. force=True contorna o
+    ...                estado inicial do input (que vem "disabled" até o foco).
+    ...                Histórico: Keyboard insertText e Keyboard type NÃO
+    ...                funcionaram — miravam a semântica e/ou não disparavam o
+    ...                evento certo; o cadastro ia vazio e a validação barrava o
+    ...                fluxo (confirmado por screenshot/body nos 1º e 2º runs).
     [Arguments]    ${seletor}    ${texto}
-    Focus    ${seletor}
-    Keyboard Key    press    Control+a
-    Keyboard Key    press    Delete
-    Keyboard Input    type    ${texto}    delay=30
-    Sleep    200ms
+    Fill Text    ${seletor}    ${texto}    force=True
+    Sleep    100ms
 
 Abrir o app
     [Documentation]    Abre o navegador e carrega o app; espera o login montar.
@@ -82,9 +81,9 @@ Cadastrar e entrar
     [Arguments]    ${email}
     Click    role=button[name="Criar conta"]
     Wait For Elements State    role=button[name="CRIAR CONTA"]    visible
-    Digitar no campo    [aria-label="Nome"]    Atleta E2E
-    Digitar no campo    [aria-label="E-mail"]    ${email}
-    Digitar no campo    [aria-label="Senha"]    ${SENHA}
+    Digitar no campo    input[aria-label="Nome"]    Atleta E2E
+    Digitar no campo    input[aria-label="E-mail"]    ${email}
+    Digitar no campo    input[aria-label="Senha"]    ${SENHA}
     Click    role=button[name="CRIAR CONTA"]
     # Depois do cadastro, o usuário sem ficha/sessão cai no Primeiro acesso
     # (PBI-68/09), cujo caminho para o treino é o botão "Registrar treino"
@@ -103,7 +102,7 @@ Registrar um treino livre
     # Treino livre começa vazio: "Adicionar exercício" abre o seletor.
     Click    role=button[name="Adicionar exercício"]
     Wait For Elements State    [aria-label="Buscar por nome"]    visible
-    Digitar no campo    [aria-label="Buscar por nome"]    Supino
+    Digitar no campo    input[aria-label="Buscar por nome"]    Supino
     # Seletor de vários (PBI-49): o item é um botão "Adicionar <nome>"; o rodapé
     # confirma a seleção com "ADICIONAR 1 EXERCÍCIO".
     Wait For Elements State
@@ -158,7 +157,7 @@ Limpar conta pelo perfil
     Wait For Elements State    role=button[name="Excluir conta"]    visible    timeout=3s
     Click    role=button[name="Excluir conta"]
     Wait For Elements State    [aria-label="EXCLUIR"]    visible    timeout=3s
-    Digitar no campo    [aria-label="EXCLUIR"]    EXCLUIR
+    Digitar no campo    input[aria-label="EXCLUIR"]    EXCLUIR
     # O diálogo tem outro botão "Excluir conta"; pega o último (o do diálogo).
     Click    role=button[name="Excluir conta"] >> nth=-1
 
