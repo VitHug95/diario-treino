@@ -479,6 +479,28 @@ Início: nome/e-mail do `GET /me`, seletor de tema (PBI-24), "Sair" e "Excluir
 conta" com confirmação digitada ("EXCLUIR"). Testes: integração (apaga tudo do
 usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
+#### PBI-82 · Calendário do mês a partir do cartão "Esta semana"
+**História:** Como atleta, quero abrir o mês inteiro a partir do cartão "Esta
+semana" e navegar de mês em mês, para ver em que dias treinei e abrir o que foi
+feito em cada dia.
+
+**Critérios de aceite**
+- Link (ícone de calendário) no cartão "Esta semana" abre o calendário do mês atual.
+- Grade seg→dom com a mesma marca de dia da semana (treinou, hoje, passado sem treino, futuro); "N dias treinados" do mês exibido.
+- Seta de mês anterior sem limite; seta de mês seguinte para no mês atual; "Hoje" volta a ele fora do mês atual.
+- Tocar num dia passado abre a folha do dia (ver/registrar); dia futuro não abre.
+- Mês sem treino mostra "0 dias treinados"; falha de rede mostra "Tentar de novo", nunca um mês vazio falso.
+- Salvar/editar/excluir sessão atualiza o calendário aberto (PBI-70).
+
+**Notas técnicas:** só front. Reusa `GET /sessoes?de=&ate=` (sem endpoint novo,
+sem mudança de banco). `MarcaDia`/`CirculoTracejado` extraídos para
+`shared/calendario/`; `CalendarioMes.semanasDoMes` é função pura testável.
+`sessoesDoMesProvider` (família por mês) entra no mapa de invalidação (PBI-70).
+Rota `/mes` filha da Início. Os dias passados sem treino levam um "X" (semana e mês).
+**Depende de:** PBI-22, PBI-23, PBI-59.
+**Status:** ✅ FEITO (front). `flutter analyze` 0 e suíte verde; testes da função
+de meses, da tela, do link na Início e da invalidação do mês.
+
 #### PBI-26 · Teste E2E do fluxo principal
 **História:** Como time, queremos um teste automatizado do caminho mais importante, para publicar sem medo de quebrar o que já funciona.
 
