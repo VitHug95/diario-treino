@@ -277,24 +277,30 @@ class _CartaoSemana extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
             child: Row(
               children: [
-                Flexible(
-                  child: Text('ESTA SEMANA',
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.overline.copyWith(color: cores.textSecondary)),
-                ),
-                if (treinados != null) ...[
-                  const SizedBox(width: AppSpacing.x8),
-                  Flexible(
-                    child: Text(
-                        '$treinados ${treinados == 1 ? 'dia treinado' : 'dias treinados'}',
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.end,
-                        style: AppText.caption.copyWith(color: cores.textStrong)),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text('ESTA SEMANA',
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.overline
+                                .copyWith(color: cores.textSecondary)),
+                      ),
+                      if (treinados != null) ...[
+                        const SizedBox(width: AppSpacing.x8),
+                        Flexible(
+                          child: Text(
+                              '$treinados ${treinados == 1 ? 'dia treinado' : 'dias treinados'}',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption
+                                  .copyWith(color: cores.textStrong)),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-                const SizedBox(width: AppSpacing.x4),
-                // "Ver mês": abre o calendário (PBI-82). Alvo de 44 px. O texto
-                // encolhe antes do ícone; o ícone sempre garante o toque.
+                ),
+                // Calendário do mês (PBI-82): só o ícone, no canto direito.
+                // Alvo de 44 px; o Semantics dá o rótulo falado.
                 Semantics(
                   button: true,
                   label: 'Ver calendário do mês',
@@ -305,21 +311,8 @@ class _CartaoSemana extends StatelessWidget {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
                           minHeight: AppSizes.touchMin, minWidth: AppSizes.touchMin),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.calendar,
-                                size: AppSizes.iconeSm, color: cores.primaryText),
-                            const SizedBox(width: AppSpacing.x4),
-                            Text('Ver mês',
-                                style: AppText.caption.copyWith(
-                                    color: cores.primaryText,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
+                      child: Icon(LucideIcons.calendar,
+                          size: AppSizes.iconeSm, color: cores.primaryText),
                     ),
                   ),
                 ),
