@@ -26,29 +26,41 @@ ${CADASTRADO}       ${FALSE}
 
 *** Keywords ***
 Digitar no campo
-    [Documentation]    Preenche um campo de texto do Flutter web.
+    [Documentation]    Preenche um campo de texto do Flutter web (CanvasKit).
     ...
-    ...                ALVO: precisa ser o seletor do <input> REAL, não o nó de
-    ...                semântica. Em Flutter web com a árvore de semântica ligada,
-    ...                o Semantics(label:, textField:) que embrulha o TextField faz
-    ...                o PRÓPRIO <input> receber o aria-label (flutter#172206). Um
-    ...                seletor como [aria-label="Nome"] pode casar no nó
-    ...                <flt-semantics> (não editável) em vez do <input> — focar e
-    ...                digitar ali não alimenta o TextEditingController, e o campo
-    ...                fica vazio. Por isso os chamadores passam input[aria-label=...]
-    ...                (ou //input[@aria-label=...]).
+    ...                ALVO: o <input> REAL, não o nó de semântica. O
+    ...                Semantics(label:, textField:) que embrulha o TextField faz o
+    ...                PRÓPRIO <input> receber o aria-label (flutter#172206); por
+    ...                isso os chamadores passam input[aria-label=...].
     ...
-    ...                MÉTODO: Fill Text (Playwright `fill`) foca o elemento e
-    ...                dispara o evento `input`, que é o que o Flutter web escuta
-    ...                para espelhar o valor no framework. force=True contorna o
-    ...                estado inicial do input (que vem "disabled" até o foco).
-    ...                Histórico: Keyboard insertText e Keyboard type NÃO
-    ...                funcionaram — miravam a semântica e/ou não disparavam o
-    ...                evento certo; o cadastro ia vazio e a validação barrava o
-    ...                fluxo (confirmado por screenshot/body nos 1º e 2º runs).
+    ...                MÉTODO (o porquê desta combinação): o Flutter web CanvasKit
+    ...                cria o <input> editável e só liga os listeners de teclado
+    ...                DEPOIS que o campo recebe foco por interação. Preencher antes
+    ...                disso é descartado — o input é "limpo preguiçosamente" e os
+    ...                listeners entram tarde (padrão de hibernação, Playwright
+    ...                #22610). Foi o que derrubou as 3 tentativas anteriores:
+    ...                  - insertText: injeta no DOM sem eventos de teclado;
+    ...                  - type com Focus + alvo [aria-label] (nó semântico);
+    ...                  - Fill Text: preenche instantaneamente, antes dos listeners.
+    ...                Em todos, o api.log confirmou "Authorization header? false"
+    ...                — ou seja, cadastro nunca completava (campos vazios), não um
+    ...                problema de token.
+    ...
+    ...                Combinação que respeita o ciclo do Flutter:
+    ...                  1. Click no <input> (interação real liga o editável, ao
+    ...                     contrário de Focus);
+    ...                  2. Sleep para o Flutter ligar os listeners de teclado;
+    ...                  3. Keyboard Input `type` (tecla a tecla, com keydown/press/
+    ...                     keyup reais e delay), que é o pressSequentially do
+    ...                     Playwright — o indicado quando a página reage a cada
+    ...                     tecla. Control+a+Delete limpa antes de digitar.
     [Arguments]    ${seletor}    ${texto}
-    Fill Text    ${seletor}    ${texto}    force=True
-    Sleep    100ms
+    Click    ${seletor}
+    Sleep    250ms
+    Keyboard Key    press    Control+a
+    Keyboard Key    press    Delete
+    Keyboard Input    type    ${texto}    delay=40ms
+    Sleep    200ms
 
 Abrir o app
     [Documentation]    Abre o navegador e carrega o app; espera o login montar.
