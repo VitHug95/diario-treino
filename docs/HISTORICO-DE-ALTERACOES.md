@@ -121,6 +121,20 @@ fechados sem merge.
 | #90 | PBI-71 | "Registrar treino" fixo na Início: sheet "Qual treino?" com as fichas que têm exercícios e "Sem ficha"; sem plano, direto ao treino livre. |
 | #91 | PBI-72 | "Manter na ficha?": `POST /sessoes` com `manterNaFicha` grava sessão e ficha na mesma transação (séries salvas e alvo da última); 400/403/404 sem gravar nada; `GET /treinos/{id}` com `somenteLeitura`; diálogo no Resumo e no registro, etiqueta "Fora da ficha". |
 
+## Correções de uso real, backup, contraste e calendário · 19 e 20/10
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #93 | PBI-77 | Plano novo nasce em uso quando não há plano em uso (planos escondidos não contam); migration de reparo `ReparoPlanoEmUso`. |
+| #94 | PBI-74 | Um exercício por ficha e por sessão: 409 ao adicionar à ficha, 400 ao salvar a sessão; seletor desabilita quem já está presente. |
+| #95 | PBI-78, 79 | Editor de alvos abre sempre com o dado atual (não reabre em branco); resumo da ficha mostra a faixa de repetições e "65 kg" (não "65 carga"). |
+| #96 | PBI-73 | Gráfico de progresso decide a grandeza por exercício: sem carga, usa repetições. |
+| #97 | PBI-76 | "Manter na ficha?": avisa quando não consegue ler a ficha e firma os três botões em coluna. |
+| #98 | PBI-80 | Tocar numa aba sempre abre a raiz dela (ADR-11). |
+| #100, #102 | PBI-05 | Backup semanal do banco no CI (`pg_dump` do Neon guardado fora, em artifact); restauração testada. |
+| #101 | PBI-24 | Conferência de contraste 4,5:1 nos dois temas, travada por teste. |
+| #104 a #106 | PBI-82 | Calendário do mês a partir do cartão "Esta semana": grade seg→dom, navegação por mês, folha do dia; ícone de calendário no canto e "X" nos dias passados sem treino. |
+
 ---
 
 ## Migrations do banco
@@ -135,6 +149,7 @@ fechados sem merge.
 | `20261015051429_TagDeSerie` | PBI-38 | Marcador por série e por rodada. |
 | `20261015124844_FaixaRepeticoes` | PBI-39 | `volume_alvo_max` com `CHECK`. |
 | `20261015204940_PlanosVariosEmUso` | PBI-44 | Coluna `em_uso` e vários planos por atleta. |
+| `20261019145756_ReparoPlanoEmUso` | PBI-77 | Reparo de dados: marca em uso o plano ativo com a sessão mais recente para atletas sem plano em uso. |
 
 ## Infraestrutura
 
@@ -149,7 +164,6 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- PBI-05: backup do banco (aguarda a escolha entre artifact do GitHub Actions com criptografia e Cloudflare R2).
 - PBI-26: E2E completo com Robot. Os passos que esperam "Treino registrado" ou "Ir para o Início" precisam esperar o aviso "Treino salvo" (PBI-64), e o passo de escolher exercício mudou com a PBI-49.
 - PBI-48 e o épico do educador (E7), na próxima sprint.
 - PBI-34 (trocar a métrica no registro), PBI-35 (cronograma semanal) e cardio (PBI-27 a 30).
