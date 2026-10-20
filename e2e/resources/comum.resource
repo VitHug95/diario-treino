@@ -33,10 +33,23 @@ Digitar no campo
     ...                Nota de versão: nesta Browser Library o keyword Click NÃO
     ...                aceita force; quem aceita force é o Fill Text. Para focar
     ...                usamos Focus (dispara o foco do Flutter e habilita o input).
+    ...
+    ...                Digitação: usa Keyboard Input `type` (digita caractere a
+    ...                caractere, com keydown/keypress/keyup reais), NÃO
+    ...                `insertText`. O Flutter web espelha o valor do <input> no
+    ...                framework a partir dos eventos de teclado; `insertText`
+    ...                injeta o texto no DOM sem esses eventos, e o Flutter não
+    ...                registra o valor — o cadastro era enviado "vazio" e a
+    ...                validação barrava o fluxo (1º run do CI: a tela continuava
+    ...                no cadastro com as mensagens de campo obrigatório). O
+    ...                `delay` dá tempo do framework processar cada tecla; o
+    ...                Sleep final garante o valor comitado antes do próximo passo.
     [Arguments]    ${seletor}    ${texto}
     Focus    ${seletor}
     Keyboard Key    press    Control+a
-    Keyboard Input    insertText    ${texto}
+    Keyboard Key    press    Delete
+    Keyboard Input    type    ${texto}    delay=30
+    Sleep    200ms
 
 Abrir o app
     [Documentation]    Abre o navegador e carrega o app; espera o login montar.
