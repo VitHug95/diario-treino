@@ -206,6 +206,11 @@ jobs:
           # firebase_options.dart é gitignored (um por ambiente); usa o de E2E.
           cp lib/firebase_options.e2e.dart lib/firebase_options.dart
           flutter pub get
+          # tee + PIPESTATUS: o stdout do teste (inclui o diagnóstico "Textos
+          # visíveis na tela" em falha) vai para o console E para drive.log, que
+          # é publicado no artefato — assim a falha é inspecionável sem precisar
+          # copiar o log do job. O exit code é o do flutter drive, não do tee.
+          set -o pipefail
           flutter drive \
             --driver=test_driver/integration_test.dart \
             --target=integration_test/fluxo_pbi26_test.dart \
@@ -216,7 +221,8 @@ jobs:
             --dart-define=TREINO_AO_VIVO=false \
             --dart-define=USE_AUTH_EMULATOR=true \
             --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
-            --dart-define=AUTH_EMULATOR_PORT=9099
+            --dart-define=AUTH_EMULATOR_PORT=9099 \
+            2>&1 | tee "$RUNNER_TEMP/drive.log"
       - name: Logs dos serviços (diagnóstico em falha)
         if: failure()
         run: |
@@ -229,6 +235,7 @@ jobs:
         with:
           name: e2e-resultados
           path: |
+            ${{ runner.temp }}/drive.log
             ${{ runner.temp }}/api.log
             ${{ runner.temp }}/emulator.log
             ${{ runner.temp }}/chromedriver.log
