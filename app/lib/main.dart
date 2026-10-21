@@ -11,11 +11,20 @@ import 'core/tema/tema_controller.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
 
   // Árvore de semântica habilitada no web (ADR-07): sem ela o Flutter web
-  // desenha em canvas e os testes E2E (Robot) não acham elementos no DOM.
-  SemanticsBinding.instance.ensureSemantics();
+  // desenha em canvas e os testes não acham elementos pela semântica.
+  //
+  // Sob integration_test, o testWidgets JÁ liga a semântica e dispõe o handle
+  // ao fim; chamar ensureSemantics() aqui criaria um 2º handle que ninguém
+  // dispõe, e o teste falha no encerramento ("A SemanticsHandle was active at
+  // the end of the test"). Então só ligamos manualmente fora de teste — o nome
+  // do binding de teste contém "Test" (evita acoplar flutter_test à produção).
+  final sobTeste = binding.runtimeType.toString().contains('Test');
+  if (!sobTeste) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
