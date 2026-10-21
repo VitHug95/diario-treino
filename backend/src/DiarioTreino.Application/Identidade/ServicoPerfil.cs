@@ -21,9 +21,8 @@ public sealed class ServicoPerfil
         IdentidadeDoChamador identidade,
         CancellationToken ct)
     {
-        var usuario = await _repositorio.ObterPorFirebaseUidAsync(identidade.FirebaseUid, ct);
-
-        usuario ??= await ProvisionarAsync(identidade, ct);
+        var usuario = await _repositorio.ObterPorFirebaseUidAsync(identidade.FirebaseUid, ct)
+            ?? await ProvisionarAsync(identidade, ct);
 
         var papeis = usuario.Papeis.Select(p => p.Papel).OrderBy(p => p).ToList();
         return new PerfilUsuario(usuario.Id, usuario.Nome, usuario.Email, papeis);
@@ -54,9 +53,21 @@ public sealed class ServicoPerfil
         };
         usuario.Papeis.Add(new UsuarioPapel { UsuarioId = usuario.Id, Papel = Papeis.Atleta });
 
-        _repositorio.Adicionar(usuario);
-        await _repositorio.SalvarAsync(ct);
-        return usuario;
+        // Tolera corrida: no primeiro acesso o app dispara chamadas autenticadas
+        // em paralelo (planos/sessões no boot), e todas tentam provisionar o
+        // mesmo usuário. Se a inserção colidir no índice único, outra chamada já
+        // criou o usuário — re-busca em vez de estourar 500.
+        if (await _repositorio.TentarInserirUsuarioAsync(usuario, ct))
+        {
+            return usuario;
+        }
+
+        var existente = await _repositorio.ObterPorFirebaseUidAsync(identidade.FirebaseUid, ct);
+        // Em tese sempre existe aqui (o conflito prova que foi inserido); a
+        // checagem evita um null silencioso se a corrida for em outra coluna.
+        return existente
+            ?? throw new InvalidOperationException(
+                "Falha ao provisionar o usuário: conflito de inserção sem registro correspondente.");
     }
 
     private static string DerivarNome(string? email)

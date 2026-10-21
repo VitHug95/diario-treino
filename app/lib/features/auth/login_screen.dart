@@ -113,6 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     CampoHeader(
                       controller: _email,
                       hint: 'seu@email.com',
+                      rotulo: 'E-mail',
                       keyboardType: TextInputType.emailAddress,
                       autofill: const [AutofillHints.email],
                       validator: (v) => (v == null || !v.contains('@'))
@@ -125,6 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     CampoHeader(
                       controller: _senha,
                       hint: 'Sua senha',
+                      rotulo: 'Senha',
                       obscure: true,
                       autofill: const [AutofillHints.password],
                       validator: (v) =>

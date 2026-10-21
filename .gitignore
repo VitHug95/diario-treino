@@ -38,6 +38,13 @@ app/ios/Runner/GoogleService-Info.plist
 *.pem
 appsettings.*.local.json
 
+# ---------- E2E ----------
+# O E2E migrou para integration_test (app/integration_test/); a pasta e2e/ só
+# guarda o firebase.json do Auth Emulator. Resíduos locais do antigo Robot:
+e2e/resultados/
+e2e/browser/
+e2e/playwright-log.txt
+
 # ---------- Sistema operacional ----------
 Thumbs.db
 .DS_Store

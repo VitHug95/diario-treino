@@ -49,11 +49,16 @@ try
 
     // CORS: o app web chama a API de outra origem (dev: localhost do Flutter;
     // produção: domínio do front). As origens vêm da configuração
-    // "Cors:OrigensPermitidas" (lista). Em Development, se nada for informado,
-    // libera qualquer localhost para não travar o desenvolvimento.
+    // "Cors:OrigensPermitidas" (lista). Em Development OU no modo emulador
+    // (E2E), se nada for informado, libera qualquer localhost — o Flutter web
+    // (flutter run / flutter drive) usa uma porta ALEATÓRIA em localhost, que
+    // não dá para fixar na lista. Em produção a lista é sempre informada.
     const string politicaCors = "AppWeb";
     var origensPermitidas = builder.Configuration
         .GetSection("Cors:OrigensPermitidas").Get<string[]>() ?? [];
+    // Mesmo sinal de E2E usado na autenticação: quando o emulador está ligado.
+    var modoEmulador = !string.IsNullOrWhiteSpace(
+        builder.Configuration["Firebase:AuthEmulatorHost"]);
     builder.Services.AddCors(options =>
     {
         options.AddPolicy(politicaCors, policy =>
@@ -62,7 +67,7 @@ try
             {
                 policy.WithOrigins(origensPermitidas);
             }
-            else if (builder.Environment.IsDevelopment())
+            else if (builder.Environment.IsDevelopment() || modoEmulador)
             {
                 // Flutter web usa porta aleatória em localhost; libera todas.
                 policy.SetIsOriginAllowed(origem =>

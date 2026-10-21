@@ -13,6 +13,16 @@ public interface IRepositorioUsuario
     public Task SalvarAsync(CancellationToken ct);
 
     /// <summary>
+    /// Insere um usuário recém-provisionado tolerando corrida: no primeiro
+    /// acesso o app pode disparar várias chamadas autenticadas em paralelo
+    /// (ex.: planos e sessões no boot), e todas tentam provisionar o mesmo
+    /// usuário. Retorna <c>false</c> quando a inserção colide no índice único
+    /// (email/firebase_uid) — sinal de que outra chamada já provisionou — para
+    /// o chamador re-buscar o usuário em vez de estourar 500.
+    /// </summary>
+    public Task<bool> TentarInserirUsuarioAsync(Usuario usuario, CancellationToken ct);
+
+    /// <summary>
     /// Exclui a conta do usuário e todos os seus dados (sessões, planos/fichas,
     /// vínculos, exercícios próprios, papéis e o próprio usuário), numa única
     /// transação. Hard delete: exclusão de conta é o caso em que o atleta quer

@@ -11,11 +11,20 @@ import 'core/tema/tema_controller.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
 
   // Árvore de semântica habilitada no web (ADR-07): sem ela o Flutter web
-  // desenha em canvas e os testes E2E (Robot) não acham elementos no DOM.
-  SemanticsBinding.instance.ensureSemantics();
+  // desenha em canvas e os testes não acham elementos pela semântica.
+  //
+  // Sob integration_test, o testWidgets JÁ liga a semântica e dispõe o handle
+  // ao fim; chamar ensureSemantics() aqui criaria um 2º handle que ninguém
+  // dispõe, e o teste falha no encerramento ("A SemanticsHandle was active at
+  // the end of the test"). Então só ligamos manualmente fora de teste — o nome
+  // do binding de teste contém "Test" (evita acoplar flutter_test à produção).
+  final sobTeste = binding.runtimeType.toString().contains('Test');
+  if (!sobTeste) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -27,6 +36,14 @@ Future<void> main() async {
   if (usarAuthEmulator) {
     await FirebaseAuth.instance
         .useAuthEmulator(authEmulatorHost, authEmulatorPorta);
+    // Atalho de login do E2E (SOMENTE com o emulador): entra já autenticado,
+    // sem passar pela digitação na tela de cadastro. O teste E2E do PBI-26 roda
+    // com integration_test (tester.enterText na árvore de widgets) e não exerce
+    // a tela de login — por isso o usuário é provisionado aqui no boot. Com o
+    // usuário logado, o redirect do go_router cai direto na Início e o
+    // TokenInterceptor anexa o ID token do emulador às chamadas da API.
+    // Em produção (usarAuthEmulator=false) nada disto roda.
+    await _autenticarParaE2E();
   }
 
   final prefs = await SharedPreferences.getInstance();
@@ -39,4 +56,36 @@ Future<void> main() async {
       child: const DiarioTreinoApp(),
     ),
   );
+}
+
+/// Login automático do E2E (PBI-26), usado só com o Firebase Auth Emulator.
+/// Tenta entrar com um usuário fixo de teste; se ele ainda não existe no
+/// emulador, cria e entra. Qualquer falha é apenas registrada (o app abre na
+/// tela de login e o teste falha de forma visível) — nunca derruba o boot.
+Future<void> _autenticarParaE2E() async {
+  const email = 'e2e@teste.local';
+  const senha = 'Teste@12345';
+  final auth = FirebaseAuth.instance;
+  try {
+    try {
+      await auth.signInWithEmailAndPassword(email: email, password: senha);
+      debugPrint('E2E auto-login: signIn OK');
+    } on FirebaseAuthException catch (e) {
+      // Primeira execução: o usuário ainda não existe no emulador.
+      if (e.code == 'user-not-found' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'invalid-login-credentials') {
+        final cred = await auth.createUserWithEmailAndPassword(
+            email: email, password: senha);
+        await cred.user?.updateDisplayName('Atleta E2E');
+        await cred.user?.reload();
+        debugPrint('E2E auto-login: createUser OK');
+      } else {
+        rethrow;
+      }
+    }
+    debugPrint('E2E auto-login: currentUser=${auth.currentUser?.uid}');
+  } catch (e) {
+    debugPrint('E2E auto-login FALHOU: $e');
+  }
 }
