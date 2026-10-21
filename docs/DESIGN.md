@@ -125,6 +125,14 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
 - Continuar treino (PBI-37): card `primary-tint` com `primary-on-tint` na
   Início, raio 16, mostrando a ficha e "X de Y marcados".
 - Aviso de pré-preenchimento: `primary-tint` com `primary-on-tint`, raio 8.
+- Aviso curto (PBI-75): confirmação do que já aconteceu, **sem ação**. Pílula
+  flutuante (`SnackBarBehavior.floating`, `StadiumBorder`) em `primary-tint`
+  com texto `primary-on-tint` no estilo `label`, nunca a barra preta do
+  Material. Some sozinha em ~2 s, flutua acima da navegação inferior sem cobrir
+  o botão principal, `liveRegion` para o leitor de tela. Dois avisos não
+  empilham. Use para "Ficha criada" e afins; `mostrarAviso` em `shared/`.
+  Quando o aviso precisa de ação (desfazer, ver) ou comunica erro, use outro
+  componente — não esta pílula.
 - Bloco de observação: `obs-tint`, borda `obs-line`, título `obs-title`, corpo `obs-body`, raio 16.
 - Chip de filtro: pílula 44. Selecionado: fundo `text-primary`, texto `bg-surface`.
 - Abas segmentadas: trilho `bg-track` 4px de respiro, raio 12; aba ativa `bg-surface` raio 9.

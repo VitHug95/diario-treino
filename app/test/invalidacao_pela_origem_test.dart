@@ -235,10 +235,9 @@ void main() {
     await tester.tap(_noDialogo('Salvar'));
     await _assentar(tester);
 
-    // Fica no detalhe do plano, com a ficha na lista e o atalho; a ficha não
-    // abre sozinha.
+    // Fica no detalhe do plano, com a ficha na lista; a ficha não abre sozinha.
+    // A confirmação é só um aviso curto, sem ação (PBI-75).
     expect(find.text('Ficha “A” criada'), findsOneWidget);
-    expect(find.text('Adicionar exercícios'), findsOneWidget);
     expect(find.text('Nenhuma ficha ainda'), findsNothing);
     expect(find.byTooltip('A: adicione exercícios para treinar'), findsOneWidget);
 
