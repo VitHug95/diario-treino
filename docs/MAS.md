@@ -17,7 +17,7 @@ O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com de
 
 **Concluído e na `main`:** fundação back/front (PBI-01 a 03), publicação (PBI-04), autenticação Firebase, `/me` e controle de acesso centralizado (PBI-06 a 08), catálogo com 89 exercícios globais, busca, criação e filtro por membro e músculo (PBI-10, 11, 31, 32, 54), fichas (PBI-12 a 14, 36), registro de sessão com edição, exercício fora da ficha e treino livre (PBI-15 a 19), primeiro acesso (PBI-09), tela inicial com semana, último treino e dicas (PBI-23, 59, 60), progresso com gráfico, observação no ponto e lista de sessões (PBI-20 a 22), perfil, tema e exclusão de conta (PBI-25 e parte da 24), treino em andamento (PBI-37), épico **Treino ao vivo, série por série** (TV-1 a TV-6 = PBI-38 a 43), épico **Planos** com vários planos e um em uso (PBI-44 a 47, 49), ajustes de layout (PBI-50 a 55 e 57 a 67), correções e fluxos de entrada (PBI-68 a 72: sem plano, criar plano, Registrar treino, "Manter na ficha?", atualização das telas pela origem da mudança) e as correções de uso real de 16 a 19/10 (**PBI-73, 74, 76, 77, 78, 79 e 80**).
 
-**Pendente:** backup do banco (PBI-05), conferência final de contraste 4,5:1 nos dois temas (fecha a PBI-24), E2E Robot completo (PBI-26; hoje há teste de fluxo em `flutter test`), trocar a métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75), modo educador (PBI-48 e épico E7) e todo o incremento 2 de cardio (PBI-27 a 30).
+**Pendente:** trocar a métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75), modo educador (PBI-48 e épico E7) e todo o incremento 2 de cardio (PBI-27 a 30). (Backup PBI-05, contraste PBI-24 e E2E PBI-26 concluídos.)
 
 ## 2. Visão do produto em uma frase
 
@@ -100,9 +100,9 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Consequência:** um modelo único atende todas as modalidades, e os gráficos conseguem agrupar porque a métrica nunca é texto livre.
 
 ### ADR-07: Flutter web primeiro, com semântica habilitada
-- **Contexto:** publicar na Apple Store custa caro e só compensa se houver venda; testes E2E serão em Robot Framework.
+- **Contexto:** publicar na Apple Store custa caro e só compensa se houver venda.
 - **Decisão:** publicar primeiro como web. Habilitar a árvore de semântica do Flutter (`SemanticsBinding.instance.ensureSemantics()`) e dar rótulo a todo campo e botão.
-- **Consequência:** o Flutter web desenha em canvas; sem semântica, o Robot não encontra elementos no DOM. Com ela, os testes ficam estáveis e o app ganha acessibilidade de brinde.
+- **Consequência:** o Flutter web desenha em canvas (CanvasKit); a semântica dá acessibilidade e rótulos estáveis. **Atualização (PBI-26):** o E2E de UI *não* é feito por fora (Robot/Playwright pelo DOM) — no CanvasKit os campos de texto não aceitam entrada via DOM de forma confiável. O E2E usa `integration_test`, que dirige a árvore de widgets (`tester.enterText`). Ver PBI-26 no BACKLOG.
 
 ### ADR-08: Tema claro e escuro no mesmo app
 - **Status:** implementado, com um item em aberto. Design system por tokens no ar; botão sol/lua na Início e **opção tríplice (Sistema/Claro/Escuro) na tela de Perfil** (`TemaController` + `shared_preferences`, padrão `ThemeMode.system`). Falta só a conferência final de contraste 4,5:1 em todas as telas do MVP nos dois temas (**PBI-24**).
@@ -193,8 +193,10 @@ src/
 tests/
   DiarioTreino.UnitTests/         xUnit: domínio e casos de uso
   DiarioTreino.IntegrationTests/  xUnit + Testcontainers (Postgres real) + WebApplicationFactory
+app/
+  integration_test/               E2E (PBI-26): flutter drive + ChromeDriver contra a stack real
 e2e/
-  robot/                          Robot Framework + Browser library contra o app web
+  firebase.json                   config do Firebase Auth Emulator (usada pelo job e2e)
 ```
 
 Regra de dependência: `Api → Application → Domain` e `Infrastructure → Application`. O domínio não conhece EF Core, Firebase nem HTTP.
@@ -285,6 +287,11 @@ sequenceDiagram
 - Authority: `https://securetoken.google.com/<id-do-projeto-firebase>`.
 - Emissor válido: o mesmo endereço; audiência válida: o id do projeto.
 - Nenhuma chave secreta guardada na API: as chaves públicas do Google são obtidas automaticamente.
+- **Modo emulador (só no E2E, PBI-26):** quando `Firebase:AuthEmulatorHost` está
+  definido, a API aceita os tokens do Firebase Auth Emulator — emissor e
+  audiência continuam validados, mas a assinatura é dispensada
+  (`RequireSignedTokens=false` + `SignatureValidator`), pois o emulador emite
+  tokens `alg:none`. Em produção a variável fica vazia e nada disto é ativado.
 
 ### 11.3 Regra única de autorização
 
@@ -383,7 +390,7 @@ flowchart LR
 |---|---|---|
 | Unitário | xUnit | Regras de domínio, controle de acesso, cálculo de pré-preenchimento |
 | Integração | xUnit + Testcontainers + WebApplicationFactory | Endpoints com Postgres real e token falso assinado localmente |
-| E2E | Robot Framework + Browser library | Fluxo principal no app web: entrar, registrar treino, ver no gráfico |
+| E2E | `integration_test` (`flutter drive` + ChromeDriver) | Fluxo principal contra a stack real (Postgres + API + Auth Emulator): entrar, registrar treino, ver no progresso |
 | Front | flutter_test | Widgets críticos (formulário de série, filtro de período) |
 
 Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do nível adequado passando no CI, migration criada quando houver mudança de banco, este documento atualizado se alguma decisão mudou.

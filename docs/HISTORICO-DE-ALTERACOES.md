@@ -141,7 +141,7 @@ fechados sem merge.
 - API no Fly.io (`gru`), deploy automático no CI desde o PR #32.
 - Front no Netlify até 15/10; desde o PR #62, no Cloudflare Workers (`wrangler deploy` no CI). Motivo em `POST-MORTEM-deploy-release2.md`.
 - Banco no Neon; migrations aplicadas no startup da API.
-- CI: build .NET sem warnings, testes unitários e de integração (Testcontainers), `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false` e build web.
+- CI: build .NET sem warnings, testes unitários e de integração (Testcontainers), `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`, build web e o **E2E (PBI-26)** — job `e2e` com `integration_test` via `flutter drive` + ChromeDriver, contra Postgres + API + Firebase Auth Emulator.
 
 ## Estado atual
 
@@ -149,8 +149,6 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- PBI-05: backup do banco (aguarda a escolha entre artifact do GitHub Actions com criptografia e Cloudflare R2).
-- PBI-26: E2E completo com Robot. Os passos que esperam "Treino registrado" ou "Ir para o Início" precisam esperar o aviso "Treino salvo" (PBI-64), e o passo de escolher exercício mudou com a PBI-49.
 - PBI-48 e o épico do educador (E7), na próxima sprint.
 - PBI-34 (trocar a métrica no registro), PBI-35 (cronograma semanal) e cardio (PBI-27 a 30).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).
