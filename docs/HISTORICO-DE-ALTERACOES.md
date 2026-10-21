@@ -135,6 +135,13 @@ fechados sem merge.
 | #101 | PBI-24 | Conferência de contraste 4,5:1 nos dois temas, travada por teste. |
 | #104 a #106 | PBI-82 | Calendário do mês a partir do cartão "Esta semana": grade seg→dom, navegação por mês, folha do dia; ícone de calendário no canto e "X" nos dias passados sem treino. |
 
+## E2E do fluxo principal · 21/10
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #108 | PBI-26 | E2E do caminho principal em `integration_test` (`flutter drive` + ChromeDriver), contra a stack real (Postgres + API + Firebase Auth Emulator): entrar, registrar treino livre e ver no progresso. Migrado de Robot/Playwright, inviável no CanvasKit (campos de texto não aceitam entrada via DOM). Inclui auto-login no modo emulador, aceitação do token do emulador (`RequireSignedTokens=false`) e CORS de qualquer localhost no E2E. **Correção de produção:** provisionamento de usuário idempotente — o primeiro acesso disparava `/planos/ativo` e `/sessoes` em paralelo e a 2ª inserção violava o índice único (500); agora trata o conflito e re-busca. |
+| #109 | docs | BACKLOG, MAS e HISTORICO: PBI-26 concluído e as decisões do E2E. |
+
 ---
 
 ## Migrations do banco
