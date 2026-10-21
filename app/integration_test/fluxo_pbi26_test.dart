@@ -38,7 +38,17 @@ void main() {
       await tester.pump(passo);
       if (condicao.evaluate().isNotEmpty) return;
     }
-    fail('Tempo esgotado esperando por: ${descricao ?? condicao.toString()}');
+    // Diagnóstico: no timeout, lista os textos visíveis na tela — para saber o
+    // que apareceu no lugar do esperado (ex.: tela de login = auto-login
+    // falhou; spinner = ainda carregando; outro texto = finder errado).
+    final textos = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .where((s) => s != null && s.trim().isNotEmpty)
+        .toList();
+    debugPrint('E2E DIAGNOSTICO — textos na tela no timeout: $textos');
+    fail('Tempo esgotado esperando por: ${descricao ?? condicao.toString()}.\n'
+        'Textos visíveis na tela: $textos');
   }
 
   testWidgets('Atleta registra um treino livre e vê no progresso (PBI-26)',
@@ -49,7 +59,10 @@ void main() {
 
     // 1) Início, já autenticado. Conta nova (sem ficha/sessão) cai no Primeiro
     //    acesso, cujo "Registrar treino" abre direto o treino livre (PBI-71).
+    //    Timeout maior: boot + Firebase init + auto-login + 1ª carga dos
+    //    providers (API real) no web debug é lento.
     await esperarPor(tester, find.text('Registrar treino'),
+        tentativas: 120,
         descricao: 'botão "Registrar treino" na Início');
     await tester.tap(find.text('Registrar treino'));
 

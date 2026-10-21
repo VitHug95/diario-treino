@@ -60,6 +60,7 @@ Future<void> _autenticarParaE2E() async {
   try {
     try {
       await auth.signInWithEmailAndPassword(email: email, password: senha);
+      debugPrint('E2E auto-login: signIn OK');
     } on FirebaseAuthException catch (e) {
       // Primeira execução: o usuário ainda não existe no emulador.
       if (e.code == 'user-not-found' ||
@@ -69,11 +70,13 @@ Future<void> _autenticarParaE2E() async {
             email: email, password: senha);
         await cred.user?.updateDisplayName('Atleta E2E');
         await cred.user?.reload();
+        debugPrint('E2E auto-login: createUser OK');
       } else {
         rethrow;
       }
     }
+    debugPrint('E2E auto-login: currentUser=${auth.currentUser?.uid}');
   } catch (e) {
-    debugPrint('E2E auto-login falhou: $e');
+    debugPrint('E2E auto-login FALHOU: $e');
   }
 }
