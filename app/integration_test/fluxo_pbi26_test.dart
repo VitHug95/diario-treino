@@ -71,13 +71,21 @@ void main() {
         descricao: 'tela "Treino livre"');
 
     // 3) Adicionar um exercício do catálogo (API real).
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Adicionar exercício'));
+    //    Mira pelo TEXTO, não por widgetWithText(OutlinedButton, ...): o botão é
+    //    um OutlinedButton.icon, cujo label fica aninhado de um jeito que o
+    //    finder por tipo+texto não casa (run 14: "0 OutlinedButton ancestors").
+    //    ensureVisible: o botão fica abaixo na lista, pode estar fora do viewport.
+    await esperarPor(tester, find.text('Adicionar exercício'),
+        descricao: 'botão "Adicionar exercício" no treino livre');
+    await tester.ensureVisible(find.text('Adicionar exercício'));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.text('Adicionar exercício'));
     await esperarPor(tester, find.text('Adicionar exercícios'),
         descricao: 'seletor de exercícios');
 
     // Busca pelo nome para reduzir a lista (debounce de 350ms no campo).
     await tester.enterText(find.byType(TextField).first, 'Supino');
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 600));
     await esperarPor(tester, find.text('Supino reto com barra'),
         descricao: 'exercício "Supino reto com barra" no catálogo');
 
@@ -90,6 +98,8 @@ void main() {
     // 4) De volta ao treino livre: marcar como feito e preencher a série.
     await esperarPor(tester, find.text('Marcar'),
         descricao: 'ação "Marcar" (sugestão de série)');
+    await tester.ensureVisible(find.text('Marcar'));
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('Marcar'));
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -97,11 +107,16 @@ void main() {
     // é "Carga" e o volume "Repetições".
     await esperarPor(tester, find.widgetWithText(TextField, 'Carga'),
         descricao: 'campo "Carga" da série');
+    await tester.ensureVisible(find.widgetWithText(TextField, 'Carga'));
     await tester.enterText(find.widgetWithText(TextField, 'Carga'), '30');
     await tester.enterText(find.widgetWithText(TextField, 'Repetições'), '10');
     await tester.pump(const Duration(milliseconds: 300));
 
     // 5) Finalizar. Como o único exercício está marcado, não há diálogo.
+    await esperarPor(tester, find.text('FINALIZAR TREINO'),
+        descricao: 'botão "FINALIZAR TREINO"');
+    await tester.ensureVisible(find.text('FINALIZAR TREINO'));
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('FINALIZAR TREINO'));
 
     // Pós-salvar (PBI-64): volta à Início com o aviso "Treino salvo".
