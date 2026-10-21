@@ -120,18 +120,41 @@ void main() {
   final prancha = _ex('prancha', 'Prancha',
       [_serie('', '45', volumeCodigo: 'TEMPO_SEG', pesoCorporal: true)]);
 
-  testWidgets('vários exercícios: lista os nomes e uma decisão vale para todos',
+  testWidgets('vários exercícios: lista nomes/resumos e todos começam em "manter"',
       (tester) async {
     await _abrir(tester, treinoId: 'B', exercicios: [coice, prancha]);
 
     expect(find.text('Manter na ficha?'), findsOneWidget);
-    expect(find.textContaining('Você adicionou exercícios', findRichText: true), findsOneWidget);
-    expect(find.textContaining('2 séries de 20 × 10', findRichText: true), findsOneWidget);
-    expect(find.textContaining('1 série de 45 s', findRichText: true), findsOneWidget);
+    expect(find.textContaining('Escolha o que fica na ficha'), findsOneWidget);
+    expect(find.text('Tríceps coice'), findsOneWidget);
+    expect(find.text('Prancha'), findsOneWidget);
+    expect(find.text('2 séries de 20 × 10'), findsOneWidget);
+    expect(find.text('1 série de 45 s'), findsOneWidget);
 
-    await tester.tap(find.text('MANTER NA FICHA'));
+    // PBI-81: padrão é manter todos; "Salvar" sem mexer devolve os dois.
+    await tester.tap(find.text('SALVAR'));
     await tester.pumpAndSettle();
     expect(find.text('resultado: coice,prancha'), findsOneWidget);
+  });
+
+  testWidgets('PBI-81: manter um e deixar o outro só neste treino',
+      (tester) async {
+    await _abrir(tester, treinoId: 'B', exercicios: [coice, prancha]);
+
+    // Na linha da Prancha, troca para "Só neste treino". O SegmentedButton da
+    // prancha é o 2º; mira pelo rótulo acessível da linha para não confundir.
+    final soNesteDaPrancha = find.descendant(
+      of: find.ancestor(
+          of: find.text('Prancha'), matching: find.byType(Column)),
+      matching: find.text('Só neste treino'),
+    );
+    await tester.tap(soNesteDaPrancha.first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SALVAR'));
+    await tester.pumpAndSettle();
+    // Só o coice fica na ficha; os dois seguem na sessão (isso é no back).
+    expect(find.text('resultado: coice'), findsOneWidget);
   });
 
   testWidgets('voltar devolve nulo (não salva) com o rótulo do registro', (tester) async {
