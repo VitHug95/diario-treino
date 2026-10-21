@@ -511,22 +511,50 @@ de meses, da tela, do link na Início e da invalidação do mês.
 
 **Depende de:** PBI-21.
 
-**Status:** PARCIAL. Em vez de começar pelo Robot+Browser (que exige um modo de
-teste de autenticação na API — caminho de risco a decidir com o PO), entregou-se
-primeiro um **teste de fluxo de UI** em `app/test/fluxo_registro_test.dart`:
-roda com `flutter test` (headless, no CI atual, sem browser/rede), exercita as
-telas e a navegação reais com as bordas fakeadas (auth e repositórios em
-memória) e cobre o caminho que o bug PBI-23A quebrou (registrar o Treino A →
-voltar à Início → a sugestão passa a recomendar o B). O **E2E completo** (Robot
-+ Browser contra a stack real, incluindo progresso com observação) continua
-como meta deste PBI; depende também do progresso (PBI-20/21) e de um modo de
-teste de login (ver nota).
+**Status:** ✅ CONCLUÍDA. E2E do fluxo principal rodando verde no CI (job `e2e`),
+contra a **stack real efêmera**: Postgres (service) + API .NET + Firebase Auth
+Emulator + o app Flutter de verdade. Cenário coberto: entrar (já autenticado) →
+registrar um treino livre (adicionar "Supino reto com barra" do catálogo, marcar
+como feito, preencher carga e repetições, finalizar) → ver a sessão registrada
+na aba Progresso. Usuário de teste próprio, provisionado na hora.
 
-**Nota técnica (E2E completo):** rodar Robot/Browser no CI exige autenticar sem
-Firebase real — ou um modo de teste na API validando um JWT de teste (como o
-`TokenFalsoFirebase` dos testes de integração, hoje só dentro da
-WebApplicationFactory), ou o Firebase Auth Emulator. Ambos adicionam um caminho
-de autenticação alternativo; decidir a abordagem com o PO antes.
+**Mudança de abordagem (Robot → integration_test).** O plano original era Robot
+Framework + Browser library (Playwright) dirigindo o app web pelo DOM. Isso se
+mostrou **inviável** neste stack: o Flutter 3.29 só tem o renderer **CanvasKit**
+(o renderer HTML foi removido), que desenha os campos em canvas; o `<input>` da
+árvore de semântica é um proxy que o framework recria/limpa, e preencher por fora
+(via DOM) não alimenta o `TextEditingController` de forma confiável — testado com
+`insertText`, `type` e `fill`, todos descartavam o valor. Migrou-se para
+**`integration_test`** (`app/integration_test/fluxo_pbi26_test.dart` +
+`test_driver/integration_test.dart`), que dirige a árvore de widgets
+(`tester.enterText`) e digita de verdade. No CI roda com `flutter drive` +
+ChromeDriver (Chrome headless do runner). O antigo diretório `e2e/` guarda só o
+`firebase.json` do emulador; os arquivos do Robot foram removidos.
+
+**Auto-login no modo E2E.** Como o `integration_test` não exerce a tela de login
+(digitar no cadastro esbarraria no mesmo CanvasKit), o `main.dart` provisiona e
+loga um usuário de teste no emulador **apenas quando `USE_AUTH_EMULATOR=true`**
+(produção intacta). Com o usuário logado, o `redirect` do go_router cai na Início
+e o `TokenInterceptor` anexa o ID token.
+
+**Ajustes de backend necessários para o emulador (só no modo E2E):**
+- `AutenticacaoFirebase`: aceita o token do emulador — `RequireSignedTokens=false`
+  (o emulador emite `alg:none`, sem assinatura) além do `SignatureValidator`,
+  ativado só quando `Firebase:AuthEmulatorHost` está definido.
+- CORS: libera qualquer `localhost` no modo emulador (o `flutter drive` serve o
+  app numa porta aleatória), sem lista fixa.
+
+**Bug de produção encontrado pelo E2E (corrigido).** No primeiro acesso o app
+dispara chamadas autenticadas em paralelo (`/planos/ativo` e `/sessoes`), que
+chamam `ObterOuProvisionarAsync` para um usuário ainda inexistente. As duas liam
+`null` e tentavam inserir o mesmo usuário → a segunda violava o índice único de
+email e o endpoint devolvia **500**. Corrigido com provisionamento idempotente:
+`RepositorioUsuario.TentarInserirUsuarioAsync` trata a violação de unicidade
+(Postgres `23505`) e o `ServicoPerfil` re-busca o usuário. Beneficia produção, não
+só o teste.
+
+O teste antigo de fluxo de UI em `app/test/fluxo_registro_test.dart` (roda no
+`flutter test`, com as bordas fakeadas) permanece como cobertura complementar.
 
 ---
 
