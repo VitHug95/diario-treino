@@ -5,7 +5,7 @@ que falta. O detalhe de cada entrega, PR por PR, está em
 [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md); o contrato da API, no
 [MAS](MAS.md) (seção 12); as PBIs, no [BACKLOG](BACKLOG.md).
 
-Data do levantamento: 16/10/2026, depois do PR #91 (PBI-72).
+Data do levantamento: 21/10/2026, depois do PR #109 (PBI-26, E2E do fluxo principal).
 
 ---
 
@@ -35,6 +35,8 @@ Data do levantamento: 16/10/2026, depois do PR #91 (PBI-72).
 - Deploy automático a cada merge na `main`, depois do CI verde: jobs `deploy-api`
   (Fly) e `deploy-web` (Cloudflare). Ver [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md).
 - Migrations aplicadas no startup da API em produção.
+- Backup semanal do banco (PBI-05): `pg_dump` do Neon em artifact do GitHub Actions,
+  restauração testada. Ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md).
 - Até 15/10 o front ficava no Netlify; a migração para o Cloudflare está no ADR-09
   e em [POST-MORTEM-deploy-release2.md](POST-MORTEM-deploy-release2.md).
 - Flag `TREINO_AO_VIVO`: ligada por padrão no build; o CI roda os testes com ela
@@ -138,58 +140,73 @@ Migrations versionadas (todas aplicam do zero):
 | `20261015051429_TagDeSerie` | PBI-38 | Tag por série e por rodada |
 | `20261015124844_FaixaRepeticoes` | PBI-39 | `volume_alvo_max` |
 | `20261015204940_PlanosVariosEmUso` | PBI-44 | Vários planos, `em_uso` |
+| `20261019145756_ReparoPlanoEmUso` | PBI-77 | Reparo de dados: marca em uso o plano com a sessão mais recente para atletas sem plano em uso |
 
-As PBIs 57 a 72 não mudaram o esquema.
+As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
+acima (só dados, sem alterar tabelas). As correções 73 a 76, 78 a 80 e o
+calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 
 ---
 
 ## 7. Testes e CI
 
-- **Front:** 32 arquivos de teste em `app/test/` (231 testes na última entrega),
-  incluindo o fluxo de registro com o app inteiro, o teste de um `ProviderScope`
-  só para a invalidação e o teste de arquitetura.
+- **Front (widget):** 37 arquivos de teste em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas), incluindo o fluxo de registro com o app inteiro,
+  o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
+- **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
+  widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
+  Postgres + API .NET + Firebase Auth Emulator + o app. Cobre entrar → registrar
+  treino livre → ver no progresso. Roda com `flutter drive` + ChromeDriver (Chrome
+  headless). Migrou de Robot/Playwright, inviável no CanvasKit (campos de texto não
+  aceitam entrada via DOM). Ver PBI-26 no [BACKLOG](BACKLOG.md).
 - **Back:** unitários (acesso, catálogo, planejamento, "manter na ficha") e
   integração com Testcontainers (Postgres real) para controle de acesso, esquema,
   catálogo, fichas, planos, sessões, progresso e "manter na ficha".
 - **CI** (`.github/workflows/ci.yml`): build .NET sem warnings, testes unitários e
-  de integração, `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`
-  e build web; deploy da API e do front depois do CI verde na `main`.
-- **Localmente no Windows:** os testes de integração precisam de Docker (sem ele,
-  só rodam no CI). Com a flag `TREINO_AO_VIVO` ligada, 2 testes do plano falham
-  porque esperam o caminho com a flag desligada.
+  de integração, `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`,
+  build web e o job `e2e` (integration_test). Deploy da API e do front depois do CI
+  verde na `main`.
+- **Localmente no Windows:** os testes de integração (back) e o E2E precisam de
+  Docker/emulador (sem eles, só rodam no CI). Com a flag `TREINO_AO_VIVO` ligada,
+  2 testes do plano falham porque esperam o caminho com a flag desligada.
 
 ---
 
 ## 8. O que falta
 
 ### Backlog
-- **PBI-05 — backup do banco:** aguarda a escolha do destino (artifact do GitHub
-  Actions com criptografia, ou Cloudflare R2).
-- **PBI-26 — E2E com Robot:** os passos precisam acompanhar as mudanças de
-  texto e de caminho (abaixo). As branches `feat/e2e-pbi-26` e `feat/pbi-26-e2e`
-  existem fora da `main`.
+- **PBI-34** (trocar a métrica no registro), **PBI-35** (cronograma semanal).
+- **PBI-75** (pop menor no aviso "Ficha criada") — em andamento no bloco 1.
+- **PBI-81** ("Manter na ficha?" por exercício) — em andamento no bloco 1.
+- **PBI-84** ("Adicionar série" em branco no registro posterior/edição) — bloco 1.
 - **PBI-48 e épico do educador (E7):** próxima sprint.
-- **PBI-34** (trocar a métrica no registro), **PBI-35** (cronograma semanal) e
-  cardio (**PBI-27 a 30**).
+- Incremento 2 — cardio (**PBI-27 a 30**).
 
-### Robot: o que mudou para os passos
-- "Registrar sem ficha" virou **"Registrar treino"** (Bem-vindo e Início).
-- "MONTAR MINHAS FICHAS" e "CRIAR FICHA" saíram: o caminho é "Criar meu plano" →
-  "CRIAR PLANO" → "NOVA FICHA" → "Salvar".
-- Depois de salvar não há mais "Treino registrado" nem "Ir para o Início": esperar a
-  Início com o aviso **"Treino salvo"**.
-- O passo de escolher exercício muda com o seletor da PBI-49.
-- Campos de texto no Flutter web: `Click With Options force=True` e depois
-  `Keyboard Input insertText` (o campo semântico é um `<input disabled>`).
+### Entregue recentemente (PR)
+- Correções de uso real de 16 a 19/10: **PBI-77** (#93, plano novo em uso +
+  migration de reparo), **PBI-74** (#94, um exercício por ficha/sessão),
+  **PBI-78/79** (#95, editor de alvos com dado atual e resumo com unidade),
+  **PBI-73** (#96, gráfico sem carga usa repetições), **PBI-76** (#97, aviso
+  quando não lê a ficha), **PBI-80** (#98, aba abre a raiz — ADR-11).
+- **PBI-05** backup (#100/#102), **PBI-24** contraste (#101).
+- **PBI-82** calendário do mês (#104–#106).
+- **PBI-26** E2E do fluxo principal (#108/#109).
 
-### Perguntas ao PO
-- PBI-69: o plano pode nascer sem fichas e a ficha voltar ao detalhe do plano?
-- PBI-72: uma decisão para todos os exercícios adicionados serve?
-- PBI-68: o card "Bem-vindo de volta · Crie seu plano" é o "manter o boas-vindas"?
-- Atalho "Iniciar treino" na Início; toque no dia de hoje na semana; "excluir
-  treino" é só plano ou plano e ficha (PBI-58); o aviso "Treino salvo" basta;
-  séries sem marcar ficam de fora ao concluir o exercício; play no plano do
-  professor.
+### Decisões do PO já tomadas (19/10)
+- Início de quem apagou os planos mostra "Bem-vindo de volta · Crie seu plano" (PBI-68).
+- Gráfico de exercício só de repetições usa a **melhor série** (maior nº de repetições da sessão) (PBI-73).
+- Exercício já presente fica **desabilitado com aviso** no seletor (PBI-74).
+- "Manter na ficha?" é decidido **exercício por exercício** (PBI-81).
+- Atalho "Iniciar treino" na Início: **dispensado**.
+- "Excluir treino" apaga **só a sessão**.
+- Toque num dia da semana **abre o treino daquele dia**.
+- As dicas da Início **ficam no app** até o modo educador (E7).
+
+### Perguntas ainda abertas com o PO
+- PBI-69: o plano pode nascer sem fichas e a ficha criada volta ao detalhe do plano?
+- Séries não marcadas ficam de fora ao "concluir exercício"?
+- Play no plano do professor (só leitura): o que faz?
+- PBI-75: "Treino salvo" mantém a ação "Ver treino" ou vira só o pop? (recomendação: só o pop).
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -200,8 +217,17 @@ As PBIs 57 a 72 não mudaram o esquema.
 
 ## 9. Ponto de retomada
 
-Tudo da leva de 16/10 está na `main` (PRs #76 a #91). Próximos passos, nesta ordem:
+O Incremento 1 (modo atleta) está essencialmente completo e na `main`, incluindo o
+E2E automatizado do fluxo principal (PBI-26, PRs #108/#109). Próximos passos:
 
-1. Ajustar os passos do Robot (seção 8) e fechar a PBI-26.
-2. PBI-05, assim que o destino do backup for escolhido.
-3. Levar as perguntas da seção 8 ao PO.
+1. PBI-34 (trocar a métrica no registro) e PBI-35 (cronograma semanal).
+2. PBI-75 (pop "Ficha criada").
+3. Modo educador (PBI-48 e épico E7) na próxima sprint; depois o Incremento 2 (cardio).
+4. Levar as perguntas da seção 8 ao PO.
+
+### Dívidas técnicas de infra em aberto
+- Deploy da API no Fly pode ficar vermelho por "no capacity in gru" ao criar a 2ª
+  máquina de HA (transitório; a API sobe na 1ª). Candidato: `--ha=false` no
+  `deploy-api`.
+- O job `e2e` é `continue-on-error: true` (não bloqueia merge) enquanto amadurece;
+  avaliar torná-lo bloqueante agora que passa de forma estável.

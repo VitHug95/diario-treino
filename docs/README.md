@@ -35,24 +35,24 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 - Tem acesso ao treino e ao progresso de cada aluno vinculado
 - Pode exportar os dados do aluno em PDF
 
-## Estado atual (19/10/2026)
+## Estado atual (21/10/2026)
 
-O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está praticamente completo**: login, catálogo com 89 exercícios filtrado por membro, vários planos com um em uso, fichas com alvos, registro de sessão (editar, excluir, exercício fora da ficha, "Manter na ficha?"), treino livre, primeiro acesso, treino ao vivo série por série, tela inicial com semana, último treino e dicas, progresso completo e perfil com tema e exclusão de conta. De 16 a 19/10 entraram as correções de uso real (PBI-73 a 80): plano novo nasce em uso, um exercício por ficha e por sessão, editor de alvos e resumo da ficha, gráfico de exercício sem carga, "Manter na ficha?" avisando quando não lê a ficha e tocar numa aba abrindo a raiz dela. Também entrou o calendário do mês (PBI-82): a partir do cartão "Esta semana", o atleta abre o mês inteiro, navega de mês em mês e toca num dia para ver ou registrar o treino.
+O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está completo**: login, catálogo com 89 exercícios filtrado por membro, vários planos com um em uso, fichas com alvos, registro de sessão (editar, excluir, exercício fora da ficha, "Manter na ficha?"), treino livre, primeiro acesso, treino ao vivo série por série, tela inicial com semana, último treino e dicas, progresso completo, perfil com tema e exclusão de conta, e o **E2E do fluxo principal (PBI-26)**. De 16 a 19/10 entraram as correções de uso real (PBI-73 a 80): plano novo nasce em uso, um exercício por ficha e por sessão, editor de alvos e resumo da ficha, gráfico de exercício sem carga, "Manter na ficha?" avisando quando não lê a ficha e tocar numa aba abrindo a raiz dela. Também entrou o calendário do mês (PBI-82): a partir do cartão "Esta semana", o atleta abre o mês inteiro, navega de mês em mês e toca num dia para ver ou registrar o treino.
 
-**Falta no Incremento 1:** só o E2E Robot completo (PBI-26). O backup do banco (PBI-05, `pg_dump` semanal no CI guardado fora do Neon, restauração testada — ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md)) e a conferência de contraste 4,5:1 nos dois temas (PBI-24, auditada e travada por teste) estão concluídos. Também em aberto: troca de métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75) e o modo educador (PBI-48, épico E7). O **Incremento 2** (cardio e resumo do período) ainda não começou.
+**Incremento 1 completo**, incluindo o E2E do fluxo principal (PBI-26, `integration_test` via `flutter drive` + ChromeDriver contra a stack real). Backup do banco (PBI-05, `pg_dump` semanal no CI guardado fora do Neon, restauração testada — ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md)) e contraste 4,5:1 nos dois temas (PBI-24, auditado e travado por teste) também concluídos. Em aberto, como melhorias: troca de métrica no registro (PBI-34), cronograma semanal (PBI-35), pop menor no aviso "Ficha criada" (PBI-75), "Manter na ficha?" por exercício (PBI-81) e o modo educador (PBI-48, épico E7). O **Incremento 2** (cardio e resumo do período) ainda não começou.
 
 O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o modelo de dados, no [MAS.md](MAS.md) e [MER.md](MER.md).
 
 ## Incrementos
 
-**Incremento 1 (MVP)** — em finalização
+**Incremento 1 (MVP)** — completo
 - Login ✅
 - Cadastro de fichas A/B/C com exercícios ✅
 - Registro da sessão com carga pré-preenchida e observação ✅
 - Gráfico de carga por exercício com filtro de período ✅
 - Backup semanal do banco ✅ (restauração testada)
 - Contraste 4,5:1 nos dois temas ✅ (auditado e travado por teste)
-- Falta: E2E Robot completo
+- E2E do fluxo principal ✅ (PBI-26, `integration_test` contra a stack real)
 
 **Incremento 2** — não iniciado
 - Registro de cardio
@@ -97,7 +97,7 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 - [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
 - [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
 - [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md): tudo que entrou na `main`, PR por PR, com as migrations
-- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (E2E, cardio, modo educador)
+- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (cardio, modo educador)
 - [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
 - [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md): backup semanal do banco e como restaurar (PBI-05)
 
