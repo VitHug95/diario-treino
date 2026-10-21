@@ -11,6 +11,7 @@ import '../../shared/botao_tracejado.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/estado_vazio.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -61,25 +62,18 @@ class _PlanoDetalheScreenState extends ConsumerState<PlanoDetalheScreen> {
     }
   }
 
-  /// Cria a ficha e fica no plano (PBI-61): a ficha aparece na lista e o aviso
-  /// oferece "Adicionar exercícios", que abre a ficha nova. Criar não abre a
-  /// ficha sozinho, para criar e treinar serem momentos separados.
+  /// Cria a ficha e fica no plano (PBI-61): a ficha aparece na lista. Criar não
+  /// abre a ficha sozinho, para criar e treinar serem momentos separados — a
+  /// ficha nova fica na lista para o atleta abrir quando quiser. A confirmação
+  /// é só um aviso curto (PBI-75), sem ação.
   Future<void> _novaFicha(PlanoDetalhe plano) async {
     final dados = await dialogoFicha(context);
     if (dados == null) return;
     try {
-      final fichaId = await ref.read(fichasComandosProvider).adicionarFicha(
+      await ref.read(fichasComandosProvider).adicionarFicha(
           planoId: plano.id, nome: dados.nome, descricao: dados.descricao);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(
-          content: Text('Ficha “${dados.nome}” criada'),
-          action: SnackBarAction(
-            label: 'Adicionar exercícios',
-            onPressed: () => context.push(rotaDaFicha(plano.id, fichaId)),
-          ),
-        ));
+      mostrarAviso(context, 'Ficha “${dados.nome}” criada');
     } on FichasException catch (e) {
       if (mounted) avisarPlano(context, e.mensagem);
     }

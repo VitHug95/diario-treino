@@ -331,7 +331,7 @@ void main() {
     expect(find.text('INICIAR TREINO AGORA'), findsNothing);
   });
 
-  testWidgets('PBI-61: criar ficha fica no plano com o aviso "Adicionar exercícios"',
+  testWidgets('PBI-75: criar ficha fica no plano com um aviso curto, sem ação',
       (tester) async {
     final repo = _RepoCriaFicha();
     await tester.pumpWidget(_telaComRotas(_plano(), repo: repo));
@@ -344,14 +344,12 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
-    // Continua no plano; a ficha não abre sozinha.
+    // Continua no plano; a ficha não abre sozinha. A confirmação é só um aviso
+    // curto (PBI-75): mostra o texto, mas não oferece mais a ação de abrir.
     expect(repo.criada, 'D');
     expect(find.text('HIPERTROFIA'), findsOneWidget);
     expect(find.text('Ficha “D” criada'), findsOneWidget);
-
-    await tester.tap(find.text('Adicionar exercícios'));
-    await tester.pumpAndSettle();
-    expect(find.text('Editar fn'), findsOneWidget);
+    expect(find.text('Adicionar exercícios'), findsNothing);
   });
 
   testWidgets('Excluir plano em uso explica que o uso passa adiante',
