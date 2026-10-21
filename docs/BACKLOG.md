@@ -479,6 +479,48 @@ Início: nome/e-mail do `GET /me`, seletor de tema (PBI-24), "Sair" e "Excluir
 conta" com confirmação digitada ("EXCLUIR"). Testes: integração (apaga tudo do
 usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
+#### PBI-73 · Gráfico decide a grandeza por exercício (sem carga, usa repetições)
+**História:** Como atleta, quero que o gráfico de um exercício sem carga (ex.: flexão, prancha de repetições) mostre repetições, para acompanhar a evolução de quem não usa peso.
+**Status:** ✅ concluída (PR #96). O gráfico escolhe o eixo por exercício: com carga, usa a carga; sem carga no período, usa **repetições** (a melhor série = maior nº de repetições da sessão); isometria segue com tempo. Enum `MetricaProgresso`. **Decisão do PO em aberto:** usar a melhor série ou o total de repetições da sessão — hoje é a melhor série.
+
+#### PBI-74 · Um exercício por ficha e por sessão
+**História:** Como atleta, não quero o mesmo exercício duplicado numa ficha ou numa sessão, para o registro não ficar confuso.
+**Status:** ✅ concluída (PR #94). `POST /treinos/{id}/exercicios` responde **409** se o exercício já está na ficha; `POST /sessoes` responde **400** se dois blocos trazem o mesmo exercício; o seletor desabilita quem já está presente, com aviso. A unicidade vive na aplicação (sem constraint no banco); dados antigos com repetição continuam abrindo.
+
+#### PBI-75 · Aviso simples vira pop pequeno (sem barra preta)
+**História:** Como atleta, quero que avisos curtos (ex.: "Ficha criada") apareçam como um pop pequeno que some sozinho, sem uma barra preta cobrindo a base da tela com um botão que não pedi.
+**Status:** 🔸 em andamento (bloco 1). Componente compartilhado de aviso (pílula flutuante ~2 s, sem ação, cor do tema) aplicado ao aviso "Ficha criada"; regra registrada no DESIGN.md. "Treino salvo" depende de decisão do PO (manter ou não a ação "Ver treino").
+
+#### PBI-76 · "Manter na ficha?": aviso quando a ficha não é lida
+**História:** Como atleta, quero ser avisado quando o app não conseguir ler a ficha ao perguntar "Manter na ficha?", para entender por que a pergunta não apareceu.
+**Status:** ✅ concluída (PR #97). `ResultadoManterNaFicha{ids, leituraFalhou}`: quando a leitura falha, o treino é salvo sem perguntar e com aviso (catch não-silencioso). Os três botões do diálogo ficam em coluna.
+
+#### PBI-77 · Plano novo nasce em uso quando não há plano em uso
+**História:** Como atleta, quero que o primeiro plano que eu criar já nasça em uso, para não precisar ativá-lo à mão.
+**Status:** ✅ concluída (PR #93). Troca `!AtletaTemAlgumPlanoAsync` por `ObterPlanoEmUsoAsync is null` (planos escondidos não contam). Migration de reparo `20261019145756_ReparoPlanoEmUso` marca em uso o plano com a sessão mais recente para atletas que ficaram sem plano em uso.
+
+#### PBI-78 · Editor de alvos abre com o dado atual
+**História:** Como atleta, quero que o editor de alvos de um exercício abra já com os valores que estão salvos, não em branco, para só ajustar o que preciso.
+**Status:** ✅ concluída (PR #95). O editor lê o dado atual do `fichaDetalheProvider` em vez de reabrir em branco.
+
+#### PBI-79 · Resumo da ficha com faixa de repetições e unidade
+**História:** Como atleta, quero que o resumo da ficha mostre a faixa de repetições e a carga com unidade ("65 kg", não "65 carga"), para ler o alvo sem ambiguidade.
+**Status:** ✅ concluída (PR #95, junto da PBI-78). `_ResumoAlvo` usa `formatarVolumeAlvo` + unidade kg; mostra a faixa de repetições ("8 a 12").
+
+#### PBI-80 · Tocar numa aba abre a raiz dela
+**História:** Como atleta, quero que tocar numa aba da navegação inferior me leve sempre à raiz dela (ex.: Planos abre a lista de planos), não à tela em que eu estava, para não me perder.
+**Status:** ✅ concluída (PR #98). `goBranch(i, initialLocation: true)` sempre; telas de tela cheia (registro, treino ao vivo) ficam no navigator raiz, acima da barra. Registrado como **ADR-11** no MAS.
+
+#### PBI-81 · "Manter na ficha?" decide exercício por exercício
+**História:** Como atleta, quero escolher, exercício por exercício, o que fica na ficha, para manter o que funciona e deixar de fora o que fiz só naquele dia.
+**Status:** 🔸 em andamento (bloco 1). Com um exercício, o diálogo atual (três botões) é mantido; com dois ou mais, cada exercício tem a escolha "Manter na ficha" / "Só neste treino" (padrão: manter), e "Salvar" devolve só os mantidos. A API (`POST /sessoes` com lista de ids em `manterNaFicha`) já suporta lista parcial.
+**Decisão do PO (19/10):** exercício por exercício.
+
+#### PBI-84 · "Adicionar série" nasce em branco no registro posterior e na edição
+**História:** Como atleta, quero que a série nova nasça vazia, com a anterior só como dica, para não gravar sem querer uma série idêntica à última.
+**Status:** 🔸 em andamento (bloco 1). No registro de treino já feito e na edição de sessão, "Adicionar série" passa a criar a série em branco (herda a estrutura — métrica de volume, peso corporal, unidade —, não os números), com os valores da anterior como dica (`hintText`). Série sem volume não é salva, então não há mais duplicação acidental. No **treino ao vivo nada muda**: a série nova continua copiando a anterior e nascendo não feita (o Resumo só salva as feitas).
+**Depende de:** PBI-16.
+
 #### PBI-82 · Calendário do mês a partir do cartão "Esta semana"
 **História:** Como atleta, quero abrir o mês inteiro a partir do cartão "Esta
 semana" e navegar de mês em mês, para ver em que dias treinei e abrir o que foi

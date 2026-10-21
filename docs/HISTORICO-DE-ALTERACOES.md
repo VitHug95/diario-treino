@@ -141,6 +141,8 @@ fechados sem merge.
 |---|---|---|
 | #108 | PBI-26 | E2E do caminho principal em `integration_test` (`flutter drive` + ChromeDriver), contra a stack real (Postgres + API + Firebase Auth Emulator): entrar, registrar treino livre e ver no progresso. Migrado de Robot/Playwright, inviável no CanvasKit (campos de texto não aceitam entrada via DOM). Inclui auto-login no modo emulador, aceitação do token do emulador (`RequireSignedTokens=false`) e CORS de qualquer localhost no E2E. **Correção de produção:** provisionamento de usuário idempotente — o primeiro acesso disparava `/planos/ativo` e `/sessoes` em paralelo e a 2ª inserção violava o índice único (500); agora trata o conflito e re-busca. |
 | #109 | docs | BACKLOG, MAS e HISTORICO: PBI-26 concluído e as decisões do E2E. |
+| #110 | docs | HISTORICO: registro dos PRs #108 e #109 na tabela. |
+| (este) | PBI-83 | Sincroniza os documentos com a `main`: ESTADO (migration `ReparoPlanoEmUso`, ADR-11, PBIs 73–82 entregues com PR, PBI-81/84 em andamento, decisões do PO separadas das perguntas abertas); BACKLOG ganha as PBIs 73–81 (sem lacuna); README não cita mais o E2E Robot como pendente. |
 
 ---
 
