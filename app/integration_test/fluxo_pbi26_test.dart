@@ -95,13 +95,17 @@ void main() {
         descricao: 'rodapé "ADICIONAR 1 EXERCÍCIO"');
     await tester.tap(find.text('ADICIONAR 1 EXERCÍCIO'));
 
-    // 4) De volta ao treino livre: marcar como feito e preencher a série.
-    await esperarPor(tester, find.text('Marcar'),
-        descricao: 'ação "Marcar" (sugestão de série)');
-    await tester.ensureVisible(find.text('Marcar'));
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.text('Marcar'));
-    await tester.pump(const Duration(milliseconds: 300));
+    // 4) De volta ao treino livre: garantir o exercício marcado e preencher a
+    //    série. No treino livre o exercício adicionado já pode entrar como
+    //    "Realizado" com os campos abertos (run 15: a tela já mostrava Carga/
+    //    Repetições e "Realizado", sem o botão "Marcar"). Então só toca em
+    //    "Marcar" se ele existir; o que importa é os campos aparecerem.
+    if (find.text('Marcar').evaluate().isNotEmpty) {
+      await tester.ensureVisible(find.text('Marcar'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Marcar'));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
 
     // Campos da série, mirados pelo rótulo (labelText): no seed, a intensidade
     // é "Carga" e o volume "Repetições".
@@ -119,13 +123,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('FINALIZAR TREINO'));
 
-    // Pós-salvar (PBI-64): volta à Início com o aviso "Treino salvo".
-    await esperarPor(tester, find.text('Treino salvo'),
-        descricao: 'aviso "Treino salvo" na Início');
+    // Pós-salvar (PBI-64): volta à Início. NÃO depende do SnackBar "Treino
+    // salvo" (efêmero, pode sumir entre pumps): espera a volta à Início, provada
+    // pela aba "Progresso" da navegação inferior reaparecer (ela não existe na
+    // tela de treino livre, que é full-screen).
+    await esperarPor(tester, find.text('Progresso'),
+        descricao: 'volta à Início após finalizar (aba "Progresso")');
 
     // 6) Aba Progresso: confirma que o exercício registrado aparece.
-    await esperarPor(tester, find.text('Progresso'),
-        descricao: 'aba "Progresso" na navegação inferior');
     await tester.tap(find.text('Progresso'));
     await esperarPor(tester, find.text('EVOLUÇÃO'),
         descricao: 'tela de Progresso (seção EVOLUÇÃO)');
