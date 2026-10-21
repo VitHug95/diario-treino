@@ -1,6 +1,7 @@
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Domain.Identidade;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace DiarioTreino.Infrastructure.Persistencia;
 
@@ -23,6 +24,31 @@ public sealed class RepositorioUsuario : IRepositorioUsuario
     public void Adicionar(Usuario usuario) => _db.Usuarios.Add(usuario);
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
+
+    public async Task<bool> TentarInserirUsuarioAsync(Usuario usuario, CancellationToken ct)
+    {
+        _db.Usuarios.Add(usuario);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        })
+        {
+            // Outra requisição simultânea já provisionou este usuário. Desfaz o
+            // rastreamento do insert que falhou para não poluir o ChangeTracker
+            // e sinaliza o conflito ao chamador (que vai re-buscar).
+            _db.Entry(usuario).State = EntityState.Detached;
+            foreach (var papel in usuario.Papeis)
+            {
+                _db.Entry(papel).State = EntityState.Detached;
+            }
+            return false;
+        }
+    }
 
     public async Task ExcluirContaAsync(Guid usuarioId, CancellationToken ct)
     {
