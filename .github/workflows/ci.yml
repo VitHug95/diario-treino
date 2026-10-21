@@ -165,10 +165,12 @@ jobs:
           FIREBASE__PROJECTID: demo-diario-treino
           FIREBASE__AUTHEMULATORHOST: "127.0.0.1:9099"
           FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099"
-          # O app é servido pelo flutter drive (web-server) numa porta efêmera;
-          # libera localhost amplamente no CORS do E2E para não depender da porta.
-          CORS__ORIGENSPERMITIDAS__0: "http://127.0.0.1:8000"
-          CORS__ORIGENSPERMITIDAS__1: "http://localhost:8000"
+          # NÃO fixar Cors:OrigensPermitidas no E2E: o flutter drive (web-server)
+          # serve o app numa porta ALEATÓRIA em localhost. Sem lista fixa e com o
+          # modo emulador ligado (FIREBASE__AUTHEMULATORHOST), a API libera
+          # qualquer localhost no CORS (ver Program.cs). Com a lista fixa :8000,
+          # o GET real era bloqueado pelo navegador (só o preflight OPTIONS
+          # passava), e a Início caía em "Não foi possível carregar suas fichas".
         run: |
           # --no-launch-profile: ignora o launchSettings.json (que fixa a porta
           # 5289 e o ambiente Development) e respeita as variáveis acima.
