@@ -176,9 +176,6 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 
 ### Backlog
 - **PBI-34** (trocar a métrica no registro), **PBI-35** (cronograma semanal).
-- **PBI-75** (pop menor no aviso "Ficha criada") — em andamento no bloco 1.
-- **PBI-81** ("Manter na ficha?" por exercício) — em andamento no bloco 1.
-- **PBI-84** ("Adicionar série" em branco no registro posterior/edição) — bloco 1.
 - **PBI-48 e épico do educador (E7):** próxima sprint.
 - Incremento 2 — cardio (**PBI-27 a 30**).
 
@@ -191,12 +188,19 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - **PBI-05** backup (#100/#102), **PBI-24** contraste (#101).
 - **PBI-82** calendário do mês (#104–#106).
 - **PBI-26** E2E do fluxo principal (#108/#109).
+- Bloco 1 (fechar pendências antes do educador): **PBI-83** docs (#111),
+  **PBI-81** "Manter na ficha?" por exercício (#112), **PBI-75** aviso vira
+  pílula (#113). **PBI-84** (série em branco) entrou (#114) e foi **revertida**
+  (#115) por decisão do PO — ver seção de decisões.
 
 ### Decisões do PO já tomadas (19/10)
 - Início de quem apagou os planos mostra "Bem-vindo de volta · Crie seu plano" (PBI-68).
 - Gráfico de exercício só de repetições usa a **melhor série** (maior nº de repetições da sessão) (PBI-73).
 - Exercício já presente fica **desabilitado com aviso** no seletor (PBI-74).
 - "Manter na ficha?" é decidido **exercício por exercício** (PBI-81).
+- "Adicionar série" no registro posterior/edição **copia a série anterior**
+  (valores já preenchidos e editáveis), igual ao treino ao vivo — a PBI-84
+  (série em branco com dica) foi **revertida** por isso (31/10, #114→#115).
 - Atalho "Iniciar treino" na Início: **dispensado**.
 - "Excluir treino" apaga **só a sessão**.
 - Toque num dia da semana **abre o treino daquele dia**.
@@ -221,9 +225,8 @@ O Incremento 1 (modo atleta) está essencialmente completo e na `main`, incluind
 E2E automatizado do fluxo principal (PBI-26, PRs #108/#109). Próximos passos:
 
 1. PBI-34 (trocar a métrica no registro) e PBI-35 (cronograma semanal).
-2. PBI-75 (pop "Ficha criada").
-3. Modo educador (PBI-48 e épico E7) na próxima sprint; depois o Incremento 2 (cardio).
-4. Levar as perguntas da seção 8 ao PO.
+2. Modo educador (PBI-48 e épico E7) na próxima sprint; depois o Incremento 2 (cardio).
+3. Levar as perguntas da seção 8 ao PO.
 
 ### Dívidas técnicas de infra em aberto
 - Deploy da API no Fly pode ficar vermelho por "no capacity in gru" ao criar a 2ª
