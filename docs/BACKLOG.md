@@ -518,7 +518,7 @@ usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
 #### PBI-84 · "Adicionar série" nasce em branco no registro posterior e na edição
 **História:** Como atleta, quero que a série nova nasça vazia, com a anterior só como dica, para não gravar sem querer uma série idêntica à última.
-**Status:** 🔸 em andamento (bloco 1). No registro de treino já feito e na edição de sessão, "Adicionar série" passa a criar a série em branco (herda a estrutura — métrica de volume, peso corporal, unidade —, não os números), com os valores da anterior como dica (`hintText`). Série sem volume não é salva, então não há mais duplicação acidental. No **treino ao vivo nada muda**: a série nova continua copiando a anterior e nascendo não feita (o Resumo só salva as feitas).
+**Status:** ↩️ revertida por decisão do PO (31/10). Chegou a entrar na `main` (PR #114): no registro posterior/edição, "Adicionar série" nascia em branco com a anterior como dica (`hintText`). Na prática o PO preferiu o mesmo comportamento do treino ao vivo — a série nova vem com os valores da anterior **já preenchidos e editáveis** —, então o PR #115 reverteu a mudança e as três telas voltaram a copiar a série anterior. A história acima fica registrada como ideia rejeitada; se um dia a duplicação acidental incomodar, reabrir discutindo a opção "copiar só a carga, repetições em branco".
 **Depende de:** PBI-16.
 
 #### PBI-82 · Calendário do mês a partir do cartão "Esta semana"
