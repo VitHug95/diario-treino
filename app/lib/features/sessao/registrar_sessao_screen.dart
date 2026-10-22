@@ -879,10 +879,7 @@ class _CorpoSeries extends StatelessWidget {
           height: AppSizes.touchMin,
           child: OutlinedButton.icon(
             onPressed: () {
-              // PBI-84: no registro posterior/edição a série nova nasce em
-              // branco, com a anterior só como dica. (O treino ao vivo segue
-              // copiando a série anterior.)
-              exercicio.adicionarSerieEmBranco();
+              exercicio.adicionarSerie();
               aoMudar();
             },
             icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
@@ -1050,7 +1047,6 @@ class _LinhaSerie extends StatelessWidget {
               child: _CampoNumero(
                 rotulo: serie.intensidadeMetricaNome,
                 controlador: serie.intensidade,
-                dica: serie.intensidadeHint,
               ),
             ),
           const SizedBox(width: AppSpacing.x6),
@@ -1058,7 +1054,6 @@ class _LinhaSerie extends StatelessWidget {
             child: _CampoNumero(
               rotulo: serie.volumeMetricaNome,
               controlador: serie.volume,
-              dica: serie.volumeHint,
             ),
           ),
           const SizedBox(width: AppSpacing.x6),
@@ -1068,7 +1063,6 @@ class _LinhaSerie extends StatelessWidget {
               rotulo: 'Desc.',
               controlador: serie.descanso,
               somenteInteiro: true,
-              dica: serie.descansoHint,
             ),
           ),
           IconButton(
@@ -1111,16 +1105,11 @@ class _CampoNumero extends StatelessWidget {
     required this.rotulo,
     required this.controlador,
     this.somenteInteiro = false,
-    this.dica = '',
   });
 
   final String rotulo;
   final TextEditingController controlador;
   final bool somenteInteiro;
-
-  /// Valor da série anterior mostrado como hint apagado numa série nova em
-  /// branco (PBI-84). Vazio nas demais séries.
-  final String dica;
 
   @override
   Widget build(BuildContext context) {
@@ -1135,7 +1124,6 @@ class _CampoNumero extends StatelessWidget {
       style: AppText.inputValue,
       decoration: InputDecoration(
         labelText: rotulo,
-        hintText: dica.isEmpty ? null : dica,
         isDense: true,
       ),
     );

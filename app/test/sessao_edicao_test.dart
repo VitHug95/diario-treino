@@ -151,32 +151,6 @@ void main() {
       expect(ed.series[1].volume.text, '8');
     });
 
-    test('PBI-84: adicionar série em branco deixa os campos vazios e a anterior '
-        'como dica', () {
-      final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
-      ed.series.first.intensidade.text = '35';
-      ed.series.first.volume.text = '8';
-      ed.series.first.descanso.text = '60';
-
-      ed.adicionarSerieEmBranco();
-
-      expect(ed.series, hasLength(2));
-      final nova = ed.series[1];
-      expect(nova.rodada, 2);
-      // Nasce em branco: nada preenchido, logo não entra como série feita.
-      expect(nova.intensidade.text, isEmpty);
-      expect(nova.volume.text, isEmpty);
-      expect(nova.descanso.text, isEmpty);
-      // Os valores da anterior ficam só como dica (hintText).
-      expect(nova.intensidadeHint, '35');
-      expect(nova.volumeHint, '8');
-      expect(nova.descansoHint, '60');
-      // Herda as métricas e o tipo da anterior.
-      expect(nova.volumeMetricaId, ed.series.first.volumeMetricaId);
-      expect(nova.intensidadeMetricaId, ed.series.first.intensidadeMetricaId);
-      expect(nova.tipo, ed.series.first.tipo);
-    });
-
     test('remover série renumera as rodadas na sequência', () {
       final ed = ExercicioEdicao.doRascunho(_exercicioComAlvos());
       ed.adicionarSerie();
