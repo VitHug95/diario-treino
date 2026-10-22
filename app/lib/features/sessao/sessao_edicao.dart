@@ -24,6 +24,9 @@ class SerieEdicao {
     required String descansoTexto,
     this.marcador = 'VALIDA',
     this.feita = false,
+    this.intensidadeHint = '',
+    this.volumeHint = '',
+    this.descansoHint = '',
   })  : id = UniqueKey(),
         intensidade = TextEditingController(text: intensidadeTexto),
         volume = TextEditingController(text: volumeTexto),
@@ -50,6 +53,13 @@ class SerieEdicao {
   final String volumeMetricaNome;
   final TextEditingController volume;
   final TextEditingController descanso;
+
+  /// Dica (hintText) com o valor da série anterior, mostrada quando a série
+  /// nasce em branco no registro posterior/edição (PBI-84). Fica apagada no
+  /// campo e some ao digitar; não vai para o servidor. Vazia nas demais séries.
+  final String intensidadeHint;
+  final String volumeHint;
+  final String descansoHint;
 
   bool get intensidadePorPesoCorporal =>
       intensidadeMetricaCodigo == 'PESO_CORPORAL';
@@ -97,7 +107,7 @@ class SerieEdicao {
       );
 
   /// Cria uma cópia desta série (mesmos valores e métricas) para a próxima
-  /// rodada. Usado pelo "adicionar série copia a anterior".
+  /// rodada. Usado pelo "adicionar série copia a anterior" (treino ao vivo).
   SerieEdicao copiarComoRodada(int novaRodada) => SerieEdicao(
         rodada: novaRodada,
         ordem: ordem,
@@ -112,6 +122,28 @@ class SerieEdicao {
         volumeTexto: volume.text,
         descansoTexto: descanso.text,
         marcador: marcador,
+      );
+
+  /// Cria a próxima série **em branco**, herdando só as métricas e o tipo
+  /// (PBI-84, registro posterior/edição). Os valores desta série viram
+  /// [intensidadeHint]/[volumeHint]/[descansoHint]: aparecem como dica apagada
+  /// no campo, sem preencher de fato — a série só conta quando o atleta digita.
+  SerieEdicao copiarEmBrancoComDica(int novaRodada) => SerieEdicao(
+        rodada: novaRodada,
+        ordem: ordem,
+        tipo: tipo,
+        intensidadeMetricaId: intensidadeMetricaId,
+        intensidadeMetricaCodigo: intensidadeMetricaCodigo,
+        intensidadeMetricaNome: intensidadeMetricaNome,
+        intensidadeTexto: '',
+        volumeMetricaId: volumeMetricaId,
+        volumeMetricaCodigo: volumeMetricaCodigo,
+        volumeMetricaNome: volumeMetricaNome,
+        volumeTexto: '',
+        descansoTexto: '',
+        intensidadeHint: intensidade.text,
+        volumeHint: volume.text,
+        descansoHint: descanso.text,
       );
 
   /// Formata um número para exibição (inteiro sem casas, decimal com vírgula).
@@ -243,6 +275,7 @@ class ExercicioEdicao {
   }
 
   /// Adiciona uma série copiando a última (ou uma vazia, se não houver nenhuma).
+  /// Usado no treino ao vivo, onde repetir a carga da série anterior é o comum.
   void adicionarSerie() {
     final novaRodada = series.isEmpty ? 1 : series.last.rodada + 1;
     if (series.isEmpty) {
@@ -250,6 +283,17 @@ class ExercicioEdicao {
       return;
     }
     series.add(series.last.copiarComoRodada(novaRodada));
+  }
+
+  /// Adiciona a próxima série **em branco** (PBI-84), com os valores da anterior
+  /// só como dica (hintText). Usado no registro posterior e na edição, onde a
+  /// série nova não deve nascer "feita" com a carga da anterior.
+  void adicionarSerieEmBranco() {
+    if (series.isEmpty) {
+      // Sem base para herdar métricas; o chamador trata (mesma regra do copiar).
+      return;
+    }
+    series.add(series.last.copiarEmBrancoComDica(series.last.rodada + 1));
   }
 
   /// Remove a série do índice e renumera as rodadas na sequência.
