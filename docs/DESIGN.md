@@ -130,9 +130,13 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
   com texto `primary-on-tint` no estilo `label`, nunca a barra preta do
   Material. Some sozinha em ~2 s, flutua acima da navegação inferior sem cobrir
   o botão principal, `liveRegion` para o leitor de tela. Dois avisos não
-  empilham. Use para "Ficha criada" e afins; `mostrarAviso` em `shared/`.
-  Quando o aviso precisa de ação (desfazer, ver) ou comunica erro, use outro
-  componente — não esta pílula.
+  empilham. Use para "Ficha criada", "Treino salvo" e afins; `mostrarAviso` em
+  `shared/` (para quem navega antes de avisar, `mostrarAvisoNoMessenger`, que
+  recebe o messenger e as cores capturados antes do `go`). Quando o aviso
+  precisa de ação (desfazer, ver) ou comunica erro, use outro componente — não
+  esta pílula. Decisão do PO (PBI-75): o "Treino salvo" é só o pop, **sem** a
+  antiga ação "Ver treino" — o treino se reabre pelo cartão de último treino na
+  Início.
 - Bloco de observação: `obs-tint`, borda `obs-line`, título `obs-title`, corpo `obs-body`, raio 16.
 - Chip de filtro: pílula 44. Selecionado: fundo `text-primary`, texto `bg-surface`.
 - Abas segmentadas: trilho `bg-track` 4px de respiro, raio 12; aba ativa `bg-surface` raio 9.

@@ -10,16 +10,31 @@ import '../theme/theme_tokens.dart';
 /// nunca preto.
 ///
 /// Use para confirmar algo que já aconteceu e não exige resposta
-/// (ex.: "Ficha criada"). Quando o aviso precisa de ação (desfazer, ver) ou
-/// comunica erro, use outro componente — ver `docs/DESIGN.md`.
+/// (ex.: "Ficha criada", "Treino salvo"). Quando o aviso precisa de ação
+/// (desfazer, ver) ou comunica erro, use outro componente — ver `docs/DESIGN.md`.
 ///
 /// Regras de comportamento:
 /// - flutua acima da navegação inferior, sem cobrir o botão principal;
 /// - dois avisos não empilham: limpa o anterior antes de mostrar;
 /// - `liveRegion` para o leitor de tela anunciar sem roubar o foco.
 void mostrarAviso(BuildContext context, String mensagem) {
-  final cores = AppColors.of(context);
-  ScaffoldMessenger.of(context)
+  mostrarAvisoNoMessenger(
+    ScaffoldMessenger.of(context),
+    AppColors.of(context),
+    mensagem,
+  );
+}
+
+/// Variante para quem precisa **capturar o messenger antes de navegar** (ex.:
+/// o "Treino salvo" pega o messenger da raiz antes do `go` para a Início, para
+/// o aviso aparecer já na nova tela). Pegue `messenger` e `cores` do context
+/// atual antes de trocar de rota e chame aqui depois.
+void mostrarAvisoNoMessenger(
+  ScaffoldMessengerState messenger,
+  AppColors cores,
+  String mensagem,
+) {
+  messenger
     ..clearSnackBars()
     ..showSnackBar(SnackBar(
       content: Semantics(

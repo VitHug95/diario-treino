@@ -214,9 +214,10 @@ void main() {
 
       // Confirmação: volta ao Início.
       // PBI-64: sem diálogo; vai direto à Início com o aviso "Treino salvo".
+      // PBI-75: o aviso é um pop sem ação — não há mais "Ver treino" nele.
       expect(find.text('Treino registrado'), findsNothing);
       expect(find.text('Treino salvo'), findsOneWidget);
-      expect(find.text('Ver treino'), findsOneWidget);
+      expect(find.text('Ver treino'), findsNothing);
 
       // Regressão do bug PBI-23A: ao voltar, a Início reflete a nova sessão
       // (semana marcada e último treino), sem precisar recarregar.
