@@ -302,7 +302,12 @@ jobs:
       - name: Instalar flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      # --ha=false: mantém UMA máquina. Sem a flag, o Fly tenta subir uma 2ª
+      # máquina para alta disponibilidade e o deploy fica vermelho quando a
+      # região (gru) está sem capacidade ("no capacity in gru") — mesmo com a
+      # API já no ar na 1ª máquina. Uso pessoal não precisa de HA; se um dia
+      # precisar, escalar com `fly scale count 2` fora do deploy.
       - name: Deploy
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
