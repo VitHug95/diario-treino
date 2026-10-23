@@ -479,7 +479,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
         if (!mounted) return;
         Navigator.of(context).pop(true);
       } else {
-        final sessaoId = await repo.criarSessao(
+        await repo.criarSessao(
           treinoId: widget.treinoId,
           data: _data,
           duracaoMin: duracao,
@@ -500,7 +500,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
         if (mounted) {
           _confirmarRegistro(
-            sessaoId,
             mensagem: fichaNaoConferida
                 ? 'Treino salvo. Não deu para conferir a ficha.'
                 : 'Treino salvo',
@@ -569,8 +568,8 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
-  void _confirmarRegistro(String sessaoId, {String mensagem = 'Treino salvo'}) =>
-      irParaInicioComTreinoSalvo(context, sessaoId, mensagem: mensagem);
+  void _confirmarRegistro({String mensagem = 'Treino salvo'}) =>
+      irParaInicioComTreinoSalvo(context, mensagem: mensagem);
 
   void _erro(String msg) {
     if (!mounted) return;

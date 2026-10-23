@@ -184,7 +184,7 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
           _observacao.text.trim().isEmpty ? null : _observacao.text.trim();
 
       // Sessão e ficha numa chamada só (uma transação): ou grava tudo, ou nada.
-      final sessaoId = await repo.criarSessao(
+      await repo.criarSessao(
         treinoId: estado.treinoId,
         data: _data,
         duracaoMin: duracao,
@@ -202,7 +202,6 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
       // treino foi salvo mesmo assim e o aviso diz isso.
       if (mounted) {
         _confirmar(
-          sessaoId,
           mensagem: manterNaFicha.leituraFalhou
               ? 'Treino salvo. Não deu para conferir a ficha.'
               : 'Treino salvo',
@@ -227,8 +226,8 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
   }
 
   /// Salvou (PBI-64): Início com o aviso "Treino salvo", sem diálogo.
-  void _confirmar(String sessaoId, {String mensagem = 'Treino salvo'}) =>
-      irParaInicioComTreinoSalvo(context, sessaoId, mensagem: mensagem);
+  void _confirmar({String mensagem = 'Treino salvo'}) =>
+      irParaInicioComTreinoSalvo(context, mensagem: mensagem);
 
   void _erro(String msg) {
     if (!mounted) return;

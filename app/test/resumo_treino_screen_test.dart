@@ -116,10 +116,10 @@ void main() {
     expect(find.text('Tela inicial'), findsOneWidget);
     expect(find.text('Treino salvo'), findsOneWidget);
 
-    // "Ver treino" abre o detalhe da sessão salva.
-    await tester.tap(find.text('Ver treino'));
-    await tester.pumpAndSettle();
-    expect(find.text('Detalhe s1'), findsOneWidget);
+    // PBI-75: o aviso é um pop sem ação — não há "Ver treino", e ficamos na
+    // Início (não abre o detalhe da sessão).
+    expect(find.text('Ver treino'), findsNothing);
+    expect(find.text('Detalhe s1'), findsNothing);
     c.dispose();
   });
 
