@@ -132,4 +132,9 @@ abstract final class AppSizes {
   /// Borda padrão de card e a de destaque (ficha em andamento, PBI-67).
   static const borda = 1.0;
   static const bordaDestaque = 2.0;
+
+  /// Largura do conteúdo de um diálogo de formulário. Fixa a constraint
+  /// horizontal para o campo ocupar o diálogo e a área de toque casar com a
+  /// borda no web (CanvasKit). Cabe no celular estreito (360).
+  static const larguraDialogo = 320.0;
 }

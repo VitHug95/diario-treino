@@ -21,35 +21,56 @@ Future<DadosFicha?> dialogoFicha(BuildContext context, {TreinoResumo? inicial}) 
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(inicial == null ? 'Nova ficha' : 'Renomear ficha'),
-      content: Form(
-        key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: nome,
-              decoration: const InputDecoration(labelText: 'Nome', hintText: 'Ex.: A'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            TextFormField(
-              controller: descricao,
-              decoration: const InputDecoration(
-                  labelText: 'Descrição (opcional)', hintText: 'Ex.: Peito e tríceps'),
-            ),
-          ],
+      content: SizedBox(
+        // Largura explícita: sem ela, numa Column dentro do AlertDialog no web
+        // (CanvasKit) o campo encolhe e a área de toque não acompanha a borda
+        // desenhada — o clique só "pegava" na beirada do campo.
+        width: AppSizes.larguraDialogo,
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nome,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Nome', hintText: 'Ex.: A'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              TextFormField(
+                controller: descricao,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                    labelText: 'Descrição (opcional)', hintText: 'Ex.: Peito e tríceps'),
+                onFieldSubmitted: (_) => _salvar(ctx, formKey, nome, descricao),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
         FilledButton(
-          onPressed: () {
-            if (!formKey.currentState!.validate()) return;
-            Navigator.pop(ctx, DadosFicha(nome.text.trim(), descricao.text.trim()));
-          },
+          onPressed: () => _salvar(ctx, formKey, nome, descricao),
           child: const Text('Salvar'),
         ),
       ],
     ),
   );
+}
+
+/// Valida o nome e fecha o diálogo devolvendo os dados. Usado pelo botão Salvar
+/// e pelo Enter no campo de descrição.
+void _salvar(
+  BuildContext ctx,
+  GlobalKey<FormState> formKey,
+  TextEditingController nome,
+  TextEditingController descricao,
+) {
+  if (!formKey.currentState!.validate()) return;
+  Navigator.pop(ctx, DadosFicha(nome.text.trim(), descricao.text.trim()));
 }
