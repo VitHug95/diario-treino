@@ -1151,9 +1151,110 @@ de entrar. Pontos já combinados para o refinamento:
 - **Falta virar PBI:** tornar-se educador, convite e aceite de vínculo, lista de
   alunos, ver treino e progresso do aluno, montar plano para o aluno, termo de
   consentimento LGPD (antes de qualquer acesso do educador), PDF e a PBI-48.
-- **Decisões a levar ao Vinicius:** o aluno pode esconder uma observação do
-  educador; o educador perde o histórico quando o vínculo acaba; o que vai no PDF;
-  excluir plano do professor depois do fim do vínculo (premissa da PBI-48).
+- **Decisões do PO (tomadas, 31/10):**
+  - **O aluno pode esconder uma observação do educador: SIM.** O atleta marca uma
+    observação como privada e o educador não a vê (nem no app, nem no PDF). Exige
+    uma flag de privacidade na observação da sessão (mudança de banco).
+  - **O educador perde o histórico quando o vínculo acaba: NÃO apaga, mas perde o
+    acesso.** Nada do aluno é apagado; o educador simplesmente deixa de ver os
+    dados quando o vínculo sai de ATIVO (é o que o `IControleAcesso` já faz). Se o
+    vínculo for reativado, volta a ver. (Não há "cópia" do histórico para o
+    educador.)
+  - **O que vai no PDF:** os **treinos (sessões registradas) e as evoluções
+    (gráficos de progresso por exercício)** do período. Respeita a privacidade:
+    observação marcada como privada não entra.
+  - **Excluir plano do professor depois do fim do vínculo: SIM.** Encerrado o
+    vínculo, o aluno pode excluir da sua lista o plano que o professor montou
+    (premissa da PBI-48).
+
+### Épico E7 · Modo educador — PBIs refinadas (31/10)
+
+Ordem do fundamento ao visível. A estrutura de dados (papel `EDUCADOR`, tabela
+`vinculo`) e a regra de acesso (`IControleAcesso`) já estão na `main`; estas PBIs
+dão vida ao educador. Login é único (ADR-04): muda o **papel**, não o login.
+
+#### PBI-85 · Tornar-se educador e vínculo com aluno (convite/aceite) — backend
+
+**História:** Como educador, quero convidar um aluno e, com o aceite dele, ter um
+vínculo ativo, para então acompanhar os treinos dele — e encerrar o vínculo
+quando o acompanhamento acabar.
+
+**Contexto:** a tabela `vinculo` (PENDENTE/ATIVO/ENCERRADO) e o papel `EDUCADOR`
+já existem no banco; o `IControleAcesso` já libera "educador com vínculo ATIVO".
+Falta o caminho que cria e muda o vínculo, e o que concede o papel `EDUCADOR`
+(hoje o `GET /me` só provisiona `ATLETA`). Esta PBI é só backend; as telas vêm na
+PBI-88.
+
+**Critérios de aceite**
+- Virar educador: um usuário ganha o papel `EDUCADOR` (endpoint dedicado, ex.
+  `POST /me/papeis/educador`), idempotente; `GET /me` passa a devolver os papéis.
+- `POST /vinculos` — educador (com papel `EDUCADOR`) convida um aluno por e-mail;
+  cria `vinculo` PENDENTE. 409 se já existe vínculo aberto (respeita
+  `ux_vinculo_aberto`); 400 se o convite for para si mesmo (`educador ≠ aluno`);
+  404 se o e-mail não existe (sem revelar se existe — mensagem neutra).
+- Aceite: o aluno vê convites pendentes (`GET /vinculos/pendentes`) e aceita
+  (`POST /vinculos/{id}/aceitar` → ATIVO, grava `inicio`) ou recusa
+  (→ ENCERRADO). Só o aluno do vínculo aceita/recusa (senão 404).
+- Encerrar: educador ou aluno encerram um vínculo ATIVO
+  (`POST /vinculos/{id}/encerrar` → ENCERRADO, grava `fim`). Fora do vínculo: 404.
+- `GET /alunos` — alunos com vínculo ATIVO do educador logado.
+- Validação: `educador_id` precisa ter papel `EDUCADOR` (regra do MER 3.3).
+
+**Notas técnicas:** entidade `Vinculo` e `VinculoConfiguration` já existem; falta
+o serviço de aplicação (`ServicoVinculo`?), os endpoints e o `IRepositorioVinculo`
+ganhar métodos de escrita/consulta (hoje só `ExisteVinculoAtivoAsync`). Reusar o
+`IControleAcesso` para os acessos; todo endpoint novo que lê/grava dado de atleta
+tem teste do caso "outro usuário" (404). Sem mudança de banco.
+**Depende de:** PBI-07 (feito). **Prioridade:** alta (fundação do E7).
+
+#### PBI-86 · Educador vê treino e progresso do aluno — backend
+
+**História:** Como educador com vínculo ativo, quero ver os treinos e a evolução
+do aluno, para orientar o acompanhamento.
+
+**Critérios de aceite (preliminares)**
+- Os endpoints de dados de atleta (planos, sessões, progresso) aceitam o
+  `atletaId` opcional na query (MAS 12); sem ele, vale o usuário logado. A regra
+  11.3 é aplicada sempre (educador com vínculo ATIVO ou dono; senão 404).
+- Teste do caso "outro usuário / vínculo encerrado" → 404 em cada endpoint.
+**Depende de:** PBI-85. **Prioridade:** alta.
+
+#### PBI-87 · Observação privada e consentimento LGPD
+
+**História:** Como atleta, quero poder marcar uma observação como privada (o
+educador não vê) e dar consentimento antes de qualquer acesso do educador, para
+proteger dados sensíveis.
+
+**Critérios de aceite (preliminares)**
+- Flag de privacidade na observação da sessão (**mudança de banco** + migration).
+  Observação privada não vai para o educador (API) nem para o PDF.
+- Tabela `consentimento (usuario_id, versao_termo, aceito_em)` (MER 7); o acesso
+  do educador só é liberado após o aceite do termo pelo aluno.
+**Depende de:** PBI-85. **Prioridade:** alta (bloqueia o acesso real do educador).
+
+#### PBI-88 · Telas do educador (lista de alunos, treino/progresso, montar ficha)
+
+**História:** Como educador, quero telas para ver meus alunos, o treino e a
+evolução de cada um e montar ficha para eles, para acompanhar de verdade pelo app.
+
+**Critérios de aceite (preliminares)**
+- O app escolhe as telas pelo papel (`usuario_papel`); quem é só atleta não vê
+  nada de educador. Troca/contexto de papel para quem tem os dois.
+- Lista de alunos; abrir aluno mostra treino e progresso (consome a PBI-86).
+- Montar ficha para o aluno grava o plano com `autor = educador` (fecha a PBI-48,
+  cujo lado do aluno — ler/copiar plano do professor — já existe).
+**Depende de:** PBI-85, PBI-86, PBI-87. Inclui a **PBI-48**.
+
+#### PBI-89 · Exportar progresso do aluno em PDF
+
+**História:** Como educador, quero exportar os treinos e as evoluções do aluno em
+PDF, para registrar/compartilhar o acompanhamento.
+
+**Critérios de aceite (preliminares)**
+- `GET /alunos/{id}/progresso/pdf?de=&ate=` gera o PDF com os **treinos (sessões)
+  e as evoluções (gráficos por exercício)** do período. Observação privada não
+  entra. Passa pela regra 11.3 (vínculo ATIVO; senão 404).
+**Depende de:** PBI-86, PBI-87. **Prioridade:** média.
 
 ---
 
@@ -1164,7 +1265,6 @@ de entrar. Pontos já combinados para o refinamento:
 | O gráfico de força usa maior carga da sessão ou volume total (carga × repetições)? | PBI-20 | Vinicius |
 | A zona é definida por frequência cardíaca, pace ou percepção de esforço? | PBI-27 a PBI-29 | Vinicius |
 | Rodada a mais ou incompleta no intervalado: como aparece no feedback? | PBI-29 | Vinicius |
-| O aluno pode esconder uma observação do educador? | E7 | Vinicius |
 | Lista de membros e músculos está boa para o uso de vocês e para reabilitação? (não bloqueia: a lista proposta entra e é ajustada por migration) | PBI-31 | Vinicius |
 | Nome definitivo do app | PBI-04 (domínio) | Vitor e Vinicius |
 
