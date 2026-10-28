@@ -175,8 +175,12 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 ## 8. O que falta
 
 ### Backlog
-- **PBI-34** (trocar a métrica no registro), **PBI-35** (cronograma semanal).
-- **PBI-48 e épico do educador (E7):** próxima sprint.
+- **PBI-34** (trocar a métrica no registro): **bloqueada** por decisão de
+  produto (opção a × b — ver "Perguntas ainda abertas"). Em espera.
+- **PBI-35** (cronograma semanal): evolução, prioridade baixa.
+- **PBI-48 e épico do educador (E7): próximo a ser atacado.** A estrutura de
+  dados e a autorização já existem (ver abaixo); falta construir o que dá vida
+  ao educador. Em refinamento.
 - Incremento 2 — cardio (**PBI-27 a 30**).
 
 ### Entregue recentemente (PR)
@@ -190,8 +194,11 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - **PBI-26** E2E do fluxo principal (#108/#109).
 - Bloco 1 (fechar pendências antes do educador): **PBI-83** docs (#111),
   **PBI-81** "Manter na ficha?" por exercício (#112), **PBI-75** aviso vira
-  pílula (#113). **PBI-84** (série em branco) entrou (#114) e foi **revertida**
-  (#115) por decisão do PO — ver seção de decisões.
+  pílula (#113) + "Treino salvo" sem ação (#116). **PBI-84** (série em branco)
+  entrou (#114) e foi **revertida** (#115) por decisão do PO — ver decisões.
+- Infra: deploy da API no Fly com **`--ha=false`** (#117, evita "no capacity
+  in gru"). Job **E2E bloqueante com 1 retry** (`ci/e2e-bloqueante`): PR aberto,
+  **aguardando merge** — tira o `continue-on-error` do job `e2e`.
 
 ### Decisões do PO já tomadas (19/10)
 - Início de quem apagou os planos mostra "Bem-vindo de volta · Crie seu plano" (PBI-68).
@@ -201,6 +208,8 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - "Adicionar série" no registro posterior/edição **copia a série anterior**
   (valores já preenchidos e editáveis), igual ao treino ao vivo — a PBI-84
   (série em branco com dica) foi **revertida** por isso (31/10, #114→#115).
+- "Treino salvo" é só o **pop sem ação** — tirou-se o "Ver treino" (PBI-75,
+  #116); o treino se reabre pelo cartão de último treino na Início.
 - Atalho "Iniciar treino" na Início: **dispensado**.
 - "Excluir treino" apaga **só a sessão**.
 - Toque num dia da semana **abre o treino daquele dia**.
@@ -210,9 +219,15 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - PBI-69: o plano pode nascer sem fichas e a ficha criada volta ao detalhe do plano?
 - Séries não marcadas ficam de fora ao "concluir exercício"?
 - Play no plano do professor (só leitura): o que faz?
-- PBI-75: "Treino salvo" mantém a ação "Ver treino" ou vira só o pop? (recomendação: só o pop).
+- **PBI-34** (trocar a métrica de intensidade no registro): onde a troca
+  acontece — (a) por série no registro, flexível, mas o gráfico precisa agrupar
+  por métrica; ou (b) no alvo da ficha, mais previsível e com mudança de banco?
+  **Bloqueia a implementação** (o back já aceita a opção (a) por série, falta a
+  decisão + UI + tratamento no progresso). Recomendação: (a) com o gráfico
+  agrupando por métrica, e o progresso num passo seguinte.
 
 ### Pendências de infraestrutura
+- Mergear o PR `ci/e2e-bloqueante` (E2E deixa de ser tolerante a falha).
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
 - Resetar a senha do role do Neon (foi digitada em texto durante o setup).
 - Ruído de log cosmético na API (`libgssapi_krb5.so.2`), sem efeito na conexão.
@@ -224,9 +239,44 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 O Incremento 1 (modo atleta) está essencialmente completo e na `main`, incluindo o
 E2E automatizado do fluxo principal (PBI-26, PRs #108/#109). Próximos passos:
 
-1. PBI-34 (trocar a métrica no registro) e PBI-35 (cronograma semanal).
-2. Modo educador (PBI-48 e épico E7) na próxima sprint; depois o Incremento 2 (cardio).
-3. Levar as perguntas da seção 8 ao PO.
+1. **Modo educador (épico E7 + PBI-48)** — próximo a ser atacado. Ver o mapa
+   "pronto × falta" abaixo.
+2. Mergear o PR `ci/e2e-bloqueante`.
+3. Destravar a PBI-34 com o PO (opção a × b) antes de implementá-la.
+4. Depois: PBI-35 (cronograma semanal) e Incremento 2 (cardio, PBI-27 a 30).
+
+### Modo educador — o que já existe × o que falta
+
+**Pronto e na `main` (não refazer):**
+- Papel `EDUCADOR` (enum + `CHECK` em `usuario_papel`).
+- Tabela `vinculo` completa: status PENDENTE/ATIVO/ENCERRADO, `CHECK`
+  educador≠aluno, índices `ux_vinculo_aberto` e `ix_vinculo_aluno_ativo`, FKs
+  Restrict (migration `InitialCreate` + `VinculoConfiguration`).
+- Regra única de acesso `IControleAcesso` (MAS 11.3): dono OU educador com
+  vínculo ATIVO; recurso de outro usuário → 404. Já usada no planejamento/sessão.
+- Plano com autor ≠ atleta é somente-leitura (403 `plano-somente-leitura`,
+  sempre depois do 404) — back e UI do lado do aluno (PBI-48 parcial: ler/copiar).
+
+**Falta construir (ordem sugerida, do fundamento ao visível):**
+1. Backend — tornar-se educador: provisionar/garantir o papel `EDUCADOR`
+   (hoje `MeEndpoints` só dá `ATLETA` no 1º acesso).
+2. Backend — vínculo: serviço + endpoints de convite e aceite (PENDENTE→ATIVO),
+   validar que o educador tem papel `EDUCADOR`, respeitar `ux_vinculo_aberto`;
+   encerrar vínculo (ENCERRADO + `fim`).
+3. Backend — expor dados do aluno: endpoints aceitam o `atletaId` opcional da
+   query (MAS 12) passando pelo `IControleAcesso`; `/alunos`, `/alunos/{id}/...`.
+   Todo endpoint novo precisa do teste do caso "outro usuário" (404).
+4. Banco — consentimento LGPD: migration da tabela `consentimento` (MER 7)
+   antes de liberar qualquer acesso do educador.
+5. Front — telas do educador: contexto/escolha de papel, lista de alunos, ver
+   treino e progresso do aluno, montar ficha para o aluno (autor = educador) e
+   fechar a PBI-48 (criação do plano do professor que a UI do aluno já consome).
+6. Depois: PDF do progresso do aluno.
+
+**Decisões de produto a levar ao Vinicius antes do refinamento:** o aluno pode
+esconder uma observação do educador? o educador perde o histórico quando o
+vínculo acaba? o que vai no PDF? pode excluir plano do professor depois do fim
+do vínculo (premissa da PBI-48)?
 
 ### Dívidas técnicas de infra em aberto
 - Deploy da API no Fly pode ficar vermelho por "no capacity in gru" ao criar a 2ª
