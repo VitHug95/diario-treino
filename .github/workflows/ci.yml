@@ -79,12 +79,14 @@ jobs:
   # O integration_test digita pela árvore de widgets (tester.enterText). O app
   # entra já autenticado pelo atalho de login do boot (main.dart, modo emulador).
   #
-  # continue-on-error: não bloqueia o merge enquanto a suíte amadurece.
+  # Bloqueante: a suíte amadureceu (verde e estável), então o E2E passou a
+  # barrar o merge. Para absorver flake transitório (timeout de boot do
+  # emulador/API, lentidão do ChromeDriver) sem travar merge à toa, o passo do
+  # `flutter drive` re-tenta uma vez antes de falhar.
   e2e:
     name: E2E (integration_test + Chrome)
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    continue-on-error: true
     timeout-minutes: 25
     env:
       PROJECT_ID: demo-diario-treino
@@ -206,23 +208,33 @@ jobs:
           # firebase_options.dart é gitignored (um por ambiente); usa o de E2E.
           cp lib/firebase_options.e2e.dart lib/firebase_options.dart
           flutter pub get
-          # tee + PIPESTATUS: o stdout do teste (inclui o diagnóstico "Textos
+          # tee + pipefail: o stdout do teste (inclui o diagnóstico "Textos
           # visíveis na tela" em falha) vai para o console E para drive.log, que
           # é publicado no artefato — assim a falha é inspecionável sem precisar
           # copiar o log do job. O exit code é o do flutter drive, não do tee.
           set -o pipefail
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/fluxo_pbi26_test.dart \
-            -d web-server \
-            --browser-name=chrome \
-            --headless \
-            --dart-define=API_BASE_URL=http://127.0.0.1:8080/api/v1 \
-            --dart-define=TREINO_AO_VIVO=false \
-            --dart-define=USE_AUTH_EMULATOR=true \
-            --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
-            --dart-define=AUTH_EMULATOR_PORT=9099 \
-            2>&1 | tee "$RUNNER_TEMP/drive.log"
+          rodar_drive() {
+            flutter drive \
+              --driver=test_driver/integration_test.dart \
+              --target=integration_test/fluxo_pbi26_test.dart \
+              -d web-server \
+              --browser-name=chrome \
+              --headless \
+              --dart-define=API_BASE_URL=http://127.0.0.1:8080/api/v1 \
+              --dart-define=TREINO_AO_VIVO=false \
+              --dart-define=USE_AUTH_EMULATOR=true \
+              --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 \
+              --dart-define=AUTH_EMULATOR_PORT=9099 \
+              2>&1 | tee -a "$RUNNER_TEMP/drive.log"
+          }
+          # Bloqueante com 1 retry: um flake transitório (boot do emulador/API,
+          # ChromeDriver lento) não trava o merge; falha de verdade reprova nas
+          # duas tentativas. O drive.log acumula as duas (tee -a) no artefato.
+          if ! rodar_drive; then
+            echo "::warning::E2E falhou na 1ª tentativa; repetindo uma vez."
+            echo "===== RETRY DO E2E =====" >> "$RUNNER_TEMP/drive.log"
+            rodar_drive
+          fi
       - name: Logs dos serviços (diagnóstico em falha)
         if: failure()
         run: |
