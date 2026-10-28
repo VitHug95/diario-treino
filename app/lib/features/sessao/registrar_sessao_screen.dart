@@ -543,12 +543,17 @@ class _FormularioState extends ConsumerState<_Formulario> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Salvar como ficha'),
-        content: TextField(
-          controller: controlador,
-          autofocus: true,
-          maxLength: 40,
-          decoration: const InputDecoration(labelText: 'Nome da ficha'),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        // Largura explícita: sem ela, no AlertDialog web (CanvasKit) o campo
+        // fica estreito e clicar fora dele cai no barrier e fecha o diálogo.
+        content: SizedBox(
+          width: AppSizes.larguraDialogo,
+          child: TextField(
+            controller: controlador,
+            autofocus: true,
+            maxLength: 40,
+            decoration: const InputDecoration(labelText: 'Nome da ficha'),
+            onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+          ),
         ),
         actions: [
           TextButton(
