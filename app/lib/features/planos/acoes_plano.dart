@@ -139,16 +139,22 @@ Future<String?> dialogoNomePlano(BuildContext context,
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(titulo),
-      content: Form(
-        key: formKey,
-        child: TextFormField(
-          controller: nome,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-              labelText: 'Nome do plano', hintText: 'Ex.: Treino de viagem'),
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
+      // Largura explícita: sem ela, no AlertDialog web (CanvasKit) o campo fica
+      // com a largura intrínseca (estreita) e clicar fora dela cai no barrier e
+      // fecha o diálogo. Ver AppSizes.larguraDialogo.
+      content: SizedBox(
+        width: AppSizes.larguraDialogo,
+        child: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: nome,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+                labelText: 'Nome do plano', hintText: 'Ex.: Treino de viagem'),
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
+          ),
         ),
       ),
       actions: [
