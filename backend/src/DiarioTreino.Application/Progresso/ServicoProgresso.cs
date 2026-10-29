@@ -5,38 +5,52 @@ using DiarioTreino.Domain.Comum;
 namespace DiarioTreino.Application.Progresso;
 
 /// <summary>
-/// Evolução de um exercício ao longo do tempo (PBI-20). O progresso é sempre do
-/// atleta logado: filtra as sessões por ele, então sessões de terceiros nunca
-/// entram. Exercício inexistente/indisponível responde 404.
+/// Evolução de um exercício ao longo do tempo (PBI-20). O progresso é do
+/// atleta-alvo: o próprio usuário logado ou, no modo educador (PBI-86), um
+/// aluno com vínculo ativo — a regra do MAS 11.3 (<see cref="IControleAcesso"/>)
+/// é aplicada sempre. Exercício inexistente/indisponível ao alvo responde 404.
 /// </summary>
 public sealed class ServicoProgresso
 {
     private readonly IRepositorioProgresso _progresso;
     private readonly IRepositorioExercicio _exercicios;
+    private readonly IControleAcesso _acesso;
 
     public ServicoProgresso(
         IRepositorioProgresso progresso,
-        IRepositorioExercicio exercicios)
+        IRepositorioExercicio exercicios,
+        IControleAcesso acesso)
     {
         _progresso = progresso;
         _exercicios = exercicios;
+        _acesso = acesso;
     }
 
-    /// <summary>Exercícios que o atleta logado já treinou (seletor do gráfico).</summary>
-    public Task<IReadOnlyList<ExercicioComHistorico>> ListarExerciciosComHistoricoAsync(
-        Guid usuarioLogadoId, CancellationToken ct) =>
-        _progresso.ListarExerciciosComHistoricoAsync(usuarioLogadoId, ct);
+    /// <summary>
+    /// Exercícios que o atleta-alvo já treinou (seletor do gráfico). O educador
+    /// com vínculo ativo passa o <paramref name="atletaId"/> do aluno.
+    /// </summary>
+    public async Task<IReadOnlyList<ExercicioComHistorico>> ListarExerciciosComHistoricoAsync(
+        Guid usuarioLogadoId, Guid atletaId, CancellationToken ct)
+    {
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+        return await _progresso.ListarExerciciosComHistoricoAsync(atletaId, ct);
+    }
 
     public async Task<ProgressoExercicio> ObterProgressoAsync(
         Guid usuarioLogadoId,
+        Guid atletaId,
         Guid exercicioId,
         DateOnly? de,
         DateOnly? ate,
         CancellationToken ct)
     {
-        // Exercício precisa existir e estar disponível ao usuário (global ou
-        // próprio). Caso contrário, 404 (não revela existência de terceiros).
-        if (!await _exercicios.ExisteDisponivelAsync(exercicioId, usuarioLogadoId, ct))
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+
+        // Exercício precisa existir e estar disponível ao atleta-alvo (global ou
+        // próprio dele). Caso contrário, 404. Avaliado pelo alvo (PBI-86): o
+        // educador enxerga os exercícios privados do aluno que está vendo.
+        if (!await _exercicios.ExisteDisponivelAsync(exercicioId, atletaId, ct))
         {
             throw new RecursoNaoEncontradoException("Exercício não encontrado.");
         }
@@ -50,7 +64,7 @@ public sealed class ServicoProgresso
         // corporal, abdominais) cai para repetições; isometria usa o tempo;
         // cardio ainda não tem gráfico no MVP.
         var metrica = await DecidirMetricaAsync(
-            usuarioLogadoId, exercicioId, exercicio.Modalidade, de, ate, ct);
+            atletaId, exercicioId, exercicio.Modalidade, de, ate, ct);
         if (metrica is null)
         {
             // Modalidade sem gráfico de evolução no MVP (ex.: cardio): devolve
@@ -61,7 +75,7 @@ public sealed class ServicoProgresso
         }
 
         var brutos = await _progresso.ObterPontosAsync(
-            usuarioLogadoId, exercicioId, metrica.Value, de, ate, ct);
+            atletaId, exercicioId, metrica.Value, de, ate, ct);
 
         var pontos = brutos
             .Select(b => new PontoProgresso(
