@@ -17,7 +17,10 @@ public static class PlanoEndpoints
         var grupo = app.MapGroup("/api/v1").RequireAuthorization();
 
         // Plano ativo do usuário logado (com as fichas).
+        // atletaId opcional (PBI-86): sem ele, vale o logado; com ele, o educador
+        // vê o aluno (passa pelo IControleAcesso; sem vínculo ativo → 404).
         grupo.MapGet("/planos/ativo", async (
+            Guid? atletaId,
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoPlanejamento planejamento,
@@ -26,13 +29,16 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var plano = await planejamento.ObterPlanoAtivoAsync(perfil.Id, ct);
+            var alvo = atletaId ?? perfil.Id;
+            var plano = await planejamento.ObterPlanoAtivoAsync(perfil.Id, alvo, ct);
             return plano is null ? Results.NoContent() : Results.Ok(plano);
         })
         .WithName("PlanoAtivo").WithTags("Fichas").WithSummary("Plano em uso com as fichas");
 
-        // Lista os planos do atleta logado (PBI-44): em uso primeiro.
+        // Lista os planos do atleta (PBI-44): em uso primeiro. atletaId opcional
+        // para o educador (PBI-86).
         grupo.MapGet("/planos", async (
+            Guid? atletaId,
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoPlanejamento planejamento,
@@ -41,7 +47,8 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var planos = await planejamento.ListarPlanosAsync(perfil.Id, ct);
+            var alvo = atletaId ?? perfil.Id;
+            var planos = await planejamento.ListarPlanosAsync(perfil.Id, alvo, ct);
             return Results.Ok(planos);
         })
         .WithName("ListarPlanos").WithTags("Planos").WithSummary("Planos do atleta");

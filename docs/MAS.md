@@ -361,7 +361,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/alunos` | Alunos com vínculo ativo do educador logado | ✅ (PBI-85) |
 | GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | 🟣 PBI-89 |
 
-Rotas de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre.
+Rotas de **leitura** de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre (educador sem vínculo ativo → 404). Implementado na **PBI-86** em: `GET /planos`, `GET /planos/ativo`, `GET /planos/{id}`, `GET /sessoes`, `GET /sessoes/{id}`, `GET /treinos/{id}/rascunho-sessao`, `GET /exercicios/{id}/historico`, `GET /exercicios/{id}/ultima-execucao`, `GET /progresso/exercicios` e `GET /progresso/exercicios/{id}`. A disponibilidade de exercício é avaliada pelo atleta-alvo (o educador enxerga os exercícios próprios do aluno). As rotas de **escrita** seguem só do próprio atleta no modo educador atual.
 
 ## 13. Dados
 

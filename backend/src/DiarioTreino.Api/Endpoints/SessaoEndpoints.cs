@@ -37,6 +37,7 @@ public static class SessaoEndpoints
         // execução do atleta com o exercício, ou uma série em branco se nunca fez.
         grupo.MapGet("/exercicios/{id:guid}/ultima-execucao", async (
             Guid id,
+            Guid? atletaId,
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoSessao sessoes,
@@ -45,7 +46,8 @@ public static class SessaoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var rascunho = await sessoes.MontarRascunhoExercicioAsync(perfil.Id, id, ct);
+            var alvo = atletaId ?? perfil.Id;
+            var rascunho = await sessoes.MontarRascunhoExercicioAsync(perfil.Id, alvo, id, ct);
             return Results.Ok(rascunho);
         })
         .WithName("UltimaExecucaoExercicio").WithTags("Sessões")
@@ -56,6 +58,7 @@ public static class SessaoEndpoints
         grupo.MapGet("/exercicios/{id:guid}/historico", async (
             Guid id,
             int? limite,
+            Guid? atletaId,
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoSessao sessoes,
@@ -66,7 +69,8 @@ public static class SessaoEndpoints
 
             // Limite defensivo: padrão 3, teto 20.
             var n = Math.Clamp(limite ?? 3, 1, 20);
-            var historico = await sessoes.ObterHistoricoExercicioAsync(perfil.Id, id, n, ct);
+            var alvo = atletaId ?? perfil.Id;
+            var historico = await sessoes.ObterHistoricoExercicioAsync(perfil.Id, alvo, id, n, ct);
             return Results.Ok(historico);
         })
         .WithName("HistoricoExercicio").WithTags("Sessões")
@@ -104,6 +108,7 @@ public static class SessaoEndpoints
         grupo.MapGet("/sessoes", async (
             DateOnly? de,
             DateOnly? ate,
+            Guid? atletaId,
             HttpContext http,
             ServicoPerfil perfilServico,
             ServicoSessao sessoes,
@@ -112,7 +117,8 @@ public static class SessaoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            var itens = await sessoes.ListarSessoesAsync(perfil.Id, de, ate, ct);
+            var alvo = atletaId ?? perfil.Id;
+            var itens = await sessoes.ListarSessoesAsync(perfil.Id, alvo, de, ate, ct);
             return Results.Ok(itens);
         })
         .WithName("ListarSessoes").WithTags("Sessões")

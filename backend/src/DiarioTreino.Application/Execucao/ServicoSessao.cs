@@ -35,13 +35,16 @@ public sealed class ServicoSessao
     }
 
     /// <summary>
-    /// Lista as sessões do usuário logado no período (PBI-22), mais recentes
-    /// primeiro. No MVP, o atleta é o próprio usuário logado, então a listagem
-    /// filtra por ele — sessões de outros usuários nunca entram no resultado.
+    /// Lista as sessões do atleta-alvo no período (PBI-22), mais recentes
+    /// primeiro. O alvo é o próprio usuário logado ou, no modo educador
+    /// (PBI-86), um aluno com vínculo ativo — a regra do MAS 11.3 é aplicada.
     /// </summary>
-    public Task<IReadOnlyList<SessaoResumo>> ListarSessoesAsync(
-        Guid usuarioLogadoId, DateOnly? de, DateOnly? ate, CancellationToken ct) =>
-        _sessoes.ListarPorPeriodoAsync(usuarioLogadoId, de, ate, ct);
+    public async Task<IReadOnlyList<SessaoResumo>> ListarSessoesAsync(
+        Guid usuarioLogadoId, Guid atletaId, DateOnly? de, DateOnly? ate, CancellationToken ct)
+    {
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+        return await _sessoes.ListarPorPeriodoAsync(atletaId, de, ate, ct);
+    }
 
     /// <summary>
     /// Monta o rascunho de sessão de uma ficha: cada exercício abre com as
@@ -73,18 +76,23 @@ public sealed class ServicoSessao
 
     /// <summary>
     /// Rascunho de um exercício avulso para o treino livre (PBI-19): as séries
-    /// da última execução do atleta com esse exercício ou, sem histórico, uma
-    /// série em branco com as métricas padrão. O atleta é o usuário logado; se o
-    /// exercício não está disponível para ele, responde "não encontrado" (404).
+    /// da última execução do atleta-alvo com esse exercício ou, sem histórico,
+    /// uma série em branco com as métricas padrão. O alvo é o usuário logado ou,
+    /// no modo educador (PBI-86), um aluno com vínculo ativo. Exercício
+    /// indisponível ao alvo → 404.
     /// </summary>
     public async Task<RascunhoExercicioAvulso> MontarRascunhoExercicioAsync(
-        Guid usuarioLogadoId, Guid exercicioId, CancellationToken ct)
+        Guid usuarioLogadoId, Guid atletaId, Guid exercicioId, CancellationToken ct)
     {
-        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, usuarioLogadoId, ct)
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+
+        // Disponibilidade avaliada pelo alvo (PBI-86): o educador enxerga os
+        // exercícios próprios do aluno que está vendo.
+        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, atletaId, ct)
             ?? throw new RecursoNaoEncontradoException();
 
-        // 1) Histórico: última execução do atleta com este exercício.
-        var ultima = await _sessoes.ObterUltimaExecucaoAsync(usuarioLogadoId, exercicioId, ct);
+        // 1) Histórico: última execução do atleta-alvo com este exercício.
+        var ultima = await _sessoes.ObterUltimaExecucaoAsync(atletaId, exercicioId, ct);
         if (ultima is { Series.Count: > 0 })
         {
             var series = new List<SerieRascunho>();
@@ -120,17 +128,20 @@ public sealed class ServicoSessao
 
     /// <summary>
     /// Histórico recente de um exercício (TV-4): as <paramref name="limite"/>
-    /// sessões mais recentes do atleta logado com esse exercício. O atleta é o
-    /// usuário logado; exercício indisponível para ele → 404.
+    /// sessões mais recentes do atleta-alvo com esse exercício. O alvo é o
+    /// usuário logado ou, no modo educador (PBI-86), um aluno com vínculo ativo.
+    /// Exercício indisponível ao alvo → 404.
     /// </summary>
     public async Task<HistoricoExercicio> ObterHistoricoExercicioAsync(
-        Guid usuarioLogadoId, Guid exercicioId, int limite, CancellationToken ct)
+        Guid usuarioLogadoId, Guid atletaId, Guid exercicioId, int limite, CancellationToken ct)
     {
-        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, usuarioLogadoId, ct)
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+
+        var exercicio = await _exercicios.ObterParaRascunhoAsync(exercicioId, atletaId, ct)
             ?? throw new RecursoNaoEncontradoException();
 
         var bruto = await _sessoes.ObterHistoricoExercicioAsync(
-            usuarioLogadoId, exercicioId, limite, ct);
+            atletaId, exercicioId, limite, ct);
 
         var sessoes = new List<SessaoHistorico>();
         foreach (var s in bruto)

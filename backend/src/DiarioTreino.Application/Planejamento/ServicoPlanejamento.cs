@@ -31,8 +31,11 @@ public sealed class ServicoPlanejamento
     }
 
     /// <summary>Plano ativo do atleta como DTO, ou nulo se ainda não há plano.</summary>
-    public async Task<PlanoAtivo?> ObterPlanoAtivoAsync(Guid atletaId, CancellationToken ct)
+    public async Task<PlanoAtivo?> ObterPlanoAtivoAsync(
+        Guid usuarioLogadoId, Guid atletaId, CancellationToken ct)
     {
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+
         var plano = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct);
         if (plano is null)
         {
@@ -46,12 +49,17 @@ public sealed class ServicoPlanejamento
     }
 
     /// <summary>
-    /// Lista os planos do atleta logado (PBI-44): em uso primeiro, depois pelo
-    /// início mais recente. Como recebe o próprio id resolvido no endpoint, não
-    /// precisa do controle de acesso (o atleta só vê os próprios planos).
+    /// Lista os planos do atleta-alvo (PBI-44): em uso primeiro, depois pelo
+    /// início mais recente. O alvo é o próprio usuário logado ou, no modo
+    /// educador (PBI-86), um aluno com vínculo ativo — a regra do MAS 11.3 é
+    /// aplicada antes de ler.
     /// </summary>
-    public Task<List<PlanoDaLista>> ListarPlanosAsync(Guid atletaId, CancellationToken ct) =>
-        _repositorio.ListarPlanosDoAtletaAsync(atletaId, ct);
+    public async Task<List<PlanoDaLista>> ListarPlanosAsync(
+        Guid usuarioLogadoId, Guid atletaId, CancellationToken ct)
+    {
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+        return await _repositorio.ListarPlanosDoAtletaAsync(atletaId, ct);
+    }
 
     /// <summary>
     /// Detalhe de um plano com as fichas (PBI-44). Resolve o atleta dono e passa
