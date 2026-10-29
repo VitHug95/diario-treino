@@ -352,9 +352,14 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/progresso/exercicios` | Exercícios com histórico (seletor do gráfico) | ✅ |
 | GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício, com reps, `sessaoId` e observação por ponto. `metrica` é `CARGA`, `REPETICOES` (força sem carga no período) ou `TEMPO` (isometria), decidida por exercício (PBI-73) | ✅ |
 | GET | `/progresso/resumo?de=&ate=` | Contagem de treinos e sessões de cardio | 🔵 PBI-30 |
-| GET | `/alunos` | Alunos com vínculo ativo | 🟣 |
-| POST | `/vinculos` | Convida aluno | 🟣 |
-| GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | 🟣 |
+| POST | `/me/papeis/educador` | Ativa o modo educador (concede o papel EDUCADOR; idempotente) | ✅ (PBI-85) |
+| POST | `/vinculos` | Educador convida aluno por e-mail (cria vínculo PENDENTE). 403 sem papel EDUCADOR; 400 convite a si mesmo; 404 e-mail inexistente; 409 vínculo já aberto | ✅ (PBI-85) |
+| GET | `/vinculos/pendentes` | Convites pendentes do aluno logado | ✅ (PBI-85) |
+| POST | `/vinculos/{id}/aceitar` | Aluno aceita o convite (PENDENTE → ATIVO). Vínculo de outro → 404 | ✅ (PBI-85) |
+| POST | `/vinculos/{id}/recusar` | Aluno recusa o convite (PENDENTE → ENCERRADO). Vínculo de outro → 404 | ✅ (PBI-85) |
+| POST | `/vinculos/{id}/encerrar` | Educador ou aluno encerra o vínculo ATIVO (→ ENCERRADO). Vínculo de outro → 404 | ✅ (PBI-85) |
+| GET | `/alunos` | Alunos com vínculo ativo do educador logado | ✅ (PBI-85) |
+| GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | 🟣 PBI-89 |
 
 Rotas de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre.
 

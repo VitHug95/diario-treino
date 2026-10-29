@@ -8,6 +8,15 @@ public interface IRepositorioUsuario
     /// <summary>Busca o usuário pelo <c>firebase_uid</c>, com os papéis carregados.</summary>
     public Task<Usuario?> ObterPorFirebaseUidAsync(string firebaseUid, CancellationToken ct);
 
+    /// <summary>Busca o usuário pelo id, com os papéis carregados.</summary>
+    public Task<Usuario?> ObterPorIdAsync(Guid id, CancellationToken ct);
+
+    /// <summary>
+    /// Busca o usuário pelo e-mail (normalizado em minúsculas, como é guardado).
+    /// Usado para achar o aluno a convidar. Nulo quando não existe.
+    /// </summary>
+    public Task<Usuario?> ObterPorEmailAsync(string email, CancellationToken ct);
+
     public void Adicionar(Usuario usuario);
 
     public Task SalvarAsync(CancellationToken ct);

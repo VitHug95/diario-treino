@@ -29,6 +29,27 @@ public sealed class ServicoPerfil
     }
 
     /// <summary>
+    /// Concede o papel EDUCADOR ao usuário logado (PBI-85). Idempotente: se já
+    /// tem o papel, não faz nada. Login é único (ADR-04): a pessoa continua
+    /// ATLETA e ganha EDUCADOR por cima. Devolve o perfil com os papéis atuais.
+    /// </summary>
+    public async Task<PerfilUsuario> ConcederPapelEducadorAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var usuario = await _repositorio.ObterPorIdAsync(usuarioId, ct)
+            ?? throw new InvalidOperationException(
+                "Usuário logado não encontrado ao conceder o papel de educador.");
+
+        if (!usuario.Papeis.Any(p => p.Papel == Papeis.Educador))
+        {
+            usuario.Papeis.Add(new UsuarioPapel { UsuarioId = usuario.Id, Papel = Papeis.Educador });
+            await _repositorio.SalvarAsync(ct);
+        }
+
+        var papeis = usuario.Papeis.Select(p => p.Papel).OrderBy(p => p).ToList();
+        return new PerfilUsuario(usuario.Id, usuario.Nome, usuario.Email, papeis);
+    }
+
+    /// <summary>
     /// Exclui a conta do usuário logado e todos os seus dados (PBI-25). A
     /// remoção do usuário no Firebase é feita pelo app depois do 204.
     /// </summary>
