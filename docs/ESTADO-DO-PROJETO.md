@@ -175,8 +175,13 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 ## 8. O que falta
 
 ### Backlog
-- **PBI-34** (trocar a métrica no registro), **PBI-35** (cronograma semanal).
-- **PBI-48 e épico do educador (E7):** próxima sprint.
+- **PBI-34** (trocar a métrica no registro): **bloqueada** por decisão de
+  produto (opção a × b — ver "Perguntas ainda abertas"). Em espera.
+- **PBI-35** (cronograma semanal): evolução, prioridade baixa.
+- **Épico do educador (E7): em andamento.** Backend do vínculo (**PBI-85**, #120)
+  e leitura dos dados do aluno (**PBI-86**, #122) já na `main`. A seguir:
+  **PBI-87** (observação privada + consentimento LGPD), **PBI-88** (telas do
+  educador, inclui a PBI-48) e **PBI-89** (PDF).
 - Incremento 2 — cardio (**PBI-27 a 30**).
 
 ### Entregue recentemente (PR)
@@ -190,8 +195,14 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - **PBI-26** E2E do fluxo principal (#108/#109).
 - Bloco 1 (fechar pendências antes do educador): **PBI-83** docs (#111),
   **PBI-81** "Manter na ficha?" por exercício (#112), **PBI-75** aviso vira
-  pílula (#113). **PBI-84** (série em branco) entrou (#114) e foi **revertida**
-  (#115) por decisão do PO — ver seção de decisões.
+  pílula (#113) + "Treino salvo" sem ação (#116). **PBI-84** (série em branco)
+  entrou (#114) e foi **revertida** (#115) por decisão do PO — ver decisões.
+- Infra: deploy da API no Fly com **`--ha=false`** (#117, evita "no capacity
+  in gru"); job **E2E bloqueante com 1 retry** (#118, tira o `continue-on-error`);
+  **Wrangler v4** no deploy-web (#121, corrige o upload de assets que quebrou com
+  o wrangler 3.90 — `code 10013`).
+- Modo educador (E7): **PBI-85** vínculo (#120) e **PBI-86** educador lê os dados
+  do aluno via `atletaId` (#122), ambos backend.
 
 ### Decisões do PO já tomadas (19/10)
 - Início de quem apagou os planos mostra "Bem-vindo de volta · Crie seu plano" (PBI-68).
@@ -201,6 +212,8 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - "Adicionar série" no registro posterior/edição **copia a série anterior**
   (valores já preenchidos e editáveis), igual ao treino ao vivo — a PBI-84
   (série em branco com dica) foi **revertida** por isso (31/10, #114→#115).
+- "Treino salvo" é só o **pop sem ação** — tirou-se o "Ver treino" (PBI-75,
+  #116); o treino se reabre pelo cartão de último treino na Início.
 - Atalho "Iniciar treino" na Início: **dispensado**.
 - "Excluir treino" apaga **só a sessão**.
 - Toque num dia da semana **abre o treino daquele dia**.
@@ -210,7 +223,12 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 - PBI-69: o plano pode nascer sem fichas e a ficha criada volta ao detalhe do plano?
 - Séries não marcadas ficam de fora ao "concluir exercício"?
 - Play no plano do professor (só leitura): o que faz?
-- PBI-75: "Treino salvo" mantém a ação "Ver treino" ou vira só o pop? (recomendação: só o pop).
+- **PBI-34** (trocar a métrica de intensidade no registro): onde a troca
+  acontece — (a) por série no registro, flexível, mas o gráfico precisa agrupar
+  por métrica; ou (b) no alvo da ficha, mais previsível e com mudança de banco?
+  **Bloqueia a implementação** (o back já aceita a opção (a) por série, falta a
+  decisão + UI + tratamento no progresso). Recomendação: (a) com o gráfico
+  agrupando por métrica, e o progresso num passo seguinte.
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -224,13 +242,41 @@ calendário (PBI-82) e o E2E (PBI-26) não mexeram no banco.
 O Incremento 1 (modo atleta) está essencialmente completo e na `main`, incluindo o
 E2E automatizado do fluxo principal (PBI-26, PRs #108/#109). Próximos passos:
 
-1. PBI-34 (trocar a métrica no registro) e PBI-35 (cronograma semanal).
-2. Modo educador (PBI-48 e épico E7) na próxima sprint; depois o Incremento 2 (cardio).
-3. Levar as perguntas da seção 8 ao PO.
+1. **Modo educador (épico E7):** o backend do vínculo (PBI-85, #120) e a leitura
+   dos dados do aluno (PBI-86, #122) já estão na `main`. Próximo: **PBI-87**
+   (observação privada + consentimento LGPD — tem mudança de banco), depois
+   **PBI-88** (telas do educador, inclui a PBI-48) e **PBI-89** (PDF).
+2. Destravar a PBI-34 com o PO (opção a × b) antes de implementá-la.
+3. Depois: PBI-35 (cronograma semanal) e Incremento 2 (cardio, PBI-27 a 30).
+
+### Modo educador — o que já existe × o que falta
+
+**Pronto e na `main` (não refazer):**
+- Papel `EDUCADOR`, tabela `vinculo` (status/índices/FKs) e regra única de
+  acesso `IControleAcesso` (MAS 11.3) — fundação que já existia.
+- Plano com autor ≠ atleta é somente-leitura (403 `plano-somente-leitura`,
+  sempre depois do 404) — back e UI do lado do aluno (PBI-48 parcial: ler/copiar).
+- **PBI-85 (#120):** tornar-se educador (`POST /me/papeis/educador`) + vínculo
+  (convite/aceite/recusa/encerrar) + `GET /alunos` + `GET /vinculos/pendentes`.
+- **PBI-86 (#122):** leitura dos dados do aluno — `atletaId` opcional nas rotas
+  de leitura, sempre pelo `IControleAcesso`; disponibilidade de exercício pelo
+  aluno-alvo.
+
+**Falta construir (ordem sugerida):**
+1. **PBI-87** — Banco/privacidade: flag de observação privada (migration) +
+   tabela `consentimento` (MER 7), antes de liberar o acesso real do educador.
+2. **PBI-88** — Front: telas do educador (contexto/escolha de papel, lista de
+   alunos, treino e progresso do aluno, montar ficha com autor = educador) e
+   fechar a PBI-48.
+3. **PBI-89** — PDF do progresso do aluno.
+
+**Decisões de produto (já tomadas pelo PO, 31/10):** observação pode ser privada
+(SIM); o educador não "fica dono" do histórico — perde o acesso quando o vínculo
+sai de ATIVO, sem apagar nada; o PDF leva treinos + evoluções (respeitando a
+privacidade); o aluno pode excluir o plano do professor após o fim do vínculo.
 
 ### Dívidas técnicas de infra em aberto
-- Deploy da API no Fly pode ficar vermelho por "no capacity in gru" ao criar a 2ª
-  máquina de HA (transitório; a API sobe na 1ª). Candidato: `--ha=false` no
-  `deploy-api`.
-- O job `e2e` é `continue-on-error: true` (não bloqueia merge) enquanto amadurece;
-  avaliar torná-lo bloqueante agora que passa de forma estável.
+- (Resolvidas) Fly `--ha=false` (#117), E2E bloqueante com retry (#118) e
+  Wrangler v4 no deploy-web (#121) já estão na `main`.
+- Confirmar no próximo deploy à `main` que o `deploy-web` volta verde com o
+  Wrangler v4 (#121 corrigiu o `code 10013`, mas o deploy em si roda no CI).
