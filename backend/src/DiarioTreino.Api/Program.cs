@@ -27,6 +27,9 @@ try
     // Traduz PlanoSomenteLeituraException em 403 (plano do professor; PBI-44).
     builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.PlanoSomenteLeituraHandler>();
 
+    // Traduz AcaoNaoPermitidaException em 403 (ex.: convidar sem papel EDUCADOR; PBI-85).
+    builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.AcaoNaoPermitidaHandler>();
+
     // Problem Details (RFC 9457) como formato padrão de erro da API.
     builder.Services.AddProblemDetails(options =>
     {
@@ -111,6 +114,7 @@ try
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
     app.MapProgressoEndpoints();
+    app.MapVinculoEndpoints();
 
     // Em produção, aplica as migrations pendentes antes de atender requisições.
     await app.AplicarMigracoesSeConfiguradoAsync();

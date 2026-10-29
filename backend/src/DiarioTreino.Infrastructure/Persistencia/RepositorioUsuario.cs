@@ -21,6 +21,21 @@ public sealed class RepositorioUsuario : IRepositorioUsuario
             .FirstOrDefaultAsync(u => u.FirebaseUid == firebaseUid, ct);
     }
 
+    public Task<Usuario?> ObterPorIdAsync(Guid id, CancellationToken ct)
+    {
+        return _db.Usuarios
+            .Include(u => u.Papeis)
+            .FirstOrDefaultAsync(u => u.Id == id, ct);
+    }
+
+    public Task<Usuario?> ObterPorEmailAsync(string email, CancellationToken ct)
+    {
+        var normalizado = email.Trim().ToLowerInvariant();
+        return _db.Usuarios
+            .Include(u => u.Papeis)
+            .FirstOrDefaultAsync(u => u.Email == normalizado, ct);
+    }
+
     public void Adicionar(Usuario usuario) => _db.Usuarios.Add(usuario);
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);

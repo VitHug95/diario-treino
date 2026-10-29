@@ -178,6 +178,25 @@ public sealed class ServicoPlanejamentoTests
     {
         public Task<bool> ExisteVinculoAtivoAsync(Guid e, Guid a, CancellationToken ct)
             => Task.FromResult(false);
+
+        public Task<bool> ExisteVinculoAbertoAsync(Guid e, Guid a, CancellationToken ct)
+            => Task.FromResult(false);
+
+        public Task<DiarioTreino.Domain.Vinculos.Vinculo?> ObterPorIdAsync(Guid id, CancellationToken ct)
+            => Task.FromResult<DiarioTreino.Domain.Vinculos.Vinculo?>(null);
+
+        public Task<List<DiarioTreino.Domain.Vinculos.Vinculo>> ListarPendentesDoAlunoAsync(
+            Guid alunoId, CancellationToken ct)
+            => Task.FromResult(new List<DiarioTreino.Domain.Vinculos.Vinculo>());
+
+        public Task<List<DiarioTreino.Domain.Vinculos.Vinculo>> ListarAtivosDoEducadorAsync(
+            Guid educadorId, CancellationToken ct)
+            => Task.FromResult(new List<DiarioTreino.Domain.Vinculos.Vinculo>());
+
+        public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
+
+        public Task<bool> TentarCriarAsync(DiarioTreino.Domain.Vinculos.Vinculo vinculo, CancellationToken ct)
+            => Task.FromResult(true);
     }
 
     // Repositório de exercício: só o necessário para o planejamento.

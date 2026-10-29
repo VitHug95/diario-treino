@@ -35,6 +35,28 @@ public static class MeEndpoints
         .WithTags("Identidade")
         .WithSummary("Perfil e papéis do usuário logado");
 
+        // Ativar o modo educador: concede o papel EDUCADOR ao usuário logado
+        // (PBI-85). Idempotente; devolve o perfil com os papéis atuais.
+        grupo.MapPost("/me/papeis/educador", async (
+            HttpContext http,
+            ServicoPerfil servico,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, servico, ct);
+            if (perfil is null)
+            {
+                return Results.Problem(
+                    title: "Token sem identificador de usuário",
+                    statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var atualizado = await servico.ConcederPapelEducadorAsync(perfil.Id, ct);
+            return Results.Ok(atualizado);
+        })
+        .WithName("AtivarEducador")
+        .WithTags("Identidade")
+        .WithSummary("Concede o papel de educador ao usuário logado");
+
         // Excluir conta: apaga os dados do usuário no Postgres (hard delete
         // transacional). O app remove o usuário no Firebase depois do 204.
         grupo.MapDelete("/me", async (

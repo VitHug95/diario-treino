@@ -1,4 +1,5 @@
 using DiarioTreino.Application.Acesso;
+using DiarioTreino.Domain.Vinculos;
 
 namespace DiarioTreino.UnitTests.Acesso;
 
@@ -16,6 +17,24 @@ public sealed class ControleAcessoTests
 
         public Task<bool> ExisteVinculoAtivoAsync(Guid educadorId, Guid alunoId, CancellationToken ct)
             => Task.FromResult(_temVinculoAtivo);
+
+        // Membros não usados neste teste de controle de acesso (PBI-85).
+        public Task<bool> ExisteVinculoAbertoAsync(Guid educadorId, Guid alunoId, CancellationToken ct)
+            => Task.FromResult(false);
+
+        public Task<Vinculo?> ObterPorIdAsync(Guid id, CancellationToken ct)
+            => Task.FromResult<Vinculo?>(null);
+
+        public Task<List<Vinculo>> ListarPendentesDoAlunoAsync(Guid alunoId, CancellationToken ct)
+            => Task.FromResult(new List<Vinculo>());
+
+        public Task<List<Vinculo>> ListarAtivosDoEducadorAsync(Guid educadorId, CancellationToken ct)
+            => Task.FromResult(new List<Vinculo>());
+
+        public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
+
+        public Task<bool> TentarCriarAsync(Vinculo vinculo, CancellationToken ct)
+            => Task.FromResult(true);
     }
 
     private static ControleAcesso Com(bool vinculoAtivo)
