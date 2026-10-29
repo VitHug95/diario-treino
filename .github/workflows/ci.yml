@@ -293,6 +293,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: app
+          # Fixa o Wrangler v4: sem pin, a action resolvia o 3.90 (fim de vida),
+          # que falhava no upload de assets (/workers/scripts/.../assets-upload-session,
+          # code 10013) porque a API de Static Assets avançou. A v4 fala com o
+          # endpoint atual. Projeto Flutter (sem package.json no app/), então a
+          # versão não vem de devDependency — precisa ser fixada aqui.
+          wranglerVersion: "4.42.0"
           command: deploy
 
   # Publica a API no Fly SOMENTE depois do CI passar e apenas em merge na main.
