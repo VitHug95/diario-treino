@@ -19,6 +19,12 @@ public class Sessao
 
     /// <summary>Pode conter dado de saúde: não vai para log.</summary>
     public string? Observacao { get; set; }
+
+    /// <summary>
+    /// Observação privada (PBI-87): quando true, só o próprio atleta vê o texto;
+    /// o educador com vínculo não recebe a observação (nem no futuro PDF).
+    /// </summary>
+    public bool ObservacaoPrivada { get; set; }
     public DateTimeOffset CriadoEm { get; set; }
     public DateTimeOffset AtualizadoEm { get; set; }
 

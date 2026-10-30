@@ -43,7 +43,7 @@ public sealed class RepositorioSessao : IRepositorioSessao
     }
 
     public async Task<IReadOnlyList<(Guid SessaoId, DateOnly Data, string? Observacao,
-        IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
+        bool ObservacaoPrivada, IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
         Guid atletaId, Guid exercicioId, int limite, CancellationToken ct)
     {
         // As N sessões mais recentes do atleta que contêm o exercício.
@@ -53,10 +53,10 @@ public sealed class RepositorioSessao : IRepositorioSessao
             .OrderByDescending(s => s.Data)
             .ThenByDescending(s => s.CriadoEm)
             .Take(limite)
-            .Select(s => new { s.Id, s.Data, s.Observacao })
+            .Select(s => new { s.Id, s.Data, s.Observacao, s.ObservacaoPrivada })
             .ToListAsync(ct);
 
-        var resultado = new List<(Guid, DateOnly, string?, IReadOnlyList<SerieExecutada>)>();
+        var resultado = new List<(Guid, DateOnly, string?, bool, IReadOnlyList<SerieExecutada>)>();
         foreach (var s in sessoes)
         {
             var series = await _db.SeriesExecutadas
@@ -64,7 +64,7 @@ public sealed class RepositorioSessao : IRepositorioSessao
                 .OrderBy(se => se.Rodada)
                 .ThenBy(se => se.Ordem)
                 .ToListAsync(ct);
-            resultado.Add((s.Id, s.Data, s.Observacao, series));
+            resultado.Add((s.Id, s.Data, s.Observacao, s.ObservacaoPrivada, series));
         }
         return resultado;
     }

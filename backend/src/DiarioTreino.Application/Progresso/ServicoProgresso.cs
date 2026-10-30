@@ -77,15 +77,20 @@ public sealed class ServicoProgresso
         var brutos = await _progresso.ObterPontosAsync(
             atletaId, exercicioId, metrica.Value, de, ate, ct);
 
+        // Observação privada (PBI-87): o educador (logado ≠ alvo) não vê o texto
+        // nem a conta do resumo. O próprio atleta vê tudo.
+        var ehEducador = usuarioLogadoId != atletaId;
+        bool PodeVer(PontoBruto b) => !(ehEducador && b.ObservacaoPrivada);
+
         var pontos = brutos
             .Select(b => new PontoProgresso(
-                b.Data, b.Valor, b.Repeticoes, b.SessaoId, b.Observacao))
+                b.Data, b.Valor, b.Repeticoes, b.SessaoId, PodeVer(b) ? b.Observacao : null))
             .ToList();
 
         var variacao = pontos.Count >= 2
             ? pontos[^1].Valor - pontos[0].Valor
             : (decimal?)null;
-        var comObs = brutos.Count(b => b.TemObservacao);
+        var comObs = brutos.Count(b => b.TemObservacao && PodeVer(b));
 
         return new ProgressoExercicio(
             exercicio.Id,

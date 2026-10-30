@@ -21,6 +21,7 @@ public class DiarioTreinoDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioPapel> UsuarioPapeis => Set<UsuarioPapel>();
+    public DbSet<Consentimento> Consentimentos => Set<Consentimento>();
     public DbSet<Vinculo> Vinculos => Set<Vinculo>();
     public DbSet<Metrica> Metricas => Set<Metrica>();
     public DbSet<Membro> Membros => Set<Membro>();

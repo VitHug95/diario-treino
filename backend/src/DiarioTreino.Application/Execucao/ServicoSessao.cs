@@ -147,7 +147,9 @@ public sealed class ServicoSessao
         foreach (var s in bruto)
         {
             var series = await MapearSeriesDetalheAsync(s.Series, ct);
-            sessoes.Add(new SessaoHistorico(s.SessaoId, s.Data, s.Observacao, series));
+            // Observação privada (PBI-87): oculta do educador (logado ≠ alvo).
+            var obs = ObservacaoVisivel(s.Observacao, s.ObservacaoPrivada, usuarioLogadoId, atletaId);
+            sessoes.Add(new SessaoHistorico(s.SessaoId, s.Data, obs, series));
         }
 
         return new HistoricoExercicio(
@@ -306,6 +308,9 @@ public sealed class ServicoSessao
             Observacao = string.IsNullOrWhiteSpace(request.Observacao)
                 ? null
                 : request.Observacao.Trim(),
+            // Privacidade só vale com texto: sem observação, nunca marca privada.
+            ObservacaoPrivada = !string.IsNullOrWhiteSpace(request.Observacao)
+                && request.ObservacaoPrivada,
             Series = [],
         };
 
@@ -513,9 +518,19 @@ public sealed class ServicoSessao
             ficha?.Nome,
             sessao.Data,
             sessao.DuracaoMin,
-            sessao.Observacao,
+            // Observação privada (PBI-87): o educador (logado ≠ atleta) não vê o
+            // texto; o próprio dono vê sempre.
+            ObservacaoVisivel(sessao.Observacao, sessao.ObservacaoPrivada, usuarioLogadoId, sessao.AtletaId),
             exercicios.OrderBy(e => e.Ordem).ToList());
     }
+
+    /// <summary>
+    /// Devolve o texto da observação ou <c>null</c> quando ela é privada e quem
+    /// está vendo não é o dono (PBI-87). O próprio atleta vê sempre.
+    /// </summary>
+    private static string? ObservacaoVisivel(
+        string? observacao, bool privada, Guid usuarioLogadoId, Guid atletaId) =>
+        privada && usuarioLogadoId != atletaId ? null : observacao;
 
     /// <summary>Resumo do plano prescrito, ex.: "3 × 10 com 30 kg". Nulo se não
     /// há etapa de esforço prescrita.</summary>
@@ -596,6 +611,8 @@ public sealed class ServicoSessao
         sessao.Observacao = string.IsNullOrWhiteSpace(request.Observacao)
             ? null
             : request.Observacao.Trim();
+        sessao.ObservacaoPrivada = !string.IsNullOrWhiteSpace(request.Observacao)
+            && request.ObservacaoPrivada;
         sessao.AtualizadoEm = DateTimeOffset.UtcNow;
 
         // Substitui todas as séries pelas novas.

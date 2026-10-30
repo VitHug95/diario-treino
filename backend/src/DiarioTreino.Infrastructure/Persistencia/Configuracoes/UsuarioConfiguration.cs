@@ -43,3 +43,28 @@ public sealed class UsuarioPapelConfiguration : IEntityTypeConfiguration<Usuario
         builder.Property(p => p.Papel).HasColumnName("papel").HasMaxLength(20).IsRequired();
     }
 }
+
+public sealed class ConsentimentoConfiguration : IEntityTypeConfiguration<Consentimento>
+{
+    public void Configure(EntityTypeBuilder<Consentimento> builder)
+    {
+        builder.ToTable("consentimento");
+
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).HasColumnName("id");
+        builder.Property(c => c.UsuarioId).HasColumnName("usuario_id").IsRequired();
+        builder.Property(c => c.VersaoTermo).HasColumnName("versao_termo").HasMaxLength(20).IsRequired();
+        builder.Property(c => c.AceitoEm).HasColumnName("aceito_em")
+            .HasDefaultValueSql("now()").IsRequired();
+
+        // Um aceite por usuário e versão: re-aceitar a mesma versão não duplica.
+        builder.HasIndex(c => new { c.UsuarioId, c.VersaoTermo })
+            .IsUnique()
+            .HasDatabaseName("ux_consentimento_usuario_versao");
+
+        builder.HasOne(c => c.Usuario!)
+            .WithMany()
+            .HasForeignKey(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

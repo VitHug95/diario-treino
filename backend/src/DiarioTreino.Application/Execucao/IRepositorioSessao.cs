@@ -21,7 +21,7 @@ public interface IRepositorioSessao
     /// item traz a data, a observação do dia e as séries daquele exercício.
     /// </summary>
     public Task<IReadOnlyList<(Guid SessaoId, DateOnly Data, string? Observacao,
-        IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
+        bool ObservacaoPrivada, IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
         Guid atletaId, Guid exercicioId, int limite, CancellationToken ct);
 
     /// <summary>
