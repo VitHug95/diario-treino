@@ -7,6 +7,7 @@ import '../../features/auth/cadastro_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
+import '../../features/educador/aluno_detalhe_screen.dart';
 import '../../features/educador/alunos_screen.dart';
 import '../../features/educador/convites_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
@@ -60,6 +61,7 @@ abstract final class Rotas {
 
   /// Modo educador (PBI-88), empilhados sobre a Início a partir do Perfil.
   static const alunos = '/perfil/alunos';
+  static const alunoDetalhe = '/perfil/alunos/aluno';
   static const convites = '/perfil/convites';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
@@ -181,6 +183,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'alunos',
                         name: 'alunos',
                         builder: (context, state) => const AlunosScreen(),
+                        routes: [
+                          // Detalhe de um aluno (PBI-88c): evolução + sessões.
+                          GoRoute(
+                            path: 'aluno',
+                            name: 'alunoDetalhe',
+                            builder: (context, state) {
+                              final args = state.extra as AlunoDetalheArgs?;
+                              return AlunoDetalheScreen(
+                                key: ValueKey('aluno:${args?.atletaId}'),
+                                atletaId: args?.atletaId ?? '',
+                                alunoNome: args?.alunoNome ?? 'Aluno',
+                              );
+                            },
+                          ),
+                        ],
                       ),
                       GoRoute(
                         path: 'convites',

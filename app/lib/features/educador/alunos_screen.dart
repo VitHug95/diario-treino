@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../core/dados/invalidacao.dart';
+import '../../core/rotas/app_router.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/estado_vazio.dart';
 import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'aluno_detalhe_screen.dart';
 import 'dialogo_convidar_aluno.dart';
 import 'educador_comandos.dart';
 import 'educador_models.dart';
@@ -84,22 +88,47 @@ class _CartaoAluno extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
+    return Semantics(
+      button: true,
+      label: 'Abrir aluno ${aluno.alunoNome}',
+      excludeSemantics: true,
+      child: Material(
         color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: cores.lineDefault),
         borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.paddingCard),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(aluno.alunoNome, style: AppText.title),
-          const SizedBox(height: AppSpacing.x4),
-          Text(aluno.alunoEmail,
-              style: AppText.bodyS.copyWith(color: cores.textSecondary)),
-        ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => context.push(
+            Rotas.alunoDetalhe,
+            extra: AlunoDetalheArgs(
+                atletaId: aluno.alunoId, alunoNome: aluno.alunoNome),
+          ),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(aluno.alunoNome, style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(aluno.alunoEmail,
+                          style: AppText.bodyS
+                              .copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight,
+                    color: cores.iconMuted, size: AppSizes.iconeMd),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
