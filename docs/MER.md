@@ -489,8 +489,12 @@ Lista fixa dos 10 marcadores (aprovada pelo PO, 15/10): `VALIDA`, `AQUECIMENTO`,
 ### 3.13 `consentimento`
 Aceite de um termo de consentimento pelo usuário (LGPD, PBI-87). Registra que o
 atleta autorizou o acesso de educadores vinculados aos seus dados. A estrutura
-entra na PBI-87; a porteira de acesso (o educador só vê quem consentiu) é ligada
-na PBI-88, junto da tela que apresenta o termo.
+entra na PBI-87. O aceite é gravado quando o aluno **aceita um convite** de
+educador (PBI-88a, decisão do PO: aceitar o convite é o ato de consentir): o
+`POST /vinculos/{id}/aceitar` registra o consentimento da versão vigente do
+termo na mesma transação em que o vínculo vira ATIVO. Por isso o vínculo ATIVO
+já é a prova do consentimento e a regra de acesso (MAS 11.3) não precisa de gate
+extra. O texto do termo e a tela de aceite ficam no app (fatia de telas).
 
 | Coluna | Tipo | Nulo | Regra |
 |---|---|---|---|

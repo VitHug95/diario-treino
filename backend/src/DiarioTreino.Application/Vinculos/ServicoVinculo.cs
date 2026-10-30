@@ -2,6 +2,7 @@ using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Comum;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Domain.Comum;
+using DiarioTreino.Domain.Identidade;
 using DiarioTreino.Domain.Vinculos;
 
 namespace DiarioTreino.Application.Vinculos;
@@ -16,11 +17,16 @@ public sealed class ServicoVinculo
 {
     private readonly IRepositorioVinculo _vinculos;
     private readonly IRepositorioUsuario _usuarios;
+    private readonly IRepositorioConsentimento _consentimentos;
 
-    public ServicoVinculo(IRepositorioVinculo vinculos, IRepositorioUsuario usuarios)
+    public ServicoVinculo(
+        IRepositorioVinculo vinculos,
+        IRepositorioUsuario usuarios,
+        IRepositorioConsentimento consentimentos)
     {
         _vinculos = vinculos;
         _usuarios = usuarios;
+        _consentimentos = consentimentos;
     }
 
     /// <summary>
@@ -90,6 +96,12 @@ public sealed class ServicoVinculo
     /// <summary>
     /// O aluno aceita um convite PENDENTE: vira ATIVO e grava o início. Vínculo
     /// de outro aluno (ou inexistente) → 404. Só convite PENDENTE pode ser aceito.
+    ///
+    /// Consentimento LGPD (PBI-87/88, opção 1): aceitar o convite É o ato de
+    /// consentir que aquele educador veja os dados. Registramos o aceite do
+    /// termo vigente do aluno na MESMA transação em que o vínculo vira ATIVO
+    /// (idempotente). Assim o vínculo ATIVO já é a prova do consentimento e a
+    /// regra de acesso (MAS 11.3) não precisa de gate extra.
     /// </summary>
     public async Task AceitarAsync(Guid alunoLogadoId, Guid vinculoId, CancellationToken ct)
     {
@@ -101,6 +113,8 @@ public sealed class ServicoVinculo
 
         vinculo.Status = StatusVinculo.Ativo;
         vinculo.Inicio = DateTimeOffset.UtcNow;
+        await _consentimentos.RegistrarSeAusenteAsync(
+            alunoLogadoId, TermoConsentimento.VersaoVigente, ct);
         await _vinculos.SalvarAsync(ct);
     }
 

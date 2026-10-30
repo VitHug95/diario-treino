@@ -28,6 +28,7 @@ public static class DependencyInjection
                 typeof(DiarioTreinoDbContext).Assembly.GetName().Name)));
 
         services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
+        services.AddScoped<IRepositorioConsentimento, RepositorioConsentimento>();
         services.AddScoped<IRepositorioVinculo, RepositorioVinculo>();
         services.AddScoped<IRepositorioExercicio, RepositorioExercicio>();
         services.AddScoped<IRepositorioMetrica, RepositorioMetrica>();
