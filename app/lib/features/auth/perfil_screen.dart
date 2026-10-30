@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../core/rotas/app_router.dart';
 import '../../core/tema/tema_controller.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../educador/dialogo_convidar_aluno.dart';
+import '../educador/educador_comandos.dart';
+import '../educador/educador_repository.dart';
 import 'auth_service.dart';
 import 'perfil_api.dart';
 
@@ -39,6 +46,12 @@ class PerfilScreen extends ConsumerWidget {
                   _CartaoDados(nome: perfil.nome, email: perfil.email),
             ),
             const SizedBox(height: AppSpacing.x28),
+            // Modo educador (PBI-88): só com o perfil carregado, para o gate de
+            // papel (ATLETA/EDUCADOR) decidir o que mostrar.
+            perfilAsync.maybeWhen(
+              data: (perfil) => _SecaoEducador(perfil: perfil),
+              orElse: () => const SizedBox.shrink(),
+            ),
             Text('TEMA',
                 style: AppText.overline.copyWith(color: cores.textSecondary)),
             const SizedBox(height: AppSpacing.x8),
@@ -310,6 +323,152 @@ class _DialogoExcluirState extends State<_DialogoExcluir> {
           child: const Text('Excluir conta'),
         ),
       ],
+    );
+  }
+}
+
+/// Seção do modo educador no Perfil (PBI-88). Gate por papel: quem não é
+/// educador vê "Ativar modo educador"; quem é vê "Meus alunos" e "Convidar
+/// aluno". "Convites recebidos" aparece para todos (qualquer um pode ser
+/// convidado), com selo quando há convites pendentes.
+class _SecaoEducador extends ConsumerWidget {
+  const _SecaoEducador({required this.perfil});
+  final Perfil perfil;
+
+  static const _papelEducador = 'EDUCADOR';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cores = AppColors.of(context);
+    final ehEducador = perfil.papeis.contains(_papelEducador);
+    final pendentes = ref.watch(convitesPendentesProvider);
+    final qtdPendentes = pendentes.maybeWhen(
+      data: (lista) => lista.length,
+      orElse: () => 0,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('EDUCADOR',
+            style: AppText.overline.copyWith(color: cores.textSecondary)),
+        const SizedBox(height: AppSpacing.x8),
+        if (!ehEducador)
+          _LinhaAcao(
+            icone: LucideIcons.graduationCap,
+            titulo: 'Ativar modo educador',
+            subtitulo: 'Convide alunos e acompanhe os treinos deles.',
+            aoTocar: () => _ativar(context, ref),
+          )
+        else ...[
+          _LinhaAcao(
+            icone: LucideIcons.users,
+            titulo: 'Meus alunos',
+            subtitulo: 'Veja e convide seus alunos.',
+            aoTocar: () => context.push(Rotas.alunos),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          _LinhaAcao(
+            icone: LucideIcons.userPlus,
+            titulo: 'Convidar aluno',
+            subtitulo: 'Envie um convite por e-mail.',
+            aoTocar: () => _convidar(context, ref),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.x8),
+        _LinhaAcao(
+          icone: LucideIcons.mail,
+          titulo: 'Convites recebidos',
+          subtitulo: qtdPendentes > 0
+              ? '$qtdPendentes convite(s) aguardando'
+              : 'Convites de educadores aparecem aqui.',
+          destaque: qtdPendentes > 0,
+          aoTocar: () => context.push(Rotas.convites),
+        ),
+        const SizedBox(height: AppSpacing.x28),
+      ],
+    );
+  }
+
+  Future<void> _ativar(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(educadorComandosProvider).ativarEducador();
+      if (context.mounted) mostrarAviso(context, 'Modo educador ativado');
+    } on EducadorException catch (e) {
+      if (context.mounted) mostrarAviso(context, e.mensagem);
+    }
+  }
+
+  Future<void> _convidar(BuildContext context, WidgetRef ref) async {
+    final email = await dialogoConvidarAluno(context);
+    if (email == null || email.isEmpty) return;
+    try {
+      await ref.read(educadorComandosProvider).convidar(email);
+      if (context.mounted) mostrarAviso(context, 'Convite enviado');
+    } on EducadorException catch (e) {
+      if (context.mounted) mostrarAviso(context, e.mensagem);
+    }
+  }
+}
+
+/// Linha de ação da seção educador: ícone + título + subtítulo, tocável.
+class _LinhaAcao extends StatelessWidget {
+  const _LinhaAcao({
+    required this.icone,
+    required this.titulo,
+    required this.subtitulo,
+    required this.aoTocar,
+    this.destaque = false,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback aoTocar;
+  final bool destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Semantics(
+      button: true,
+      label: titulo,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: aoTocar,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(
+                color: destaque ? cores.primaryText : cores.lineDefault),
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          padding: const EdgeInsets.all(AppSpacing.paddingCard),
+          child: Row(
+            children: [
+              Icon(icone, size: AppSizes.iconeMd, color: cores.primaryText),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo, style: AppText.titleS),
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(subtitulo,
+                        style: AppText.caption
+                            .copyWith(color: cores.textSecondary)),
+                  ],
+                ),
+              ),
+              Icon(LucideIcons.chevronRight,
+                  size: AppSizes.iconeSm, color: cores.iconMuted),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

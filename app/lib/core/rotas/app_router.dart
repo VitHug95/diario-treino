@@ -7,6 +7,8 @@ import '../../features/auth/cadastro_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
+import '../../features/educador/alunos_screen.dart';
+import '../../features/educador/convites_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
@@ -55,6 +57,10 @@ abstract final class Rotas {
   static const detalheSessao = '/sessoes';
   static const perfil = '/perfil';
   static const primeiroAcesso = '/primeiro-acesso';
+
+  /// Modo educador (PBI-88), empilhados sobre a Início a partir do Perfil.
+  static const alunos = '/perfil/alunos';
+  static const convites = '/perfil/convites';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
   static const mes = '/mes';
@@ -169,6 +175,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'perfil',
                     name: 'perfil',
                     builder: (context, state) => const PerfilScreen(),
+                    routes: [
+                      // Modo educador (PBI-88), empilhados sobre o Perfil.
+                      GoRoute(
+                        path: 'alunos',
+                        name: 'alunos',
+                        builder: (context, state) => const AlunosScreen(),
+                      ),
+                      GoRoute(
+                        path: 'convites',
+                        name: 'convites',
+                        builder: (context, state) => const ConvitesScreen(),
+                      ),
+                    ],
                   ),
                   // Calendário do mês (PBI-82), empilhado sobre a Início.
                   GoRoute(

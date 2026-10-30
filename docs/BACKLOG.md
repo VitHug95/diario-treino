@@ -1256,11 +1256,21 @@ proteger dados sensíveis.
 
 A PBI-88 foi **fatiada** em entregas menores:
 - **88a** ✅ backend do consentimento no aceite (ver Status da PBI-87 acima).
-- **88b** — "virar educador" + convidar/aceitar + lista de alunos no app
-  (inclui a **tela do termo** no aceite do convite).
+- **88b** ✅ **telas do educador no app** (front): seção "Educador" no Perfil com
+  gate por papel (quem não é educador vê "Ativar modo educador"; quem é vê "Meus
+  alunos" e "Convidar aluno"; "Convites recebidos" para todos, com contagem de
+  pendentes). Feature `features/educador/` no padrão da casa (repository +
+  comandos + models + telas), invalidação via `Mudanca.vinculos`. Aceitar um
+  convite passa pela **tela do termo de consentimento** (texto provisório)
+  antes de efetivar; recusar encerra. Telas empilhadas a partir do Perfil
+  (`/perfil/alunos`, `/perfil/convites`). 324 testes verdes; analyze 0.
 - **88c** — ver treino e progresso do aluno (consome a PBI-86).
 - **88d** — montar ficha para o aluno (endpoint novo de criar plano para outro +
   UI); fecha a **PBI-48**.
+
+> **Termo de consentimento:** o texto exibido na tela de aceite é **provisório**
+> (marcado no código); o conteúdo jurídico final será definido com o PO antes do
+> lançamento do modo educador.
 
 **História:** Como educador, quero telas para ver meus alunos, o treino e a
 evolução de cada um e montar ficha para eles, para acompanhar de verdade pelo app.
