@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
 import '../auth/perfil_api.dart';
+import '../progresso/progresso_models.dart';
+import '../sessao/sessao_models.dart';
 import 'educador_models.dart';
 
 /// Erro de negócio do modo educador (vínculo/convite), com mensagem amigável.
@@ -67,6 +69,65 @@ class EducadorRepository {
         .toList();
   }
 
+  // ---- Dados do aluno (PBI-88c): leitura via ?atletaId= (regra 11.3 no back).
+  // Reusa os endpoints da PBI-86. O educador só enxerga quem tem vínculo ativo
+  // (senão a API responde 404). Observação privada do aluno já vem oculta.
+
+  /// Exercícios que o aluno já treinou (seletor do gráfico de evolução).
+  Future<List<ExercicioComHistorico>> exerciciosDoAluno(String atletaId) async {
+    final resposta = await _dio.get<List<dynamic>>(
+      '/progresso/exercicios',
+      queryParameters: {'atletaId': atletaId},
+    );
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(ExercicioComHistorico.doJson)
+        .toList();
+  }
+
+  /// Evolução de um exercício do aluno no período.
+  Future<ProgressoExercicio> progressoDoAluno(
+    String atletaId,
+    String exercicioId, {
+    DateTime? de,
+    DateTime? ate,
+  }) async {
+    final resposta = await _dio.get<Map<String, dynamic>>(
+      '/progresso/exercicios/$exercicioId',
+      queryParameters: {
+        'atletaId': atletaId,
+        if (de != null) 'de': _soData(de),
+        if (ate != null) 'ate': _soData(ate),
+      },
+    );
+    return ProgressoExercicio.doJson(resposta.data!);
+  }
+
+  /// Sessões do aluno no período, mais recentes primeiro.
+  Future<List<SessaoResumo>> sessoesDoAluno(
+    String atletaId, {
+    DateTime? de,
+    DateTime? ate,
+  }) async {
+    final resposta = await _dio.get<List<dynamic>>(
+      '/sessoes',
+      queryParameters: {
+        'atletaId': atletaId,
+        if (de != null) 'de': _soData(de),
+        if (ate != null) 'ate': _soData(ate),
+      },
+    );
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(SessaoResumo.doJson)
+        .toList();
+  }
+
+  static String _soData(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
   Future<void> _executar(
     Future<void> Function() acao, {
     String Function(DioException e)? traduzir,
@@ -118,4 +179,53 @@ final convitesPendentesProvider =
 /// Alunos com vínculo ativo do educador logado.
 final alunosProvider = FutureProvider.autoDispose<List<AlunoVinculado>>(
   (ref) => ref.watch(educadorRepositoryProvider).listarAlunos(),
+);
+
+// ---- Dados do aluno (PBI-88c), providers family por atletaId ----
+
+/// Exercícios com histórico do aluno (seletor do gráfico na tela do aluno).
+final exerciciosDoAlunoProvider = FutureProvider.autoDispose
+    .family<List<ExercicioComHistorico>, String>(
+  (ref, atletaId) =>
+      ref.watch(educadorRepositoryProvider).exerciciosDoAluno(atletaId),
+);
+
+/// Exercício selecionado no gráfico da tela do aluno (nulo = nenhum). Como a
+/// tela do aluno é autoDispose e só há uma aberta por vez, um provider simples
+/// basta (reinicia ao fechar a tela), no mesmo padrão do seletor da aba
+/// Progresso.
+final exercicioDoAlunoSelecionadoProvider = NotifierProvider.autoDispose<
+    ExercicioDoAlunoController, String?>(ExercicioDoAlunoController.new);
+
+class ExercicioDoAlunoController extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void selecionar(String? exercicioId) => state = exercicioId;
+}
+
+/// Evolução do exercício selecionado do aluno (90 dias, visão ampla).
+final progressoDoAlunoProvider =
+    FutureProvider.autoDispose.family<ProgressoExercicio?, String>(
+  (ref, atletaId) async {
+    final exercicioId = ref.watch(exercicioDoAlunoSelecionadoProvider);
+    if (exercicioId == null) return null;
+    final hoje = DateTime.now();
+    final de = DateTime(hoje.year, hoje.month, hoje.day)
+        .subtract(const Duration(days: 90));
+    return ref
+        .watch(educadorRepositoryProvider)
+        .progressoDoAluno(atletaId, exercicioId, de: de);
+  },
+);
+
+/// Sessões recentes do aluno (últimos 30 dias).
+final sessoesDoAlunoProvider =
+    FutureProvider.autoDispose.family<List<SessaoResumo>, String>(
+  (ref, atletaId) {
+    final hoje = DateTime.now();
+    final de = DateTime(hoje.year, hoje.month, hoje.day)
+        .subtract(const Duration(days: 30));
+    return ref.watch(educadorRepositoryProvider).sessoesDoAluno(atletaId, de: de);
+  },
 );

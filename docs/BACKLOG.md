@@ -1264,7 +1264,12 @@ A PBI-88 foi **fatiada** em entregas menores:
   convite passa pela **tela do termo de consentimento** (texto provisório)
   antes de efetivar; recusar encerra. Telas empilhadas a partir do Perfil
   (`/perfil/alunos`, `/perfil/convites`). 324 testes verdes; analyze 0.
-- **88c** — ver treino e progresso do aluno (consome a PBI-86).
+- **88c** ✅ **ver treino e progresso do aluno** (front): tocar num aluno abre a
+  `AlunoDetalheScreen` com a **evolução por exercício** (seletor + gráfico
+  reusando `grafico_exercicio`) e as **sessões recentes** (30 dias), tocar numa
+  sessão abre o detalhe existente (que já aplica o acesso por vínculo e oculta a
+  observação privada). Providers próprios do educador por `atletaId` (consome a
+  PBI-86 com `?atletaId=`), sem tocar nas telas do atleta. 327 testes; analyze 0.
 - **88d** — montar ficha para o aluno (endpoint novo de criar plano para outro +
   UI); fecha a **PBI-48**.
 
