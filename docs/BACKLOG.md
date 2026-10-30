@@ -1239,17 +1239,28 @@ proteger dados sensíveis.
   acesso do educador só é liberado após o aceite do termo pelo aluno.
 **Depende de:** PBI-85. **Prioridade:** alta (bloqueia o acesso real do educador).
 
-**Status:** 🔸 **parte 1 na `main`** (backend). Entregue: `sessao.observacao_privada`
-(migration `ObservacaoPrivadaEConsentimento`), gravada no POST/PUT `/sessoes`
-(`observacaoPrivada`, padrão false) e **ocultada do educador** (logado ≠ atleta)
-no detalhe, no histórico e no progresso; a tabela `consentimento` foi **criada**
-(estrutura + entidade + índice único por usuário/versão). **Decisão do PO:**
-dividir — o **gate de consentimento** (educador só vê quem consentiu, em
-`IControleAcesso`) e o endpoint de aceite ficam para a **PBI-88**, junto da tela
-que apresenta o termo; ativar o gate agora, sem a tela, tiraria o acesso do
-educador já entregue (PBI-85/86) sem o aluno ter como consentir.
+**Status:** ✅ **backend completo na `main`** (duas partes).
+- Parte 1 (#124): `sessao.observacao_privada` (migration `ObservacaoPrivadaEConsentimento`),
+  gravada no POST/PUT `/sessoes` (`observacaoPrivada`, padrão false) e **ocultada
+  do educador** (logado ≠ atleta) no detalhe, histórico e progresso; tabela
+  `consentimento` criada (estrutura + entidade + índice único por usuário/versão).
+- Parte 2 (**PBI-88a**): **consentimento gravado no aceite do convite** (decisão
+  do PO, opção 1: aceitar o convite é o ato de consentir). O `POST
+  /vinculos/{id}/aceitar` registra o consentimento da versão vigente do termo na
+  mesma transação do vínculo ATIVO (idempotente). **Sem gate global** no
+  `IControleAcesso` — o vínculo ATIVO já é a prova do consentimento, então nada
+  do que já estava na main (PBI-85/86) quebra. O texto do termo e a tela de
+  aceite entram com as telas do educador (PBI-88).
 
 #### PBI-88 · Telas do educador (lista de alunos, treino/progresso, montar ficha)
+
+A PBI-88 foi **fatiada** em entregas menores:
+- **88a** ✅ backend do consentimento no aceite (ver Status da PBI-87 acima).
+- **88b** — "virar educador" + convidar/aceitar + lista de alunos no app
+  (inclui a **tela do termo** no aceite do convite).
+- **88c** — ver treino e progresso do aluno (consome a PBI-86).
+- **88d** — montar ficha para o aluno (endpoint novo de criar plano para outro +
+  UI); fecha a **PBI-48**.
 
 **História:** Como educador, quero telas para ver meus alunos, o treino e a
 evolução de cada um e montar ficha para eles, para acompanhar de verdade pelo app.
