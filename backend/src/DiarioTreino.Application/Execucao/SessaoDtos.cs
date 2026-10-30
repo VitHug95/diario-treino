@@ -87,7 +87,12 @@ public sealed record CriarSessaoRequest(
     /// "Manter na ficha?" (PBI-72): ids dos exercícios adicionados fora da
     /// ficha que entram no fim dela, na mesma transação da sessão. Só no POST.
     /// </summary>
-    IReadOnlyList<Guid>? ManterNaFicha = null);
+    IReadOnlyList<Guid>? ManterNaFicha = null,
+    /// <summary>
+    /// Observação privada (PBI-87): quando true, o educador não vê o texto da
+    /// observação. Opcional, padrão false (contrato antigo do app não muda).
+    /// </summary>
+    bool ObservacaoPrivada = false);
 
 /// <summary>
 /// Exercício da sessão. Sem séries = exercício não realizado (não grava nada).

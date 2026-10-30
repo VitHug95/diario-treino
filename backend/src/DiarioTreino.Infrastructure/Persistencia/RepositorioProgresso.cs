@@ -57,6 +57,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
                     s.Id,
                     s.Data,
                     s.Observacao,
+                    s.ObservacaoPrivada,
                     Maior = s.Series
                         .Where(se => se.ExercicioId == exercicioId
                             && se.Tipo == TipoEtapa.Esforco
@@ -76,7 +77,8 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
                     x.Maior!.Intensidade!.Value,
                     x.Maior.Volume,
                     x.Id,
-                    x.Observacao))
+                    x.Observacao,
+                    x.ObservacaoPrivada))
                 .ToList();
         }
 
@@ -89,6 +91,7 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
                 s.Id,
                 s.Data,
                 s.Observacao,
+                s.ObservacaoPrivada,
                 MaiorTempo = s.Series
                     .Where(se => se.ExercicioId == exercicioId
                         && se.Tipo == TipoEtapa.Esforco)
@@ -99,7 +102,8 @@ public sealed class RepositorioProgresso : IRepositorioProgresso
             .ToListAsync(ct);
 
         return pontosIso
-            .Select(x => new PontoBruto(x.Data, x.MaiorTempo!.Value, null, x.Id, x.Observacao))
+            .Select(x => new PontoBruto(
+                x.Data, x.MaiorTempo!.Value, null, x.Id, x.Observacao, x.ObservacaoPrivada))
             .ToList();
     }
 

@@ -20,6 +20,8 @@ public sealed class SessaoConfiguration : IEntityTypeConfiguration<Sessao>
         builder.Property(s => s.Data).HasColumnName("data").IsRequired();
         builder.Property(s => s.DuracaoMin).HasColumnName("duracao_min");
         builder.Property(s => s.Observacao).HasColumnName("observacao");
+        builder.Property(s => s.ObservacaoPrivada)
+            .HasColumnName("observacao_privada").HasDefaultValue(false).IsRequired();
         builder.Property(s => s.CriadoEm).HasColumnName("criado_em").HasDefaultValueSql("now()").IsRequired();
         builder.Property(s => s.AtualizadoEm).HasColumnName("atualizado_em").HasDefaultValueSql("now()").IsRequired();
 

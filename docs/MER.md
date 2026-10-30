@@ -18,7 +18,9 @@ pronto.
 - Tabelas: `usuario`, `usuario_papel`, `vinculo` (estrutura pronta, sem uso),
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
   `treino_exercicio`, `etapa_prescrita`, `rodada_marcador`, `sessao`,
-  `serie_executada`.
+  `serie_executada`, `consentimento` (PBI-87, ver 3.13).
+- `vinculo` deixou de ser "estrutura sem uso": o modo educador usa o vínculo a
+  partir da PBI-85 (convite/aceite) e PBI-86 (leitura dos dados do aluno).
 - `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
   criar) e **`musculo_id`** opcional (FK composta `(musculo_id, membro_id)` →
   `musculo`) — ver 3.4.1, 3.4.2 e 3.5. O catálogo global tem **89 exercícios
@@ -29,16 +31,18 @@ pronto.
 **PBI-31 / ADR-10 concluído.** Tabelas `membro` (8) e `musculo` (15) existem; o
 antigo texto livre `grupo_muscular` foi **removido** (coluna dropada na etapa 4).
 
-**Também aplicado:** `plano_treino.em_uso` com o índice único parcial `ux_plano_atleta_em_uso` no lugar do antigo por `ativo` (PBI-44), `serie_executada.marcador` e `rodada_marcador` (TV-1), `volume_alvo_max` (TV-2) e o reparo de dados do plano em uso (PBI-77).
+**Também aplicado:** `plano_treino.em_uso` com o índice único parcial `ux_plano_atleta_em_uso` no lugar do antigo por `ativo` (PBI-44), `serie_executada.marcador` e `rodada_marcador` (TV-1), `volume_alvo_max` (TV-2), o reparo de dados do plano em uso (PBI-77) e `sessao.observacao_privada` + tabela `consentimento` (PBI-87).
 
 Migrations versionadas, em ordem: `InitialCreate`, `HabilitaUnaccent`,
 `CatalogoExerciciosCompleto` (carga dos 89 exercícios), `MembroMusculoEtapa1`
 (cria `membro`/`musculo`, classifica o catálogo), `MembroMusculoEtapa4RemoveGrupo`
 (remove `grupo_muscular`), `TagDeSerie`, `FaixaRepeticoes`, `PlanosVariosEmUso`
-(preenche `em_uso = ativo` nos planos existentes) e `ReparoPlanoEmUso`
+(preenche `em_uso = ativo` nos planos existentes), `ReparoPlanoEmUso`
 (`20261019145756`): para cada atleta com plano ativo e nenhum em uso, marca em uso
 o plano ativo com a sessão mais recente (empate: início mais novo). É idempotente
-e não tem reversão, de propósito.
+e não tem reversão, de propósito. Por último, `ObservacaoPrivadaEConsentimento`
+(`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
+`consentimento`.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -440,6 +444,7 @@ Um treino realizado em uma data.
 | data | date | não | Data em que o treino aconteceu, não a do lançamento. `CHECK (data <= current_date + 1)` |
 | duracao_min | smallint | sim | |
 | observacao | text | sim | Pode conter dado de saúde: não vai para log |
+| observacao_privada | boolean | não | `DEFAULT false`. Quando true, só o próprio atleta vê a observação; o educador vinculado não a recebe (PBI-87) |
 | criado_em | timestamptz | não | |
 | atualizado_em | timestamptz | não | |
 
@@ -480,6 +485,21 @@ linha vale `VALIDA`.
 Lista fixa dos 10 marcadores (aprovada pelo PO, 15/10): `VALIDA`, `AQUECIMENTO`,
 `PREPARATORIA`, `TOP_SET`, `BACK_OFF`, `FALHA`, `DROP_SET`, `REST_PAUSE`,
 `NEGATIVA`, `PARCIAIS`. Enum numa fonte só no domínio; o `CHECK` deriva dele.
+
+### 3.13 `consentimento`
+Aceite de um termo de consentimento pelo usuário (LGPD, PBI-87). Registra que o
+atleta autorizou o acesso de educadores vinculados aos seus dados. A estrutura
+entra na PBI-87; a porteira de acesso (o educador só vê quem consentiu) é ligada
+na PBI-88, junto da tela que apresenta o termo.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | uuid | não | PK |
+| usuario_id | uuid | não | FK `usuario`, `ON DELETE CASCADE` |
+| versao_termo | varchar(20) | não | Versão do termo aceita (ex.: "1"); o texto vive no app |
+| aceito_em | timestamptz | não | `DEFAULT now()` |
+
+Índice único `(usuario_id, versao_termo)`: re-aceitar a mesma versão não duplica.
 
 ## 4. Índices de consulta
 
@@ -528,4 +548,7 @@ Uma sessão do Treino A com supino em 2 séries e uma prancha:
 - **Tags da observação:** tabela `tag` e `sessao_tag` para cruzar padrões (sono ruim, dor). Não entra no MVP.
 - **Faixas de zona por atleta:** tabela `zona_atleta (atleta_id, zona, fc_min, fc_max)` se a zona for definida por frequência cardíaca. Depende da resposta do Vinicius.
 - **Importação de treino:** coluna `origem` em `sessao` (MANUAL, ARQUIVO) quando houver importação do relógio.
-- **Consentimento:** tabela `consentimento (usuario_id, versao_termo, aceito_em)` antes do modo educador.
+
+> **Consentimento (LGPD):** saiu desta lista — a tabela `consentimento` foi
+> criada na PBI-87 (ver 3.13). O uso como porteira do acesso do educador entra
+> na PBI-88.

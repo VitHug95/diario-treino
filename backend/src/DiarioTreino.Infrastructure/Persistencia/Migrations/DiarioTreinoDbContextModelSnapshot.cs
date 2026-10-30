@@ -1554,6 +1554,12 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("text")
                         .HasColumnName("observacao");
 
+                    b.Property<bool>("ObservacaoPrivada")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("observacao_privada");
+
                     b.Property<Guid>("RegistradoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("registrado_por_id");
@@ -1576,6 +1582,38 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         {
                             t.HasCheckConstraint("ck_sessao_data", "data <= current_date + 1");
                         });
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Identidade.Consentimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AceitoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("aceito_em")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("VersaoTermo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("versao_termo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "VersaoTermo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_consentimento_usuario_versao");
+
+                    b.ToTable("consentimento", (string)null);
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Identidade.Usuario", b =>
@@ -2024,6 +2062,17 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .WithMany()
                         .HasForeignKey("TreinoId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Identidade.Consentimento", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Identidade.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Identidade.UsuarioPapel", b =>

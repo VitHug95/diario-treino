@@ -1235,9 +1235,19 @@ proteger dados sensíveis.
 **Critérios de aceite (preliminares)**
 - Flag de privacidade na observação da sessão (**mudança de banco** + migration).
   Observação privada não vai para o educador (API) nem para o PDF.
-- Tabela `consentimento (usuario_id, versao_termo, aceito_em)` (MER 7); o acesso
-  do educador só é liberado após o aceite do termo pelo aluno.
+- Tabela `consentimento (usuario_id, versao_termo, aceito_em)` (MER 3.13); o
+  acesso do educador só é liberado após o aceite do termo pelo aluno.
 **Depende de:** PBI-85. **Prioridade:** alta (bloqueia o acesso real do educador).
+
+**Status:** 🔸 **parte 1 na `main`** (backend). Entregue: `sessao.observacao_privada`
+(migration `ObservacaoPrivadaEConsentimento`), gravada no POST/PUT `/sessoes`
+(`observacaoPrivada`, padrão false) e **ocultada do educador** (logado ≠ atleta)
+no detalhe, no histórico e no progresso; a tabela `consentimento` foi **criada**
+(estrutura + entidade + índice único por usuário/versão). **Decisão do PO:**
+dividir — o **gate de consentimento** (educador só vê quem consentiu, em
+`IControleAcesso`) e o endpoint de aceite ficam para a **PBI-88**, junto da tela
+que apresenta o termo; ativar o gate agora, sem a tela, tiraria o acesso do
+educador já entregue (PBI-85/86) sem o aluno ter como consentir.
 
 #### PBI-88 · Telas do educador (lista de alunos, treino/progresso, montar ficha)
 

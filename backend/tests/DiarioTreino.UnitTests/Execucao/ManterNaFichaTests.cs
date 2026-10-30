@@ -26,9 +26,9 @@ public sealed class ManterNaFichaTests
             => Task.FromResult<(DateOnly, IReadOnlyList<SerieExecutada>)?>(null);
 
         public Task<IReadOnlyList<(Guid SessaoId, DateOnly Data, string? Observacao,
-            IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
+            bool ObservacaoPrivada, IReadOnlyList<SerieExecutada> Series)>> ObterHistoricoExercicioAsync(
             Guid atletaId, Guid exercicioId, int limite, CancellationToken ct)
-            => Task.FromResult<IReadOnlyList<(Guid, DateOnly, string?, IReadOnlyList<SerieExecutada>)>>([]);
+            => Task.FromResult<IReadOnlyList<(Guid, DateOnly, string?, bool, IReadOnlyList<SerieExecutada>)>>([]);
 
         public Task<IReadOnlyList<SessaoResumo>> ListarPorPeriodoAsync(
             Guid atletaId, DateOnly? de, DateOnly? ate, CancellationToken ct)
