@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import '../../features/auth/perfil_api.dart';
 import '../../features/catalogo/catalogo_repository.dart';
+import '../../features/educador/educador_repository.dart';
 import '../../features/fichas/fichas_repository.dart';
 import '../../features/progresso/progresso_repository.dart';
 import '../../features/sessao/sessao_repository.dart';
@@ -22,6 +24,10 @@ enum Mudanca {
 
   /// Rascunho do treino em andamento gravado ou apagado no aparelho.
   treinoEmAndamento,
+
+  /// Vínculo educador-aluno: ativar o papel, convidar, aceitar, recusar,
+  /// encerrar (PBI-88).
+  vinculos,
 }
 
 /// Mapa único de invalidação (PBI-70): cada mudança invalida tudo o que é
@@ -53,6 +59,12 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
     case Mudanca.treinoEmAndamento:
       // Avança a versão que o treinoEmAndamentoProvider observa.
       ref.read(versaoRascunhoTreinoProvider.notifier).avancar();
+    case Mudanca.vinculos:
+      ref
+        // O perfil muda ao virar educador (ganha o papel EDUCADOR).
+        ..invalidate(perfilProvider)
+        ..invalidate(convitesPendentesProvider)
+        ..invalidate(alunosProvider);
   }
 }
 
