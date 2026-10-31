@@ -40,6 +40,14 @@ public sealed record PlanoDetalhe(
 /// <summary>Dados para criar/renomear um plano (PBI-44).</summary>
 public sealed record SalvarPlanoRequest(string Nome);
 
+/// <summary>
+/// Corpo (opcional) do POST /planos. <see cref="Nome"/> ausente mantém o
+/// contrato antigo (idempotente, devolve o plano em uso). <see cref="AtletaId"/>
+/// é o modo educador (PBI-48/PBI-88d): o plano é montado para esse aluno, com
+/// autor = quem está logado. Sem vínculo ativo, o acesso responde 404.
+/// </summary>
+public sealed record CriarPlanoRequest(string? Nome = null, Guid? AtletaId = null);
+
 /// <summary>Ficha (treino) dentro do plano.</summary>
 public sealed record TreinoResumo(
     Guid Id,

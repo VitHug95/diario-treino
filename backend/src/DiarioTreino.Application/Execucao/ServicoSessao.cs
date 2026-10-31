@@ -353,7 +353,7 @@ public sealed class ServicoSessao
 
         if (request.ManterNaFicha is { Count: > 0 } manter && request.TreinoId is { } fichaId)
         {
-            await ManterNaFichaAsync(fichaId, request, manter, ct);
+            await ManterNaFichaAsync(usuarioLogadoId, fichaId, request, manter, ct);
         }
 
         // Sessão e (PBI-72) os exercícios mantidos na ficha saem no mesmo
@@ -374,6 +374,7 @@ public sealed class ServicoSessao
     /// (400: id fora da sessão, sem séries, ou que já está na ficha).
     /// </summary>
     private async Task ManterNaFichaAsync(
+        Guid usuarioLogadoId,
         Guid treinoId,
         CriarSessaoRequest request,
         IReadOnlyList<Guid> manter,
@@ -383,7 +384,10 @@ public sealed class ServicoSessao
             ?? throw new RecursoNaoEncontradoException();
         var plano = await _planos.ObterPlanoAsync(treino.PlanoId, ct)
             ?? throw new RecursoNaoEncontradoException();
-        if (plano.AutorId != plano.AtletaId)
+        // Só o autor edita a ficha (PBI-44/PBI-88d): quem registra a sessão é o
+        // próprio atleta, então "manter na ficha" num plano do professor (autor
+        // != logado) continua 403.
+        if (plano.AutorId != usuarioLogadoId)
         {
             throw new PlanoSomenteLeituraException();
         }

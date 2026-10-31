@@ -81,11 +81,16 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            // Corpo opcional: lê { nome } de forma tolerante a corpo vazio.
-            var nome = await LerNomeOpcionalAsync(http, ct);
+            // Corpo opcional: lê { nome, atletaId } de forma tolerante a corpo vazio.
+            var corpo = await LerCorpoOpcionalAsync(http, ct);
+            var nome = corpo?.Nome;
             if (!string.IsNullOrWhiteSpace(nome))
             {
-                var criado = await planejamento.CriarPlanoNomeadoAsync(perfil.Id, nome!, ct);
+                // atletaId presente = modo educador (PBI-48): o plano é do aluno,
+                // autor = logado. Sem ele, plano próprio (autor = atleta = logado).
+                // O acesso ao alvo responde 404 quando não há vínculo ativo.
+                var alvo = corpo!.AtletaId ?? perfil.Id;
+                var criado = await planejamento.CriarPlanoNomeadoAsync(perfil.Id, alvo, nome!, ct);
                 return Results.Created($"/api/v1/planos/{criado.Id}", criado);
             }
 
@@ -367,11 +372,11 @@ public static class PlanoEndpoints
         statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>
-    /// Lê { "nome": ... } do corpo do POST /planos de forma tolerante: corpo
-    /// vazio (o E2E chama sem corpo) devolve nulo, mantendo o comportamento
-    /// idempotente antigo. Não lança em JSON malformado — trata como sem nome.
+    /// Lê { "nome", "atletaId" } do corpo do POST /planos de forma tolerante:
+    /// corpo vazio (o E2E chama sem corpo) devolve nulo, mantendo o comportamento
+    /// idempotente antigo. Não lança em JSON malformado — trata como sem corpo.
     /// </summary>
-    private static async Task<string?> LerNomeOpcionalAsync(HttpContext http, CancellationToken ct)
+    private static async Task<CriarPlanoRequest?> LerCorpoOpcionalAsync(HttpContext http, CancellationToken ct)
     {
         if (http.Request.ContentLength is null or 0)
         {
@@ -380,8 +385,7 @@ public static class PlanoEndpoints
 
         try
         {
-            var corpo = await http.Request.ReadFromJsonAsync<SalvarPlanoRequest>(ct);
-            return corpo?.Nome;
+            return await http.Request.ReadFromJsonAsync<CriarPlanoRequest>(ct);
         }
         catch (System.Text.Json.JsonException)
         {

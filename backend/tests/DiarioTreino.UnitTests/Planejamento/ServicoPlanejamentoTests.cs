@@ -176,8 +176,12 @@ public sealed class ServicoPlanejamentoTests
 
     internal sealed class RepositorioVinculoFake : IRepositorioVinculo
     {
+        // Pares (educador, aluno) com vínculo ATIVO. Vazio = ninguém tem vínculo
+        // (o padrão antigo), então os testes que não configuram nada seguem iguais.
+        public readonly HashSet<(Guid Educador, Guid Aluno)> Ativos = [];
+
         public Task<bool> ExisteVinculoAtivoAsync(Guid e, Guid a, CancellationToken ct)
-            => Task.FromResult(false);
+            => Task.FromResult(Ativos.Contains((e, a)));
 
         public Task<bool> ExisteVinculoAbertoAsync(Guid e, Guid a, CancellationToken ct)
             => Task.FromResult(false);
@@ -229,10 +233,11 @@ public sealed class ServicoPlanejamentoTests
 
     private static ServicoPlanejamento Montar(
         RepositorioPlanoFake repo,
-        RepositorioExercicioFake? exercicios = null)
+        RepositorioExercicioFake? exercicios = null,
+        RepositorioVinculoFake? vinculos = null)
         => new(
             repo,
-            new ControleAcesso(new RepositorioVinculoFake()),
+            new ControleAcesso(vinculos ?? new RepositorioVinculoFake()),
             exercicios ?? new RepositorioExercicioFake(),
             new RepositorioMetricaFake());
 
@@ -792,5 +797,78 @@ public sealed class ServicoPlanejamentoTests
         var copia = repo.Planos.Single(p => p.Id == copiaId);
         Assert.Equal(atleta, copia.AutorId); // autoria do atleta
         Assert.False(copia.EmUso);           // fora de uso
+    }
+
+    // ---- Educador monta o plano do aluno (PBI-48/PBI-88d) ----
+
+    [Fact]
+    public async Task Educador_com_vinculo_cria_plano_para_o_aluno_com_autor_educador()
+    {
+        var educador = Guid.NewGuid();
+        var aluno = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+        var vinculos = new RepositorioVinculoFake();
+        vinculos.Ativos.Add((educador, aluno));
+
+        var plano = await Montar(repo, vinculos: vinculos)
+            .CriarPlanoNomeadoAsync(educador, aluno, "Força 5 dias", CancellationToken.None);
+
+        var salvo = repo.Planos.Single();
+        Assert.Equal(educador, salvo.AutorId); // quem escreve é o autor
+        Assert.Equal(aluno, salvo.AtletaId);   // o plano é do aluno
+        Assert.True(plano.EmUso);              // primeiro do aluno nasce em uso (PBI-77)
+        Assert.True(plano.SomenteLeitura);     // perspectiva de leitura: autor != atleta
+    }
+
+    [Fact]
+    public async Task Educador_sem_vinculo_nao_cria_plano_para_o_aluno_404()
+    {
+        var educador = Guid.NewGuid();
+        var aluno = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake();
+
+        // Sem vínculo ativo configurado: o acesso responde 404, não grava nada.
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
+            Montar(repo).CriarPlanoNomeadoAsync(educador, aluno, "Força", CancellationToken.None));
+        Assert.Empty(repo.Planos);
+    }
+
+    [Fact]
+    public async Task Educador_com_vinculo_edita_o_plano_que_montou_sem_403()
+    {
+        var educador = Guid.NewGuid();
+        var aluno = Guid.NewGuid();
+        // Plano do aluno, montado pelo educador (autor = educador).
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = aluno, AutorId = educador, Nome = "Força 5 dias",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+        var vinculos = new RepositorioVinculoFake();
+        vinculos.Ativos.Add((educador, aluno));
+
+        // O autor (educador logado) edita sem cair na regra de somente-leitura.
+        await Montar(repo, vinculos: vinculos)
+            .RenomearPlanoAsync(educador, plano.Id, "Força - ajuste", CancellationToken.None);
+
+        Assert.Equal("Força - ajuste", plano.Nome);
+    }
+
+    [Fact]
+    public async Task Aluno_nao_edita_o_plano_que_o_professor_montou_403()
+    {
+        var educador = Guid.NewGuid();
+        var aluno = Guid.NewGuid();
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = aluno, AutorId = educador, Nome = "Força 5 dias",
+        };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+
+        // O próprio aluno acessa o plano (dono), mas não é o autor: 403 ao editar.
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            Montar(repo).RenomearPlanoAsync(aluno, plano.Id, "Meu jeito", CancellationToken.None));
     }
 }

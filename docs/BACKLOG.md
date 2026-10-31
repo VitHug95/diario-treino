@@ -995,7 +995,7 @@ regras do plano em uso estão no [MAS](MAS.md) (ADRs) e no [MER](MER.md)
 | PBI-45 | Lista de planos (tela 18) | Front | R1 | ✅ na `main` (PR #72) |
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
-| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | próxima sprint, no épico do educador (E7) |
+| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | backend do educador-monta-ficha ✅ (PBI-88d-back); falta a UI (PBI-88d-front) no épico E7 |
 | PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
 
 ### Ajustes de layout (PBI-57 a PBI-67)
@@ -1270,8 +1270,18 @@ A PBI-88 foi **fatiada** em entregas menores:
   sessão abre o detalhe existente (que já aplica o acesso por vínculo e oculta a
   observação privada). Providers próprios do educador por `atletaId` (consome a
   PBI-86 com `?atletaId=`), sem tocar nas telas do atleta. 327 testes; analyze 0.
-- **88d** — montar ficha para o aluno (endpoint novo de criar plano para outro +
-  UI); fecha a **PBI-48**.
+- **88d** — montar ficha para o aluno; fecha a **PBI-48**. Fatiada em back e front:
+  - **88d-back** ✅ **backend**: `POST /planos` aceita `atletaId` no corpo e cria o
+    plano do aluno com `autor = educador` (nova sobrecarga
+    `CriarPlanoNomeadoAsync(usuarioLogado, atleta, nome)` que passa pelo
+    `IControleAcesso`). As fichas reusam `POST /planos/{id}/treinos`. A regra de
+    somente-leitura virou "quem escreve é o autor" (`autor_id != usuarioLogado`,
+    antes `!= atleta_id`): o educador edita o plano que montou; o aluno só lê/treina
+    (403); sem vínculo o acesso responde 404, nunca 403 (MAS 11.3). Sem mudança de
+    banco. Unitários + integração cobrindo os três casos (criar+ficha 201, sem
+    vínculo 404, autor edita × aluno 403). 54 unitários verdes; build 0/0.
+  - **88d-front** — UI do educador montando a ficha (parametrizar as telas de
+    plano/ficha por `atletaId`). Pendente.
 
 > **Termo de consentimento:** o texto exibido na tela de aceite é **provisório**
 > (marcado no código); o conteúdo jurídico final será definido com o PO antes do
