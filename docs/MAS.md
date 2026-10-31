@@ -305,9 +305,9 @@ PodeAcessarAtleta(usuarioLogado, atletaId) =
 
 - Implementado como serviço de aplicação (`IControleAcesso`) chamado pelos casos de uso, nunca reescrito em endpoint.
 - Coberto por testes unitários e de integração com os cenários: dono, educador com vínculo ativo, educador com vínculo encerrado, terceiro sem vínculo.
-- Escrita de ficha por educador (futuro) exige vínculo ativo e grava o educador como `autor_id` do plano.
+- Escrita de ficha por educador (PBI-48/E7) exige vínculo ativo e grava o educador como `autor_id` do plano, com `atleta_id` = aluno. O `POST /planos` aceita `atletaId` opcional no corpo: com ele, o plano é do aluno (modo educador); sem ele, o plano é do próprio logado.
 - Recurso de outro usuário responde 404, não 403, para não revelar que o recurso existe.
-- Plano com autor diferente do atleta é somente leitura para o atleta (PBI-44): escrita responde 403 em Problem Details (`plano-somente-leitura`), sempre **depois** do `IControleAcesso`. Recurso de outro usuário segue 404.
+- Somente o **autor** edita o plano (regra "quem escreve é o autor", PBI-44/PBI-48): escrita por quem não é o autor (`autor_id != usuarioLogado`) responde 403 em Problem Details (`plano-somente-leitura`), sempre **depois** do `IControleAcesso`. Assim o educador edita o plano que montou e o aluno só lê/treina/copia o plano do professor. O flag `SomenteLeitura` dos DTOs de leitura segue a perspectiva do dono (`autor_id != atleta_id`). Recurso de outro usuário segue 404.
 
 ## 12. Contrato da API (v1)
 

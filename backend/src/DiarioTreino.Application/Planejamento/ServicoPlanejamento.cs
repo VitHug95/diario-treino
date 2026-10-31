@@ -89,16 +89,34 @@ public sealed class ServicoPlanejamento
     /// escondidos (ativo=false) no histórico. Com um plano já em uso, o novo
     /// nasce fora de uso. Devolve o resumo do plano criado.
     /// </summary>
+    public Task<PlanoDetalhe> CriarPlanoNomeadoAsync(
+        Guid atletaId,
+        string nome,
+        CancellationToken ct)
+        => CriarPlanoNomeadoAsync(atletaId, atletaId, nome, ct);
+
+    /// <summary>
+    /// Cria um plano nomeado para o atleta-alvo com autor explícito (PBI-48,
+    /// educador monta a ficha). O acesso ao atleta passa pelo MAS 11.3: só o
+    /// próprio atleta ou um educador com vínculo ATIVO escreve (sem vínculo →
+    /// 404). O plano fica com <c>AutorId = usuarioLogadoId</c> (quem escreve é o
+    /// autor) e <c>AtletaId = atletaId</c> (de quem é o plano), que é o que a
+    /// regra de somente-leitura usa para liberar o autor e barrar os demais.
+    /// Regra de "nasce em uso" (PBI-77) continua por conta do atleta-alvo.
+    /// </summary>
     public async Task<PlanoDetalhe> CriarPlanoNomeadoAsync(
+        Guid usuarioLogadoId,
         Guid atletaId,
         string nome,
         CancellationToken ct)
     {
+        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId, ct);
+
         var primeiro = await _repositorio.ObterPlanoEmUsoAsync(atletaId, ct) is null;
         var plano = new PlanoTreino
         {
             Id = Guid.NewGuid(),
-            AutorId = atletaId,
+            AutorId = usuarioLogadoId,
             AtletaId = atletaId,
             Nome = nome.Trim(),
             Inicio = DateOnly.FromDateTime(DateTime.UtcNow),
@@ -108,8 +126,12 @@ public sealed class ServicoPlanejamento
         _repositorio.AdicionarPlano(plano);
         await _repositorio.SalvarAsync(ct);
 
+        // SomenteLeitura é a perspectiva de quem lê: o plano é somente-leitura
+        // quando o autor não é o dono (atleta). Para o educador que acabou de
+        // criar, autor != atleta, então marca true — coerente com o DTO da lista.
+        var somenteLeitura = plano.AutorId != plano.AtletaId;
         return new PlanoDetalhe(
-            plano.Id, plano.Nome, plano.Inicio, plano.EmUso, string.Empty, false, []);
+            plano.Id, plano.Nome, plano.Inicio, plano.EmUso, string.Empty, somenteLeitura, []);
     }
 
     /// <summary>Renomeia o plano (PBI-44). Acesso + somente-leitura aplicados.</summary>
@@ -187,9 +209,13 @@ public sealed class ServicoPlanejamento
         var plano = await _repositorio.ObterPlanoAsync(planoId, ct)
             ?? throw new RecursoNaoEncontradoException();
 
-        // Regra somente-leitura (fatia D): escrita em plano de autor diferente
-        // do atleta responde 403, sempre DEPOIS do controle de acesso (404).
-        if (exigeAutor && plano.AutorId != plano.AtletaId)
+        // Regra somente-leitura (PBI-44/PBI-88d): só o AUTOR edita o plano. O
+        // autor é quem está escrevendo — o próprio atleta nos planos dele, ou o
+        // educador no plano que montou para o aluno (PBI-48). Comparar com o
+        // usuário logado (e não com o atleta dono) libera o educador autor e
+        // continua barrando o aluno que tenta editar o plano do professor.
+        // Sempre DEPOIS do controle de acesso (404).
+        if (exigeAutor && plano.AutorId != usuarioLogadoId)
         {
             throw new PlanoSomenteLeituraException();
         }
