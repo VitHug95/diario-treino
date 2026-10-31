@@ -36,9 +36,14 @@ class FichasRepository {
 
   // ---- Planos (PBI-44/45) ----
 
-  /// Planos do atleta (só os ativos), na ordem da API.
-  Future<List<PlanoDaLista>> listarPlanos() async {
-    final resposta = await _dio.get<List<dynamic>>('/planos');
+  /// Planos do atleta (só os ativos), na ordem da API. [atletaId] não nulo é o
+  /// modo educador (PBI-88d): lê os planos do aluno via `?atletaId=` (a API
+  /// aplica o controle de acesso; sem vínculo ativo responde 404).
+  Future<List<PlanoDaLista>> listarPlanos({String? atletaId}) async {
+    final resposta = await _dio.get<List<dynamic>>(
+      '/planos',
+      queryParameters: {if (atletaId != null) 'atletaId': atletaId},
+    );
     return (resposta.data ?? [])
         .cast<Map<String, dynamic>>()
         .map(PlanoDaLista.doJson)
@@ -52,18 +57,25 @@ class FichasRepository {
     return PlanoAtivo.doJson(resposta.data!);
   }
 
-  /// Detalhe do plano com uso e autoria (tela 19).
-  Future<PlanoDetalhe> obterDetalhePlano(String planoId) async {
-    final resposta = await _dio.get<Map<String, dynamic>>('/planos/$planoId');
+  /// Detalhe do plano com uso e autoria (tela 19). [atletaId] não nulo é o modo
+  /// educador (PBI-88d): a API confere o acesso ao aluno pelo `?atletaId=`.
+  Future<PlanoDetalhe> obterDetalhePlano(String planoId, {String? atletaId}) async {
+    final resposta = await _dio.get<Map<String, dynamic>>(
+      '/planos/$planoId',
+      queryParameters: {if (atletaId != null) 'atletaId': atletaId},
+    );
     return PlanoDetalhe.doJson(resposta.data!);
   }
 
   /// Cria um plano com nome e devolve o id. O primeiro do atleta nasce em uso.
-  Future<String> criarPlano(String nome) async {
+  /// [atletaId] não nulo é o modo educador (PBI-88d): o plano é montado para o
+  /// aluno (autor = educador logado, atleta = aluno). A API exige vínculo ativo
+  /// (sem ele, 404).
+  Future<String> criarPlano(String nome, {String? atletaId}) async {
     try {
       final resposta = await _dio.post<Map<String, dynamic>>(
         '/planos',
-        data: {'nome': nome},
+        data: {'nome': nome, if (atletaId != null) 'atletaId': atletaId},
       );
       return resposta.data!['id'] as String;
     } on DioException catch (e) {

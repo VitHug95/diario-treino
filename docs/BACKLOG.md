@@ -995,7 +995,7 @@ regras do plano em uso estão no [MAS](MAS.md) (ADRs) e no [MER](MER.md)
 | PBI-45 | Lista de planos (tela 18) | Front | R1 | ✅ na `main` (PR #72) |
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
-| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | backend do educador-monta-ficha ✅ (PBI-88d-back); falta a UI (PBI-88d-front) no épico E7 |
+| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | ✅ na `main` — educador monta plano/ficha para o aluno (PBI-88d-back + 88d-front) |
 | PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
 
 ### Ajustes de layout (PBI-57 a PBI-67)
@@ -1280,8 +1280,18 @@ A PBI-88 foi **fatiada** em entregas menores:
     (403); sem vínculo o acesso responde 404, nunca 403 (MAS 11.3). Sem mudança de
     banco. Unitários + integração cobrindo os três casos (criar+ficha 201, sem
     vínculo 404, autor edita × aluno 403). 54 unitários verdes; build 0/0.
-  - **88d-front** — UI do educador montando a ficha (parametrizar as telas de
-    plano/ficha por `atletaId`). Pendente.
+  - **88d-front** ✅ **UI do educador montando a ficha**: no detalhe do aluno
+    (PBI-88c), um cartão "Planos e fichas" abre a `AlunoPlanosScreen` (planos do
+    aluno + "Criar plano", que grava com autor = educador). Abrir um plano leva à
+    `AlunoPlanoDetalheScreen` (fichas + "Nova ficha"); tocar numa ficha reusa o
+    editor do atleta (`FichasScreen` por `treinoId`: adicionar exercícios e
+    definir alvos), que o backend autoriza pelo vínculo — sem parametrizar as
+    telas do atleta. `FichasRepository` ganhou `atletaId` opcional em
+    `criarPlano`/`listarPlanos`/`obterDetalhePlano`; providers-família próprios do
+    aluno (`planosDoAlunoProvider`, `planoDoAlunoDetalheProvider`) entram no mapa
+    de invalidação (`Mudanca.planos`), sem mexer nos providers do atleta logado.
+    Rotas empilhadas sob `/perfil/alunos/aluno/planos`. 332 testes verdes
+    (327 + 5); analyze 0. **Fecha a PBI-48.**
 
 > **Termo de consentimento:** o texto exibido na tela de aceite é **provisório**
 > (marcado no código); o conteúdo jurídico final será definido com o PO antes do

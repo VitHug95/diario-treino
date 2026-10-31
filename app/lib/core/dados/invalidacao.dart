@@ -84,5 +84,8 @@ void _planosEFichas(Ref ref) {
     ..invalidate(planoPorIdProvider)
     ..invalidate(planoDetalheProvider)
     ..invalidate(fichaDetalheProvider)
-    ..invalidate(rascunhoSessaoProvider);
+    ..invalidate(rascunhoSessaoProvider)
+    // Modo educador (PBI-88d): o plano/ficha do aluno que o educador monta.
+    ..invalidate(planosDoAlunoProvider)
+    ..invalidate(planoDoAlunoDetalheProvider);
 }

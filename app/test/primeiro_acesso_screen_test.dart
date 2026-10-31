@@ -15,7 +15,7 @@ class _RepoCriaPlano extends FichasRepository {
   String? criado;
 
   @override
-  Future<String> criarPlano(String nome) async {
+  Future<String> criarPlano(String nome, {String? atletaId}) async {
     criado = nome;
     return 'novo';
   }
