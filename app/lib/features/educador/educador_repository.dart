@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
 import '../auth/perfil_api.dart';
+import '../fichas/fichas_repository.dart';
+import '../fichas/plano_models.dart';
 import '../progresso/progresso_models.dart';
 import '../sessao/sessao_models.dart';
 import 'educador_models.dart';
@@ -228,4 +230,28 @@ final sessoesDoAlunoProvider =
         .subtract(const Duration(days: 30));
     return ref.watch(educadorRepositoryProvider).sessoesDoAluno(atletaId, de: de);
   },
+);
+
+// ---- Planos do aluno (PBI-88d), providers family por atletaId ----
+//
+// Reaproveitam o FichasRepository (que já aceita atletaId opcional) em vez de
+// duplicar as chamadas no EducadorRepository: planos e fichas são o mesmo
+// recurso, só muda o alvo. São famílias próprias para NÃO mexer na aridade dos
+// providers de planos do atleta logado (planosProvider/planoDetalheProvider),
+// preservando as telas e os testes do atleta. O mapa de invalidação
+// (Mudanca.planos) atualiza estes junto dos do atleta.
+
+/// Planos do aluno (modo educador). A tela ordena com [ordenarPlanos].
+final planosDoAlunoProvider =
+    FutureProvider.autoDispose.family<List<PlanoDaLista>, String>(
+  (ref, atletaId) =>
+      ref.watch(fichasRepositoryProvider).listarPlanos(atletaId: atletaId),
+);
+
+/// Detalhe de um plano do aluno (com as fichas), por (atletaId, planoId).
+final planoDoAlunoDetalheProvider = FutureProvider.autoDispose
+    .family<PlanoDetalhe, ({String atletaId, String planoId})>(
+  (ref, arg) => ref
+      .watch(fichasRepositoryProvider)
+      .obterDetalhePlano(arg.planoId, atletaId: arg.atletaId),
 );

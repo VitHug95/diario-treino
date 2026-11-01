@@ -59,7 +59,7 @@ class _FichasFake extends FichasRepository {
   }
 
   @override
-  Future<List<PlanoDaLista>> listarPlanos() async => [
+  Future<List<PlanoDaLista>> listarPlanos({String? atletaId}) async => [
         for (final p in _b.planos)
           PlanoDaLista(
             id: p.id,
@@ -77,7 +77,7 @@ class _FichasFake extends FichasRepository {
   Future<PlanoAtivo> obterPlano(String planoId) async => _ativo(_b.plano(planoId));
 
   @override
-  Future<PlanoDetalhe> obterDetalhePlano(String planoId) async {
+  Future<PlanoDetalhe> obterDetalhePlano(String planoId, {String? atletaId}) async {
     final p = _b.plano(planoId);
     return PlanoDetalhe(
       id: p.id,
@@ -96,7 +96,7 @@ class _FichasFake extends FichasRepository {
           .id;
 
   @override
-  Future<String> criarPlano(String nome) async {
+  Future<String> criarPlano(String nome, {String? atletaId}) async {
     final p = _Plano(_b.novoId('p'), nome, emUso: _b.emUso == null);
     _b.planos.add(p);
     return p.id;

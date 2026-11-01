@@ -12,6 +12,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../sessao/sessao_models.dart';
+import 'aluno_planos_screen.dart';
 import 'educador_repository.dart';
 
 /// Argumentos para abrir o detalhe de um aluno (PBI-88c).
@@ -51,6 +52,8 @@ class AlunoDetalheScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
+              _BotaoPlanosDoAluno(atletaId: atletaId, alunoNome: alunoNome),
+              const SizedBox(height: AppSpacing.x24),
               Text('EVOLUÇÃO',
                   style: AppText.overline.copyWith(color: cores.textSecondary)),
               const SizedBox(height: AppSpacing.x8),
@@ -298,4 +301,63 @@ class _CardSessaoAluno extends StatelessWidget {
   static String _dataLonga(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+/// Botão de destaque para montar o plano/fichas do aluno (PBI-88d). Abre a
+/// lista de planos do aluno, onde o educador cria o plano e as fichas.
+class _BotaoPlanosDoAluno extends StatelessWidget {
+  const _BotaoPlanosDoAluno({required this.atletaId, required this.alunoNome});
+
+  final String atletaId;
+  final String alunoNome;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Semantics(
+      button: true,
+      label: 'Montar plano e fichas de $alunoNome',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => context.push(
+            Rotas.alunoPlanos,
+            extra: AlunoPlanosArgs(atletaId: atletaId, alunoNome: alunoNome),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            child: Row(
+              children: [
+                Icon(LucideIcons.clipboardList,
+                    color: cores.primaryText, size: AppSizes.iconeMd),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Planos e fichas', style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text('Monte o treino do aluno',
+                          style: AppText.caption
+                              .copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight,
+                    color: cores.iconMuted, size: AppSizes.iconeMd),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -8,6 +8,8 @@ import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
 import '../../features/educador/aluno_detalhe_screen.dart';
+import '../../features/educador/aluno_plano_detalhe_screen.dart';
+import '../../features/educador/aluno_planos_screen.dart';
 import '../../features/educador/alunos_screen.dart';
 import '../../features/educador/convites_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
@@ -62,6 +64,10 @@ abstract final class Rotas {
   /// Modo educador (PBI-88), empilhados sobre a Início a partir do Perfil.
   static const alunos = '/perfil/alunos';
   static const alunoDetalhe = '/perfil/alunos/aluno';
+
+  /// Planos do aluno (PBI-88d): o educador monta plano/ficha para o aluno.
+  static const alunoPlanos = '/perfil/alunos/aluno/planos';
+  static const alunoPlanoDetalhe = '/perfil/alunos/aluno/planos/plano';
   static const convites = '/perfil/convites';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
@@ -196,6 +202,41 @@ final routerProvider = Provider<GoRouter>((ref) {
                                 alunoNome: args?.alunoNome ?? 'Aluno',
                               );
                             },
+                            routes: [
+                              // Planos do aluno (PBI-88d): o educador monta
+                              // plano/ficha. Detalhe do plano empilha em cima.
+                              GoRoute(
+                                path: 'planos',
+                                name: 'alunoPlanos',
+                                builder: (context, state) {
+                                  final args =
+                                      state.extra as AlunoPlanosArgs?;
+                                  return AlunoPlanosScreen(
+                                    key: ValueKey(
+                                        'alunoPlanos:${args?.atletaId}'),
+                                    atletaId: args?.atletaId ?? '',
+                                    alunoNome: args?.alunoNome ?? 'Aluno',
+                                  );
+                                },
+                                routes: [
+                                  GoRoute(
+                                    path: 'plano',
+                                    name: 'alunoPlanoDetalhe',
+                                    builder: (context, state) {
+                                      final args = state.extra
+                                          as AlunoPlanoDetalheArgs?;
+                                      return AlunoPlanoDetalheScreen(
+                                        key: ValueKey(
+                                            'alunoPlano:${args?.planoId}'),
+                                        atletaId: args?.atletaId ?? '',
+                                        alunoNome: args?.alunoNome ?? 'Aluno',
+                                        planoId: args?.planoId ?? '',
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),
