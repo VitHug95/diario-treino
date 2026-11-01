@@ -1308,15 +1308,30 @@ evolução de cada um e montar ficha para eles, para acompanhar de verdade pelo 
   cujo lado do aluno — ler/copiar plano do professor — já existe).
 **Depende de:** PBI-85, PBI-86, PBI-87. Inclui a **PBI-48**.
 
-#### PBI-89 · Exportar progresso do aluno em PDF
+#### PBI-89 · Exportar progresso em PDF
 
-**História:** Como educador, quero exportar os treinos e as evoluções do aluno em
-PDF, para registrar/compartilhar o acompanhamento.
+**História:** Como atleta, quero exportar meus treinos e evoluções em PDF; e como
+educador, quero exportar os de um aluno — para registrar/compartilhar o
+acompanhamento. **(Decisão do PO: vale para os dois.)**
 
-**Critérios de aceite (preliminares)**
-- `GET /alunos/{id}/progresso/pdf?de=&ate=` gera o PDF com os **treinos (sessões)
-  e as evoluções (gráficos por exercício)** do período. Observação privada não
-  entra. Passa pela regra 11.3 (vínculo ATIVO; senão 404).
+**Critérios de aceite**
+- `GET /api/v1/progresso/pdf?de=&ate=&atletaId=` gera o PDF com as **evoluções por
+  exercício** e as **sessões** do período. Observação privada do aluno não entra.
+  Vale para o próprio atleta e, com `atletaId`, para o educador com vínculo ATIVO
+  (regra 11.3; sem acesso → 404). Sem `de`/`ate`, os últimos **90 dias**
+  (configurável pelos parâmetros).
+
+**Status (89-back):** ✅ **backend** feito. Endpoint devolve `application/pdf`
+(`Results.File`), primeiro binário da API. PDF gerado com **QuestPDF** (licença
+Community) na Infrastructure, atrás da porta `IGeradorRelatorioPdf` (Application);
+`ServicoRelatorio` reusa `ServicoProgresso` e `ServicoSessao`, então acesso e
+privacidade já vêm tratados. Build 0/0; 54 unitários verdes + 3 testes do gerador
+(geram `%PDF`); integração (`ProgressoPdfEndpointTests`) cobre atleta 200, educador
+com vínculo, sem vínculo 404 e sem token 401 (roda no CI).
+
+**Falta (89-front):** botão "Exportar PDF" na aba **Progresso** (atleta) e na tela
+do aluno (educador), disparando o download no web.
+
 **Depende de:** PBI-86, PBI-87. **Prioridade:** média.
 
 ---
