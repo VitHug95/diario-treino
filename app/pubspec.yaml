@@ -20,6 +20,8 @@ dependencies:
   google_fonts: ^6.3.2
   lucide_icons: ^0.257.0
   shared_preferences: ^2.5.3
+  # Download do PDF no navegador (PBI-89): Blob + link <a download>.
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
