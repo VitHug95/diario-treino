@@ -1743,6 +1743,31 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.PlanoDiaSemana", b =>
+                {
+                    b.Property<Guid>("PlanoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plano_id");
+
+                    b.Property<short>("DiaSemana")
+                        .HasColumnType("smallint")
+                        .HasColumnName("dia_semana");
+
+                    b.Property<Guid>("TreinoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treino_id");
+
+                    b.HasKey("PlanoId", "DiaSemana");
+
+                    b.HasIndex("TreinoId")
+                        .HasDatabaseName("ix_plano_dia_semana_treino");
+
+                    b.ToTable("plano_dia_semana", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_plano_dia_semana_dia", "dia_semana BETWEEN 1 AND 7");
+                        });
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.PlanoTreino", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2111,6 +2136,21 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.Navigation("TreinoExercicio");
 
                     b.Navigation("VolumeMetrica");
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.PlanoDiaSemana", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Planejamento.PlanoTreino", null)
+                        .WithMany()
+                        .HasForeignKey("PlanoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DiarioTreino.Domain.Planejamento.Treino", null)
+                        .WithMany()
+                        .HasForeignKey("TreinoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.PlanoTreino", b =>

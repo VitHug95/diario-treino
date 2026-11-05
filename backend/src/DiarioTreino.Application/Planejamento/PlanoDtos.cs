@@ -4,7 +4,9 @@ namespace DiarioTreino.Application.Planejamento;
 public sealed record PlanoAtivo(
     Guid Id,
     string Nome,
-    IReadOnlyList<TreinoResumo> Treinos);
+    IReadOnlyList<TreinoResumo> Treinos,
+    /// <summary>Semana planejada (PBI-35), ordenada por dia; vazia se não há.</summary>
+    IReadOnlyList<DiaPlanejado> Semana);
 
 /// <summary>
 /// Um plano na lista de planos do atleta (PBI-44, GET /planos). Traz o resumo
@@ -35,10 +37,25 @@ public sealed record PlanoDetalhe(
     bool EmUso,
     string Autor,
     bool SomenteLeitura,
-    IReadOnlyList<TreinoResumo> Treinos);
+    IReadOnlyList<TreinoResumo> Treinos,
+    /// <summary>Semana planejada (PBI-35), ordenada por dia; vazia se não há.</summary>
+    IReadOnlyList<DiaPlanejado> Semana);
 
 /// <summary>Dados para criar/renomear um plano (PBI-44).</summary>
 public sealed record SalvarPlanoRequest(string Nome);
+
+/// <summary>
+/// Um dia da semana planejada (PBI-35): ficha do dia. <see cref="DiaSemana"/>
+/// no padrão ISO (1 = segunda … 7 = domingo). Dia ausente = livre/descanso.
+/// </summary>
+public sealed record DiaPlanejado(short DiaSemana, Guid TreinoId);
+
+/// <summary>
+/// Corpo do PUT /planos/{id}/semana (PBI-35): a semana INTEIRA do plano, que
+/// substitui a anterior. Lista vazia limpa a semana. No máximo uma ficha por
+/// dia; a mesma ficha pode repetir em vários dias.
+/// </summary>
+public sealed record DefinirSemanaRequest(IReadOnlyList<DiaPlanejado> Dias);
 
 /// <summary>
 /// Corpo (opcional) do POST /planos. <see cref="Nome"/> ausente mantém o

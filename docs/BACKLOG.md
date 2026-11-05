@@ -789,14 +789,26 @@ não aceita mais `grupoMuscular`. Build Release limpo (0 avisos com warnings-as-
 
 **Contexto:** a tela inicial (PBI-23A) já tem uma faixa semanal que marca os dias **em que treinei** (sem planejar o quê). Esta PBI é o passo além: associar fichas a dias e mostrar "era pra fazer A na segunda — fez? ✓ / não fez". O modelo atual **não** suporta isso (não há "dia planejado da ficha" no MER).
 
-**Critérios de aceite (preliminares)**
-- Associar uma ou mais fichas a dias da semana (um dia pode ter ficha planejada ou ser livre).
-- A tela inicial mostra o planejado × o realizado por dia.
-- Semana fixa ou rotação (a definir com o PO).
+**Decisões do PO (05/11):**
+1. A semana é **do plano**: cada plano tem a sua, e a Início segue a do plano em uso. Plano do professor vem com a semana dele e só o autor edita (como as fichas).
+2. **Semana fixa** (A na segunda, B na quarta…). Rotação fica fora.
+3. **No máximo uma ficha por dia**; a mesma ficha pode ir em vários dias.
+4. "Fez" = **treinou no dia, com qualquer ficha** (mede constância).
+5. Na Início, **sem atalho novo** (respeita a PBI-59): a faixa semanal mostra a ficha planejada de cada dia e ✓ / "faltou" nos dias passados; a folha do dia mostra "Planejado: Treino A" e o registro segue como hoje.
+6. Fora por ora: calendário do mês, rotação, cobranças/notificações.
+- **Opcional:** criar ficha não pede dia; plano sem semana mostra a Início exatamente como antes; dá para planejar só alguns dias. Quem já tem fichas associa, troca e remove quando quiser, sem afetar treinos registrados.
 
-**Notas técnicas:** exige mudança de banco (ex.: tabela `treino_dia_semana` ou agendamento), migration, endpoints novos. É um épico pequeno, não um ajuste. Fica como evolução da PBI-23/E6.
+**Critérios de aceite**
+- Associar fichas do plano a dias da semana (dia com ficha ou livre), trocar e remover a qualquer momento.
+- A tela inicial mostra o planejado × o realizado por dia (só quando o plano em uso tem semana).
+- Excluir/arquivar a ficha libera os dias dela; duplicar o plano leva a semana; nenhuma mudança na semana mexe em sessões.
+
+**Notas técnicas:** tabela `plano_dia_semana` (PK `plano_id, dia_semana`; ver MER 3.14 e regra 14), migration `PlanoSemana`, `PUT /planos/{id}/semana`, `semana` no `GET /planos/{id}` e no `GET /planos/ativo`. Fatiada em back e front.
 **Depende de:** PBI-23 (parte A), PBI-15.
 **Prioridade:** baixa (evolução; a faixa semanal do PBI-23A já entrega valor sem isto).
+
+**Status (35-back):** ✅ backend feito. Migration só cria a tabela, vazia. `ServicoPlanejamento.DefinirSemanaAsync` passa pelo acesso (outro usuário 404) e pela regra do autor (plano do professor 403; educador autor edita); `DefinirSemanaValidator` (dia 1..7, um por dia) e ficha ativa do plano conferida no serviço (400). Troca da semana por diferença (o EF não aceita remover e reinserir a mesma PK no mesmo `SaveChanges`). Arquivar ficha remove os dias na aplicação; apagar cai por cascata; duplicar mapeia ficha antiga → nova. Build 0/0; 62 unitários verdes (+8); integração (`PlanoSemanaEndpointTests`: fluxo, vazia, 400, 404, 403, educador, excluir/arquivar, duplicar) roda no CI.
+**Falta (35-front):** montar a semana no detalhe do plano; planejado × feito na faixa semanal e na folha do dia.
 
 #### PBI-36 · Excluir ficha
 

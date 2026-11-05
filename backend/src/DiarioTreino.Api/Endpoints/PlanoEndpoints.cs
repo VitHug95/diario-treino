@@ -121,6 +121,37 @@ public static class PlanoEndpoints
         })
         .WithName("RenomearPlano").WithTags("Planos").WithSummary("Renomeia o plano");
 
+        // Semana planejada do plano (PBI-35): substitui a semana inteira (lista
+        // vazia limpa). Outro usuário → 404; plano de outro autor → 403; ficha
+        // que não é deste plano ou formato inválido → 400.
+        grupo.MapPut("/planos/{id:guid}/semana", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<DefinirSemanaRequest> validator,
+            DefinirSemanaRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            try
+            {
+                await planejamento.DefinirSemanaAsync(perfil.Id, id, request, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        })
+        .WithName("DefinirSemanaPlano").WithTags("Planos")
+        .WithSummary("Define a semana planejada do plano (ficha por dia)");
+
         // Define o plano como o em uso do atleta (transação; nunca zero/dois).
         grupo.MapPost("/planos/{id:guid}/em-uso", async (
             Guid id,

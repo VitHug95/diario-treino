@@ -99,9 +99,70 @@ public sealed class RepositorioPlano : IRepositorioPlano
             .Select(t => new TreinoResumo(t.Id, t.Nome, t.Descricao, t.Ordem))
             .ToListAsync(ct);
 
+        var semana = await ObterSemanaAsync(planoId, ct);
+
         return new PlanoDetalhe(
             plano.Id, plano.Nome, plano.Inicio, plano.EmUso,
-            plano.Autor ?? string.Empty, plano.SomenteLeitura, treinos);
+            plano.Autor ?? string.Empty, plano.SomenteLeitura, treinos, semana);
+    }
+
+    // ---- Semana planejada (PBI-35) ----
+
+    public Task<List<DiaPlanejado>> ObterSemanaAsync(Guid planoId, CancellationToken ct) =>
+        _db.PlanoDiasSemana
+            .Where(d => d.PlanoId == planoId
+                && _db.Treinos.Any(t => t.Id == d.TreinoId && t.Ativo))
+            .OrderBy(d => d.DiaSemana)
+            .Select(d => new DiaPlanejado(d.DiaSemana, d.TreinoId))
+            .ToListAsync(ct);
+
+    public async Task<HashSet<Guid>> ObterIdsFichasAtivasAsync(Guid planoId, CancellationToken ct) =>
+        (await _db.Treinos
+            .Where(t => t.PlanoId == planoId && t.Ativo)
+            .Select(t => t.Id)
+            .ToListAsync(ct))
+        .ToHashSet();
+
+    public async Task SubstituirSemanaAsync(
+        Guid planoId, IReadOnlyList<DiaPlanejado> dias, CancellationToken ct)
+    {
+        // Diferença em vez de "apaga tudo e insere": remover e reinserir a mesma
+        // PK (plano, dia) no mesmo SaveChanges conflita no rastreamento do EF.
+        var atuais = await _db.PlanoDiasSemana
+            .Where(d => d.PlanoId == planoId)
+            .ToListAsync(ct);
+        var novos = dias.ToDictionary(d => d.DiaSemana, d => d.TreinoId);
+
+        foreach (var atual in atuais)
+        {
+            if (novos.TryGetValue(atual.DiaSemana, out var treinoId))
+            {
+                atual.TreinoId = treinoId; // mesmo dia: só troca a ficha
+                novos.Remove(atual.DiaSemana);
+            }
+            else
+            {
+                _db.PlanoDiasSemana.Remove(atual); // dia saiu da semana
+            }
+        }
+
+        foreach (var (dia, treinoId) in novos)
+        {
+            _db.PlanoDiasSemana.Add(new PlanoDiaSemana
+            {
+                PlanoId = planoId,
+                DiaSemana = dia,
+                TreinoId = treinoId,
+            });
+        }
+    }
+
+    public async Task RemoverFichaDaSemanaAsync(Guid treinoId, CancellationToken ct)
+    {
+        var dias = await _db.PlanoDiasSemana
+            .Where(d => d.TreinoId == treinoId)
+            .ToListAsync(ct);
+        _db.PlanoDiasSemana.RemoveRange(dias);
     }
 
     public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct) =>
@@ -150,6 +211,12 @@ public sealed class RepositorioPlano : IRepositorioPlano
         var marcadores = await _db.RodadaMarcadores
             .Where(m => exIds.Contains(m.TreinoExercicioId))
             .ToListAsync(ct);
+        var semana = await _db.PlanoDiasSemana
+            .Where(d => d.PlanoId == planoId)
+            .ToListAsync(ct);
+
+        // Ficha original → ficha copiada, para levar a semana junto (PBI-35).
+        var fichaCopiada = new Dictionary<Guid, Guid>();
 
         var copia = new PlanoTreino
         {
@@ -175,6 +242,7 @@ public sealed class RepositorioPlano : IRepositorioPlano
                 Ativo = true,
             };
             _db.Treinos.Add(novaFicha);
+            fichaCopiada[ficha.Id] = novaFicha.Id;
 
             foreach (var te in exercicios.Where(e => e.TreinoId == ficha.Id))
             {
@@ -215,6 +283,21 @@ public sealed class RepositorioPlano : IRepositorioPlano
                         Marcador = m.Marcador,
                     });
                 }
+            }
+        }
+
+        // A semana vai junto, apontando para as fichas copiadas. Dia de ficha
+        // arquivada (que não foi copiada) fica de fora.
+        foreach (var dia in semana)
+        {
+            if (fichaCopiada.TryGetValue(dia.TreinoId, out var novaFichaId))
+            {
+                _db.PlanoDiasSemana.Add(new PlanoDiaSemana
+                {
+                    PlanoId = copia.Id,
+                    DiaSemana = dia.DiaSemana,
+                    TreinoId = novaFichaId,
+                });
             }
         }
 

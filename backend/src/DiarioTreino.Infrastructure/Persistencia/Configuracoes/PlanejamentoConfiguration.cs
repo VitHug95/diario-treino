@@ -127,6 +127,37 @@ public sealed class RodadaMarcadorConfiguration : IEntityTypeConfiguration<Rodad
     }
 }
 
+public sealed class PlanoDiaSemanaConfiguration : IEntityTypeConfiguration<PlanoDiaSemana>
+{
+    public void Configure(EntityTypeBuilder<PlanoDiaSemana> builder)
+    {
+        // Semana planejada do plano (PBI-35). Dia ISO: 1 = segunda … 7 = domingo.
+        builder.ToTable("plano_dia_semana", t => t.HasCheckConstraint(
+            "ck_plano_dia_semana_dia", "dia_semana BETWEEN 1 AND 7"));
+
+        // PK composta (plano_id, dia_semana): no máximo uma ficha por dia.
+        builder.HasKey(d => new { d.PlanoId, d.DiaSemana });
+        builder.Property(d => d.PlanoId).HasColumnName("plano_id").IsRequired();
+        builder.Property(d => d.DiaSemana).HasColumnName("dia_semana").IsRequired();
+        builder.Property(d => d.TreinoId).HasColumnName("treino_id").IsRequired();
+
+        // Apagar o plano apaga a semana dele.
+        builder.HasOne<PlanoTreino>()
+            .WithMany()
+            .HasForeignKey(d => d.PlanoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Apagar a ficha de verdade libera os dias dela (o arquivamento, que não
+        // apaga a linha de treino, remove os dias na aplicação).
+        builder.HasOne<Treino>()
+            .WithMany()
+            .HasForeignKey(d => d.TreinoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(d => d.TreinoId).HasDatabaseName("ix_plano_dia_semana_treino");
+    }
+}
+
 public sealed class EtapaPrescritaConfiguration : IEntityTypeConfiguration<EtapaPrescrita>
 {
     public void Configure(EntityTypeBuilder<EtapaPrescrita> builder)

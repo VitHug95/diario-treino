@@ -2,7 +2,7 @@
 
 **Projeto:** Diário de Treino (nome provisório)
 **Versão:** 1.0 (MVP de registro publicado; progresso e tela inicial no ar)
-**Última atualização:** 14/10/2026
+**Última atualização:** 05/11/2026 (semana planejada do plano, PBI-35)
 **Banco:** PostgreSQL
 **Documentos relacionados:** [MAS.md](MAS.md), [BACKLOG.md](BACKLOG.md)
 
@@ -18,7 +18,8 @@ pronto.
 - Tabelas: `usuario`, `usuario_papel`, `vinculo` (estrutura pronta, sem uso),
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
   `treino_exercicio`, `etapa_prescrita`, `rodada_marcador`, `sessao`,
-  `serie_executada`, `consentimento` (PBI-87, ver 3.13).
+  `serie_executada`, `consentimento` (PBI-87, ver 3.13), `plano_dia_semana`
+  (PBI-35, ver 3.14).
 - `vinculo` deixou de ser "estrutura sem uso": o modo educador usa o vínculo a
   partir da PBI-85 (convite/aceite) e PBI-86 (leitura dos dados do aluno).
 - `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
@@ -40,9 +41,10 @@ Migrations versionadas, em ordem: `InitialCreate`, `HabilitaUnaccent`,
 (preenche `em_uso = ativo` nos planos existentes), `ReparoPlanoEmUso`
 (`20261019145756`): para cada atleta com plano ativo e nenhum em uso, marca em uso
 o plano ativo com a sessão mais recente (empate: início mais novo). É idempotente
-e não tem reversão, de propósito. Por último, `ObservacaoPrivadaEConsentimento`
+e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
-`consentimento`.
+`consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -83,6 +85,8 @@ erDiagram
     metrica ||--o{ serie_executada : "mede"
 
     plano_treino ||--|{ treino : "contém"
+    plano_treino ||--o{ plano_dia_semana : "planeja a semana (PBI-35)"
+    treino ||--o{ plano_dia_semana : "é a ficha do dia"
     treino ||--|{ treino_exercicio : "contém"
     exercicio ||--o{ treino_exercicio : "é prescrito em"
     treino_exercicio ||--|{ etapa_prescrita : "define"
@@ -505,6 +509,19 @@ extra. O texto do termo e a tela de aceite ficam no app (fatia de telas).
 
 Índice único `(usuario_id, versao_termo)`: re-aceitar a mesma versão não duplica.
 
+### 3.14 `plano_dia_semana`
+
+Semana planejada do plano (PBI-35): qual ficha é treinada em cada dia da semana.
+É do **plano** (a Início segue a do plano em uso) e é **opcional**: dia sem linha
+é dia livre/de descanso, e plano sem nenhuma linha se comporta como antes da
+PBI-35. No máximo uma ficha por dia; a mesma ficha pode estar em vários dias.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| plano_id | uuid | não | PK composta + FK `plano_treino`, `ON DELETE CASCADE` |
+| dia_semana | smallint | não | PK composta. ISO: 1 = segunda … 7 = domingo. `CHECK (dia_semana BETWEEN 1 AND 7)` |
+| treino_id | uuid | não | FK `treino`, `ON DELETE CASCADE`. Ficha ativa do mesmo plano (validado na aplicação) |
+
 ## 4. Índices de consulta
 
 | Índice | Atende |
@@ -517,6 +534,7 @@ extra. O texto do termo e a tela de aceite ficam no app (fatia de telas).
 | `treino (plano_id, ordem)` | Fichas do plano |
 | `treino_exercicio (treino_id, ordem)` | Exercícios da ficha |
 | `vinculo (aluno_id) WHERE status = 'ATIVO'` | Regra de acesso do educador |
+| `plano_dia_semana (treino_id)` | Liberar os dias de uma ficha ao excluí-la ou arquivá-la (PBI-35) |
 
 ## 5. Regras de negócio que dependem do modelo
 
@@ -530,9 +548,10 @@ extra. O texto do termo e a tela de aceite ficam no app (fatia de telas).
 8. **Tag de série (TV-1):** `serie_executada.marcador` e `rodada_marcador` só identificam "como" a série foi feita. **Não** entram em nenhum cálculo — o gráfico de progresso (regras 2 e 3) continua por `tipo = ESFORCO` e maior carga/tempo, independente da tag. Pré-preenchimento da tag no registro: tag da ficha para a rodada; sem ficha, tag da última sessão daquele exercício; sem nenhuma, `VALIDA`.
 9. **Plano em uso (PBI-44):** só um por atleta, trocado numa transação. Um plano novo nasce em uso quando o atleta não tem nenhum plano em uso (PBI-77); planos escondidos (`ativo = false`) não contam. Com um plano já em uso, o novo nasce fora de uso. A sequência A, B, C da Início, o "próximo da sequência" e a lista de fichas olham o plano em uso. Iniciar ficha de plano fora de uso é permitido e a sessão fica ligada à ficha (`sessao.treino_id`).
 10. **Excluir plano (PBI-44):** se nenhuma ficha do plano tem sessão, apaga de verdade (cascata para ficha, exercício e etapa). Se alguma tem, marca `ativo = false` e `em_uso = false`, porque `sessao.treino_id` é `Restrict`. Se era o em uso, o uso passa para o plano com a sessão mais recente; sem outro plano, a Início mostra o Primeiro acesso.
-11. **Somente leitura (PBI-44):** plano com `autor_id <> atleta_id` não aceita criar, editar, excluir ou reordenar ficha e exercício pelo atleta (403 `plano-somente-leitura`, depois de passar pelo controle de acesso; outro usuário continua 404). Leitura, iniciar e registrar sessão continuam liberados. Copiar cria um plano novo com autor = atleta.
+11. **Somente leitura (PBI-44, ajustada na PBI-88d):** só o **autor** do plano (`autor_id = usuário logado`) cria, edita, exclui ou reordena ficha e exercício e define a semana (regra 14). Para o atleta, um plano montado pelo professor é somente leitura (403 `plano-somente-leitura`, depois de passar pelo controle de acesso; outro usuário continua 404); o educador autor edita o plano que montou para o aluno. Leitura, iniciar e registrar sessão continuam liberados. Copiar cria um plano novo com autor = atleta.
 12. **Excluir conta:** apaga sessões e depois todos os planos do atleta, inclusive os escondidos (comportamento atual de `ExcluirContaAsync`).
 13. **Exercício único (PBI-74):** cada exercício aparece uma vez por ficha (`treino_exercicio`) e uma vez por sessão (`serie_executada` agrupada por `exercicio_id`). A regra é da aplicação (409 ao adicionar à ficha, 400 ao salvar a sessão), sem constraint única no banco. Dados anteriores à regra podem ter repetição.
+14. **Semana planejada (PBI-35):** a semana é do plano e opcional. `PUT /planos/{id}/semana` substitui a semana inteira (lista vazia limpa); só o autor define (regra 11). Cada ficha precisa ser ficha **ativa do mesmo plano** (senão 400); no máximo uma por dia (PK), mesma ficha em vários dias permitida. Excluir a ficha libera os dias dela: apagar de verdade cai por cascata; arquivar (ficha com sessões) remove as linhas na aplicação. Duplicar o plano copia a semana para as fichas copiadas. Mudar a semana nunca mexe em sessões já registradas. A leitura (detalhe e plano em uso) só devolve dias de fichas ativas.
 
 ## 6. Exemplo de dados
 

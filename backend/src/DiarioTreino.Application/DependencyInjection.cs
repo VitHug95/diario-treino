@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
         services.AddScoped<IValidator<SalvarTreinoRequest>, SalvarTreinoValidator>();
         services.AddScoped<IValidator<SalvarPlanoRequest>, SalvarPlanoValidator>();
+        services.AddScoped<IValidator<DefinirSemanaRequest>, DefinirSemanaValidator>();
         services.AddScoped<IValidator<CriarFichaDeTreinoRequest>, CriarFichaDeTreinoValidator>();
         services.AddScoped<IValidator<DefinirAlvosRequest>, DefinirAlvosValidator>();
         services.AddScoped<IValidator<CriarSessaoRequest>, CriarSessaoValidator>();

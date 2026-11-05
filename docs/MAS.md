@@ -327,13 +327,14 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |
 | POST | `/exercicios` | Cria exercício próprio (exige `membroId`; `musculoId` opcional) | ✅ |
 | GET | `/planos` | Planos do atleta (id, nome, início, emUso, autor, somenteLeitura, nº de fichas e de exercícios) | ✅ (PBI-44) |
-| GET | `/planos/{id}` | Detalhe do plano com as fichas | ✅ (PBI-44) |
+| GET | `/planos/{id}` | Detalhe do plano com as fichas e a `semana` planejada (`[{ diaSemana, treinoId }]`, ISO 1 = segunda; vazia se não há) | ✅ (PBI-44; semana na PBI-35) |
 | POST | `/planos` | Com `{ nome }` cria o plano (nasce em uso quando o atleta não tem plano em uso, PBI-77). Sem corpo, mantém o comportamento antigo (idempotente) para o E2E | ✅ (PBI-44) |
 | PUT | `/planos/{id}` | Renomeia (403 em plano do professor) | ✅ (PBI-44) |
+| PUT | `/planos/{id}/semana` | Substitui a semana planejada: `{ dias: [{ diaSemana, treinoId }] }` (lista vazia limpa). Uma ficha por dia, só fichas ativas do plano (senão 400); só o autor (403 em plano do professor); outro usuário 404 | ✅ (PBI-35) |
 | POST | `/planos/{id}/em-uso` | Define como em uso, em transação | ✅ (PBI-44) |
 | POST | `/planos/{id}/duplicar` | Cria "Nome (cópia)" fora de uso, sem sessões | ✅ (PBI-44) |
 | DELETE | `/planos/{id}` | Exclui (apaga ou esconde, regra 10 do MER; 403 em plano do professor) | ✅ (PBI-44) |
-| GET | `/planos/ativo` | Alias do plano em uso até o front migrar; 204 quando nenhum plano está em uso | ✅ |
+| GET | `/planos/ativo` | Plano em uso com as fichas e a `semana` planejada (que a Início segue); 204 quando nenhum plano está em uso | ✅ (semana na PBI-35) |
 | POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
 | POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
 | GET | `/treinos/{id}` | Detalhe da ficha com exercícios e `somenteLeitura` (ficha de plano do professor, PBI-72) | ✅ |
