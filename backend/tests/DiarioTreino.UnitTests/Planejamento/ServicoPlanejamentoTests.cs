@@ -50,7 +50,46 @@ public sealed class ServicoPlanejamentoTests
                 .ToList();
             return Task.FromResult<PlanoDetalhe?>(new PlanoDetalhe(
                 p.Id, p.Nome, p.Inicio, p.EmUso, "Atleta",
-                p.AutorId != p.AtletaId, treinos));
+                p.AutorId != p.AtletaId, treinos, SemanaDe(planoId)));
+        }
+
+        // ---- Semana planejada (PBI-35) ----
+
+        public readonly List<PlanoDiaSemana> Semana = [];
+
+        private List<DiaPlanejado> SemanaDe(Guid planoId) => Semana
+            .Where(d => d.PlanoId == planoId
+                && Treinos.Any(t => t.Id == d.TreinoId && t.Ativo))
+            .OrderBy(d => d.DiaSemana)
+            .Select(d => new DiaPlanejado(d.DiaSemana, d.TreinoId))
+            .ToList();
+
+        public Task<List<DiaPlanejado>> ObterSemanaAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(SemanaDe(planoId));
+
+        public Task<HashSet<Guid>> ObterIdsFichasAtivasAsync(Guid planoId, CancellationToken ct)
+            => Task.FromResult(Treinos
+                .Where(t => t.PlanoId == planoId && t.Ativo)
+                .Select(t => t.Id)
+                .ToHashSet());
+
+        public Task SubstituirSemanaAsync(
+            Guid planoId, IReadOnlyList<DiaPlanejado> dias, CancellationToken ct)
+        {
+            Semana.RemoveAll(d => d.PlanoId == planoId);
+            Semana.AddRange(dias.Select(d => new PlanoDiaSemana
+            {
+                PlanoId = planoId,
+                DiaSemana = d.DiaSemana,
+                TreinoId = d.TreinoId,
+            }));
+            return Task.CompletedTask;
+        }
+
+        public Task RemoverFichaDaSemanaAsync(Guid treinoId, CancellationToken ct)
+        {
+            Semana.RemoveAll(d => d.TreinoId == treinoId);
+            return Task.CompletedTask;
         }
 
         public Task<PlanoTreino?> ObterPlanoAsync(Guid planoId, CancellationToken ct)
@@ -870,5 +909,147 @@ public sealed class ServicoPlanejamentoTests
         // O próprio aluno acessa o plano (dono), mas não é o autor: 403 ao editar.
         await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
             Montar(repo).RenomearPlanoAsync(aluno, plano.Id, "Meu jeito", CancellationToken.None));
+    }
+
+    // ---- Semana planejada (PBI-35) ----
+
+    /// Plano do atleta com duas fichas ativas (A e B).
+    private static (RepositorioPlanoFake repo, Guid atleta, PlanoTreino plano, Treino a, Treino b)
+        PlanoComDuasFichas(Guid? autor = null)
+    {
+        var atleta = Guid.NewGuid();
+        var plano = new PlanoTreino
+        {
+            Id = Guid.NewGuid(), AtletaId = atleta, AutorId = autor ?? atleta,
+            Nome = "Hipertrofia", Ativo = true, EmUso = true,
+        };
+        var a = new Treino { Id = Guid.NewGuid(), PlanoId = plano.Id, Nome = "A", Ordem = 1, Ativo = true };
+        var b = new Treino { Id = Guid.NewGuid(), PlanoId = plano.Id, Nome = "B", Ordem = 2, Ativo = true };
+        var repo = new RepositorioPlanoFake();
+        repo.Planos.Add(plano);
+        repo.Treinos.AddRange([a, b]);
+        return (repo, atleta, plano, a, b);
+    }
+
+    [Fact]
+    public async Task Definir_semana_grava_os_dias_e_aparece_no_detalhe()
+    {
+        var (repo, atleta, plano, a, b) = PlanoComDuasFichas();
+        var servico = Montar(repo);
+
+        // A na segunda e na quinta, B na quarta.
+        await servico.DefinirSemanaAsync(atleta, plano.Id, new DefinirSemanaRequest(
+        [
+            new DiaPlanejado(1, a.Id),
+            new DiaPlanejado(3, b.Id),
+            new DiaPlanejado(4, a.Id),
+        ]), CancellationToken.None);
+
+        var detalhe = await servico.ObterPlanoAsync(atleta, plano.Id, CancellationToken.None);
+        Assert.Equal(
+            [new DiaPlanejado(1, a.Id), new DiaPlanejado(3, b.Id), new DiaPlanejado(4, a.Id)],
+            detalhe.Semana);
+    }
+
+    [Fact]
+    public async Task Definir_semana_vazia_limpa_a_semana()
+    {
+        var (repo, atleta, plano, a, _) = PlanoComDuasFichas();
+        repo.Semana.Add(new PlanoDiaSemana { PlanoId = plano.Id, DiaSemana = 1, TreinoId = a.Id });
+
+        await Montar(repo).DefinirSemanaAsync(
+            atleta, plano.Id, new DefinirSemanaRequest([]), CancellationToken.None);
+
+        Assert.Empty(repo.Semana);
+    }
+
+    [Fact]
+    public async Task Definir_semana_com_ficha_de_outro_plano_e_recusada_400()
+    {
+        var (repo, atleta, plano, _, _) = PlanoComDuasFichas();
+        var deOutroPlano = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Montar(repo).DefinirSemanaAsync(
+            atleta, plano.Id,
+            new DefinirSemanaRequest([new DiaPlanejado(2, deOutroPlano)]),
+            CancellationToken.None));
+        Assert.Empty(repo.Semana); // nada gravado
+    }
+
+    [Fact]
+    public async Task Definir_semana_no_plano_do_professor_e_403()
+    {
+        var professor = Guid.NewGuid();
+        var (repo, atleta, plano, a, _) = PlanoComDuasFichas(autor: professor);
+
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() => Montar(repo).DefinirSemanaAsync(
+            atleta, plano.Id,
+            new DefinirSemanaRequest([new DiaPlanejado(1, a.Id)]),
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Definir_semana_no_plano_de_outro_usuario_e_404()
+    {
+        var (repo, _, plano, a, _) = PlanoComDuasFichas();
+        var terceiro = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() => Montar(repo).DefinirSemanaAsync(
+            terceiro, plano.Id,
+            new DefinirSemanaRequest([new DiaPlanejado(1, a.Id)]),
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Arquivar_ficha_com_sessoes_libera_os_dias_dela()
+    {
+        var (repo, atleta, plano, a, b) = PlanoComDuasFichas();
+        repo.AtletaDoTreino = atleta;
+        repo.TemSessoes = true; // força o arquivamento
+        repo.Semana.AddRange(
+        [
+            new PlanoDiaSemana { PlanoId = plano.Id, DiaSemana = 1, TreinoId = a.Id },
+            new PlanoDiaSemana { PlanoId = plano.Id, DiaSemana = 3, TreinoId = b.Id },
+        ]);
+
+        var apagou = await Montar(repo).ExcluirFichaAsync(atleta, a.Id, CancellationToken.None);
+
+        Assert.False(apagou); // arquivou
+        Assert.False(a.Ativo);
+        // A segunda ficou livre; a quarta (ficha B) continua.
+        Assert.Equal([new DiaPlanejado(3, b.Id)],
+            await repo.ObterSemanaAsync(plano.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Plano_em_uso_traz_a_semana()
+    {
+        var (repo, atleta, plano, a, b) = PlanoComDuasFichas();
+        plano.Treinos = [a, b];
+        repo.PlanoAtivo = plano;
+        repo.Semana.Add(new PlanoDiaSemana { PlanoId = plano.Id, DiaSemana = 5, TreinoId = b.Id });
+
+        var ativo = await Montar(repo).ObterPlanoAtivoAsync(atleta, atleta, CancellationToken.None);
+
+        Assert.Equal([new DiaPlanejado(5, b.Id)], ativo!.Semana);
+    }
+
+    // ---- Validator da semana (PBI-35) ----
+
+    [Fact]
+    public void Validator_recusa_dia_fora_de_1_a_7_e_dia_repetido()
+    {
+        var v = new DefinirSemanaValidator();
+        var ficha = Guid.NewGuid();
+
+        Assert.True(v.Validate(new DefinirSemanaRequest([])).IsValid);
+        Assert.True(v.Validate(new DefinirSemanaRequest(
+            [new DiaPlanejado(1, ficha), new DiaPlanejado(7, ficha)])).IsValid);
+
+        Assert.False(v.Validate(new DefinirSemanaRequest([new DiaPlanejado(0, ficha)])).IsValid);
+        Assert.False(v.Validate(new DefinirSemanaRequest([new DiaPlanejado(8, ficha)])).IsValid);
+        Assert.False(v.Validate(new DefinirSemanaRequest(
+            [new DiaPlanejado(2, ficha), new DiaPlanejado(2, Guid.NewGuid())])).IsValid);
+        Assert.False(v.Validate(new DefinirSemanaRequest([new DiaPlanejado(3, Guid.Empty)])).IsValid);
     }
 }

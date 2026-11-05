@@ -32,6 +32,7 @@ public class DiarioTreinoDbContext : DbContext
     public DbSet<TreinoExercicio> TreinoExercicios => Set<TreinoExercicio>();
     public DbSet<EtapaPrescrita> EtapasPrescritas => Set<EtapaPrescrita>();
     public DbSet<RodadaMarcador> RodadaMarcadores => Set<RodadaMarcador>();
+    public DbSet<PlanoDiaSemana> PlanoDiasSemana => Set<PlanoDiaSemana>();
     public DbSet<Sessao> Sessoes => Set<Sessao>();
     public DbSet<SerieExecutada> SeriesExecutadas => Set<SerieExecutada>();
 

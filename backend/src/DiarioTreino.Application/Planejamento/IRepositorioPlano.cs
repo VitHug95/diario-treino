@@ -48,6 +48,25 @@ public interface IRepositorioPlano
     /// </summary>
     public Task ExcluirPlanoAsync(Guid planoId, CancellationToken ct);
 
+    // ---- Semana planejada (PBI-35) ----
+
+    /// <summary>Semana planejada do plano, ordenada por dia; só dias cuja ficha
+    /// está ativa. Lista vazia se o plano não tem semana.</summary>
+    public Task<List<DiaPlanejado>> ObterSemanaAsync(Guid planoId, CancellationToken ct);
+
+    /// <summary>Ids das fichas ATIVAS do plano (para validar a semana).</summary>
+    public Task<HashSet<Guid>> ObterIdsFichasAtivasAsync(Guid planoId, CancellationToken ct);
+
+    /// <summary>Prepara a troca da semana do plano pela informada (remove os
+    /// dias que saíram, atualiza os que mudaram de ficha, inclui os novos).
+    /// Grava no próximo <see cref="SalvarAsync"/>, numa transação só.</summary>
+    public Task SubstituirSemanaAsync(
+        Guid planoId, IReadOnlyList<DiaPlanejado> dias, CancellationToken ct);
+
+    /// <summary>Prepara a remoção dos dias em que a ficha estava planejada (ao
+    /// arquivar a ficha). Grava no próximo <see cref="SalvarAsync"/>.</summary>
+    public Task RemoverFichaDaSemanaAsync(Guid treinoId, CancellationToken ct);
+
     public void AdicionarPlano(PlanoTreino plano);
 
     public void AdicionarTreino(Treino treino);

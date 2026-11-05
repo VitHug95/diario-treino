@@ -45,7 +45,8 @@ public sealed class ServicoPlanejamento
         var treinos = plano.Treinos
             .Select(t => new TreinoResumo(t.Id, t.Nome, t.Descricao, t.Ordem))
             .ToList();
-        return new PlanoAtivo(plano.Id, plano.Nome, treinos);
+        var semana = await _repositorio.ObterSemanaAsync(plano.Id, ct);
+        return new PlanoAtivo(plano.Id, plano.Nome, treinos, semana);
     }
 
     /// <summary>
@@ -131,7 +132,7 @@ public sealed class ServicoPlanejamento
         // criar, autor != atleta, então marca true — coerente com o DTO da lista.
         var somenteLeitura = plano.AutorId != plano.AtletaId;
         return new PlanoDetalhe(
-            plano.Id, plano.Nome, plano.Inicio, plano.EmUso, string.Empty, somenteLeitura, []);
+            plano.Id, plano.Nome, plano.Inicio, plano.EmUso, string.Empty, somenteLeitura, [], []);
     }
 
     /// <summary>Renomeia o plano (PBI-44). Acesso + somente-leitura aplicados.</summary>
@@ -143,6 +144,34 @@ public sealed class ServicoPlanejamento
     {
         var plano = await ResolverPlanoComAcessoAsync(usuarioLogadoId, planoId, ct, exigeAutor: true);
         plano.Nome = nome.Trim();
+        await _repositorio.SalvarAsync(ct);
+    }
+
+    /// <summary>
+    /// Define a semana planejada do plano (PBI-35), substituindo a anterior.
+    /// Lista vazia limpa a semana. Passa pelo acesso (outro usuário → 404) e
+    /// pela regra do autor (plano do professor → 403, o educador autor edita).
+    /// Cada ficha precisa ser uma ficha ATIVA deste plano; senão
+    /// <see cref="ArgumentException"/> (400). Formato (dia 1..7, um por dia) é
+    /// conferido antes, pelo validator.
+    /// </summary>
+    public async Task DefinirSemanaAsync(
+        Guid usuarioLogadoId,
+        Guid planoId,
+        DefinirSemanaRequest request,
+        CancellationToken ct)
+    {
+        await ResolverPlanoComAcessoAsync(usuarioLogadoId, planoId, ct, exigeAutor: true);
+
+        var fichas = await _repositorio.ObterIdsFichasAtivasAsync(planoId, ct);
+        var foraDoPlano = request.Dias.FirstOrDefault(d => !fichas.Contains(d.TreinoId));
+        if (foraDoPlano is not null)
+        {
+            throw new ArgumentException(
+                $"A ficha do dia {foraDoPlano.DiaSemana} não é uma ficha ativa deste plano.");
+        }
+
+        await _repositorio.SubstituirSemanaAsync(planoId, request.Dias, ct);
         await _repositorio.SalvarAsync(ct);
     }
 
@@ -335,7 +364,8 @@ public sealed class ServicoPlanejamento
             var treinos = existente.Treinos
                 .Select(t => new TreinoResumo(t.Id, t.Nome, t.Descricao, t.Ordem))
                 .ToList();
-            return new PlanoAtivo(existente.Id, existente.Nome, treinos);
+            var semana = await _repositorio.ObterSemanaAsync(existente.Id, ct);
+            return new PlanoAtivo(existente.Id, existente.Nome, treinos, semana);
         }
 
         var plano = new PlanoTreino
@@ -351,7 +381,7 @@ public sealed class ServicoPlanejamento
         };
         _repositorio.AdicionarPlano(plano);
         await _repositorio.SalvarAsync(ct);
-        return new PlanoAtivo(plano.Id, plano.Nome, []);
+        return new PlanoAtivo(plano.Id, plano.Nome, [], []);
     }
 
     /// <summary>Renomeia/edita a ficha (nome e descrição).</summary>
@@ -386,6 +416,9 @@ public sealed class ServicoPlanejamento
         if (await _repositorio.TreinoTemSessoesAsync(treinoId, ct))
         {
             treino.Ativo = false;
+            // Arquivar não apaga a linha da ficha, então a semana não cai por
+            // cascade: libera os dias dela aqui (PBI-35).
+            await _repositorio.RemoverFichaDaSemanaAsync(treinoId, ct);
             await _repositorio.SalvarAsync(ct);
             return false;
         }
