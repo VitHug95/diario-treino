@@ -543,6 +543,38 @@ Rota `/mes` filha da Início. Os dias passados sem treino levam um "X" (semana e
 **Status:** ✅ FEITO (front). `flutter analyze` 0 e suíte verde; testes da função
 de meses, da tela, do link na Início e da invalidação do mês.
 
+#### PBI-90 · Treino ao vivo: "Concluir exercício" no fim das séries e descanso que conta negativo
+**História:** Como atleta, quero que o "Concluir exercício" só apareça quando eu
+chegar ao fim das séries, e que o descanso me avise quando acabar, para a tela
+não me atrapalhar no meio da série e eu não perder o momento de voltar ao treino.
+
+**Origem:** feedback de uso real do PO (prints de 02/10): o botão fixo "atrapalha"
+e o descanso sumia sozinho ao zerar.
+
+**Critérios de aceite**
+- "Concluir exercício" / "Concluir e ir ao resumo" sai do rodapé fixo e fica no
+  **fim da aba Séries**, abaixo do "Adicionar série", rolando junto com a lista.
+  Não aparece nas abas Histórico e Evolução.
+- O aviso "N séries sem marcar ficam de fora" vai junto, logo acima do botão.
+- O descanso **não some ao zerar**: segue contando **negativo** ("−00:05") e mostra
+  **"Descanso acabou, volte ao treino"**, com borda em destaque e barra cheia.
+- Depois de zerar, "−15s" some e "Pular" vira **"Voltar ao treino"** (que encerra
+  o descanso). "+15s" segue disponível e reinicia uma contagem de 15s. Completar a
+  próxima série começa outro descanso, como antes.
+- Sem limite para o tempo negativo: conta até o atleta agir.
+- Acessibilidade: o aviso de "acabou" é anunciado uma vez (região viva); o tempo
+  negativo não é narrado a cada segundo. O botão "Concluir" tem rótulo próprio.
+
+**Notas técnicas:** só front, sem mudança de API ou banco. `DescansoEstado.saldo`
+(com sinal) ao lado do `restante` (sem sinal, usado pelos ajustes ±15s);
+`formatarSaldo` em `widgets_ao_vivo.dart`. O `Timer` da barra só redesenha, não
+encerra mais o descanso. `_RodapeConcluir` virou `_BlocoConcluir`, dentro da
+`_AbaSeries`. A barra de descanso continua fixa no rodapé, nas três abas.
+**Depende de:** TV-5 (PBI-42), PBI-65.
+**Status:** ✅ FEITO (front). `flutter analyze` 0; suíte 336 verde (testes do botão
+no fim da lista e fora das outras abas, da lista longa com rolagem, do descanso
+negativo com aviso e do saldo no controller). E2E não usa essas telas.
+
 #### PBI-26 · Teste E2E do fluxo principal
 **História:** Como time, queremos um teste automatizado do caminho mais importante, para publicar sem medo de quebrar o que já funciona.
 

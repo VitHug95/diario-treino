@@ -1,4 +1,5 @@
 import 'package:diario_treino/core/relogio.dart';
+import 'package:diario_treino/features/sessao/descanso_controller.dart';
 import 'package:diario_treino/features/sessao/widgets_ao_vivo.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 class _RelogioFixo implements Relogio {
   _RelogioFixo(this.valor);
   final DateTime valor;
+  @override
+  DateTime agora() => valor;
+}
+
+/// Relógio que anda quando o teste manda (para o descanso passar de zero).
+class _RelogioMutavel implements Relogio {
+  _RelogioMutavel(this.valor);
+  DateTime valor;
   @override
   DateTime agora() => valor;
 }
@@ -35,6 +44,14 @@ void main() {
     });
   });
 
+  group('formatarSaldo (PBI-90)', () {
+    test('positivo igual à duração; negativo ganha o sinal de menos', () {
+      expect(formatarSaldo(const Duration(seconds: 34)), '00:34');
+      expect(formatarSaldo(const Duration(seconds: -5)), '−00:05');
+      expect(formatarSaldo(const Duration(minutes: -1, seconds: -2)), '−01:02');
+    });
+  });
+
   group('rotuloDuracao (acessibilidade)', () {
     test('plural e singular', () {
       expect(rotuloDuracao(const Duration(minutes: 38, seconds: 12)),
@@ -56,6 +73,45 @@ void main() {
     ));
 
     expect(find.text('38:00'), findsOneWidget);
+  });
+
+  testWidgets(
+      'PBI-90: o descanso não some ao zerar; conta negativo, avisa e "Voltar ao treino" encerra',
+      (tester) async {
+    final relogio = _RelogioMutavel(DateTime(2026, 10, 15, 19, 0));
+    await tester.pumpWidget(_comTema(const BarraDescanso(), relogio: relogio));
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(BarraDescanso)));
+
+    // Descanso de 30s: contando, com os dois ajustes e "Pular".
+    container.read(descansoControllerProvider.notifier).iniciar(30);
+    await tester.pump();
+    expect(find.text('00:30'), findsOneWidget);
+    expect(find.text('Descanso'), findsOneWidget);
+    expect(find.text('−15s'), findsOneWidget);
+    expect(find.text('Pular'), findsOneWidget);
+
+    // 35s depois: passou 5s do tempo. Continua na tela, negativo, com o aviso.
+    relogio.valor = DateTime(2026, 10, 15, 19, 0, 35);
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(descansoControllerProvider), isNotNull);
+    expect(find.text('−00:05'), findsOneWidget);
+    expect(find.text('Descanso acabou, volte ao treino'), findsOneWidget);
+    // Tirar 15s não faz sentido depois de zerar; "Pular" vira "Voltar ao treino".
+    expect(find.text('−15s'), findsNothing);
+    expect(find.text('Pular'), findsNothing);
+    expect(find.text('+15s'), findsOneWidget);
+
+    // Ele segue contando enquanto o atleta não age.
+    relogio.valor = DateTime(2026, 10, 15, 19, 1, 0);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('−00:30'), findsOneWidget);
+
+    // "Voltar ao treino" encerra o descanso.
+    await tester.tap(find.text('Voltar ao treino'));
+    await tester.pump();
+    expect(container.read(descansoControllerProvider), isNull);
+    expect(find.text('Descanso acabou, volte ao treino'), findsNothing);
   });
 
   testWidgets('BarraSeries pinta uma célula por série feita', (tester) async {

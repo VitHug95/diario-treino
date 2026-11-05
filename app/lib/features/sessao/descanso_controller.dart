@@ -21,6 +21,11 @@ class DescansoEstado {
     return r.isNegative ? Duration.zero : r;
   }
 
+  /// Saldo com sinal (PBI-90): positivo enquanto falta tempo e NEGATIVO depois
+  /// que o descanso zerou (quanto o atleta passou do tempo). O descanso não
+  /// some sozinho ao zerar: segue contando negativo até o atleta agir.
+  Duration saldo(DateTime agora) => fim.difference(agora);
+
   /// True quando o tempo já zerou.
   bool acabou(DateTime agora) => !agora.isBefore(fim);
 }
@@ -73,7 +78,8 @@ class DescansoController extends Notifier<DescansoEstado?> {
     );
   }
 
-  /// Encerra o descanso (pular ou acabou o tempo).
+  /// Encerra o descanso (o atleta pulou ou voltou ao treino). Zerar o tempo NÃO
+  /// encerra mais (PBI-90): o descanso continua visível, contando negativo.
   void encerrar() => state = null;
 }
 
