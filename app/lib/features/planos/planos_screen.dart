@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -340,16 +341,17 @@ Future<void> _abrirMenu(
   final repo = ref.read(fichasComandosProvider);
   try {
     switch (acao) {
+      // Confirmações sem ação: pílula (PBI-75). Erros seguem pela barra.
       case _AcaoPlano.definirEmUso:
         await repo.definirEmUso(plano.id);
-        if (context.mounted) _avisar(context, '"${plano.nome}" agora está em uso.');
+        if (context.mounted) mostrarAviso(context, '"${plano.nome}" agora está em uso');
       case _AcaoPlano.duplicar:
         await repo.duplicarPlano(plano.id);
-        if (context.mounted) _avisar(context, 'Cópia criada, fora de uso.');
+        if (context.mounted) mostrarAviso(context, 'Cópia criada, fora de uso');
       case _AcaoPlano.copiar:
         if (!await confirmarCopiaPlano(context)) return;
         await repo.duplicarPlano(plano.id);
-        if (context.mounted) _avisar(context, 'Cópia criada. Agora ela é sua para editar.');
+        if (context.mounted) mostrarAviso(context, 'Cópia criada, agora é sua para editar');
       case _AcaoPlano.renomear:
         final nome = await dialogoNomePlano(context,
             titulo: 'Renomear plano', inicial: plano.nome);

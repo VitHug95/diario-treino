@@ -489,7 +489,7 @@ usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
 #### PBI-75 · Aviso simples vira pop pequeno (sem barra preta)
 **História:** Como atleta, quero que avisos curtos (ex.: "Ficha criada") apareçam como um pop pequeno que some sozinho, sem uma barra preta cobrindo a base da tela com um botão que não pedi.
-**Status:** 🔸 em andamento (bloco 1). Componente compartilhado de aviso (pílula flutuante ~2 s, sem ação, cor do tema) aplicado ao aviso "Ficha criada"; regra registrada no DESIGN.md. "Treino salvo" depende de decisão do PO (manter ou não a ação "Ver treino").
+**Status:** ✅ concluída. Componente compartilhado `mostrarAviso` (pílula flutuante ~2 s, sem ação, cor do tema) em "Ficha criada" (PR #113) e "Treino salvo" sem a ação "Ver treino", por decisão do PO (PR #116). No fechamento, a regra passou a valer no app todo: as confirmações que ainda usavam a barra preta ("agora está em uso", "Cópia criada", "Exercício criado", "Enviamos um e-mail de redefinição" e o "Ficha criada" da tela do educador) viraram pílula, e os **erros** do modo educador, que estavam saindo na pílula, foram para a barra de erro (`mostrarErro`, ao lado do `mostrarAviso`). Testes do componente nos dois temas, do erro x confirmação no educador e da ficha nova do aluno; suíte 344 verde.
 
 #### PBI-76 · "Manter na ficha?": aviso quando a ficha não é lida
 **História:** Como atleta, quero ser avisado quando o app não conseguir ler a ficha ao perguntar "Manter na ficha?", para entender por que a pergunta não apareceu.
@@ -513,7 +513,7 @@ usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
 #### PBI-81 · "Manter na ficha?" decide exercício por exercício
 **História:** Como atleta, quero escolher, exercício por exercício, o que fica na ficha, para manter o que funciona e deixar de fora o que fiz só naquele dia.
-**Status:** 🔸 em andamento (bloco 1). Com um exercício, o diálogo atual (três botões) é mantido; com dois ou mais, cada exercício tem a escolha "Manter na ficha" / "Só neste treino" (padrão: manter), e "Salvar" devolve só os mantidos. A API (`POST /sessoes` com lista de ids em `manterNaFicha`) já suporta lista parcial.
+**Status:** ✅ concluída (PR #112). Com um exercício, o diálogo atual (três botões) é mantido; com dois ou mais, cada exercício tem a escolha "Manter na ficha" / "Só neste treino" (padrão: manter), e "Salvar" devolve só os mantidos. A API (`POST /sessoes` com lista de ids em `manterNaFicha`) já suporta lista parcial.
 **Decisão do PO (19/10):** exercício por exercício.
 
 #### PBI-84 · "Adicionar série" nasce em branco no registro posterior e na edição
@@ -1204,7 +1204,8 @@ de entrar. Pontos já combinados para o refinamento:
 Ordem do fundamento ao visível. A estrutura de dados (papel `EDUCADOR`, tabela
 `vinculo`) e a regra de acesso (`IControleAcesso`) já estão na `main`; estas PBIs
 dão vida ao educador. Login é único (ADR-04): muda o **papel**, não o login.
-**Progresso:** PBI-85 e PBI-86 ✅ na `main` (backend); PBI-87, 88 e 89 a fazer.
+**Progresso:** ✅ **épico concluído** — PBI-85 a 89 na `main` (PRs #120 a #131),
+incluindo a PBI-48 (plano do professor) e o PDF do progresso.
 
 #### PBI-85 · Tornar-se educador e vínculo com aluno (convite/aceite) — backend
 

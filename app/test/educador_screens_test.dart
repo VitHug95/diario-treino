@@ -25,6 +25,15 @@ class _RepoFake extends EducadorRepository {
   Future<void> recusar(String vinculoId) async => recusou = vinculoId;
 }
 
+/// Fake que falha ao recusar, para checar como o erro aparece (PBI-75).
+class _RepoQueFalha extends EducadorRepository {
+  _RepoQueFalha() : super(Dio());
+
+  @override
+  Future<void> recusar(String vinculoId) async =>
+      throw const EducadorException('Este convite não está mais disponível.');
+}
+
 Widget _tela(Widget home, {EducadorRepository? repo, List<dynamic>? dados}) =>
     ProviderScope(
       overrides: [
@@ -115,6 +124,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.recusou, 'v-123');
+  });
+
+  testWidgets('PBI-75: recusar com sucesso confirma na pílula; erro sai na barra de erro',
+      (tester) async {
+    const convite = [
+      ConvitePendente(
+          vinculoId: 'v1', educadorId: 'e1',
+          educadorNome: 'Prof. Ana', educadorEmail: 'ana@teste.local'),
+    ];
+
+    // Sucesso: pílula de confirmação.
+    await tester.pumpWidget(_tela(const ConvitesScreen(), repo: _RepoFake(), dados: convite));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Recusar'));
+    await tester.pump();
+    expect(find.text('Convite recusado'), findsOneWidget);
+    expect(tester.widget<SnackBar>(find.byType(SnackBar)).shape, isA<StadiumBorder>());
+
+    // Erro: a mesma ação falhando não usa a pílula.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(_tela(const ConvitesScreen(), repo: _RepoQueFalha(), dados: convite));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Recusar'));
+    await tester.pump();
+    expect(find.text('Este convite não está mais disponível.'), findsOneWidget);
+    expect(tester.widget<SnackBar>(find.byType(SnackBar)).shape,
+        isNot(isA<StadiumBorder>()));
   });
 
   testWidgets('Convites: Aceitar passa pelo termo e, ao confirmar, aceita',

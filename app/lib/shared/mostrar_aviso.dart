@@ -60,3 +60,12 @@ void mostrarAvisoNoMessenger(
       ),
     ));
 }
+
+/// Mensagem de **erro** curta (PBI-75): a barra padrão do Material, separada da
+/// pílula de confirmação. Erro não usa a pílula, para não parecer que deu
+/// certo (`docs/DESIGN.md`). Também limpa a mensagem anterior.
+void mostrarErro(BuildContext context, String mensagem) {
+  ScaffoldMessenger.of(context)
+    ..clearSnackBars()
+    ..showSnackBar(SnackBar(content: Text(mensagem)));
+}

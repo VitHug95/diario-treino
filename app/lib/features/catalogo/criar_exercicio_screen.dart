@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/dados/invalidacao.dart';
 import '../../shared/estado_erro.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -74,9 +75,8 @@ class _CriarExercicioScreenState extends ConsumerState<CriarExercicioScreen> {
       // O comando atualiza o catálogo. Volta devolvendo o id criado (o seletor
       // usa o id para reabrir o exercício já selecionado; o catálogo ignora).
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Exercício criado.')),
-        );
+        // Pílula no messenger da raiz: continua visível depois do pop.
+        mostrarAviso(context, 'Exercício criado');
         Navigator.of(context).pop(id);
       }
     } on CatalogoException catch (e) {

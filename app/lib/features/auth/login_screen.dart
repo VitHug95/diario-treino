@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/rotas/app_router.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -70,9 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await _executar(() async {
       await ref.read(authServiceProvider).enviarRedefinicaoSenha(email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enviamos um e-mail de redefinição.')),
-        );
+        mostrarAviso(context, 'Enviamos um e-mail de redefinição');
       }
     });
   }

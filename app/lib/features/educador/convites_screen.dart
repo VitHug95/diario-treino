@@ -113,7 +113,7 @@ class _CartaoConvite extends ConsumerWidget {
       await ref.read(educadorComandosProvider).aceitar(convite.vinculoId);
       if (context.mounted) mostrarAviso(context, 'Convite aceito');
     } on EducadorException catch (e) {
-      if (context.mounted) mostrarAviso(context, e.mensagem);
+      if (context.mounted) mostrarErro(context, e.mensagem);
     }
   }
 
@@ -122,7 +122,7 @@ class _CartaoConvite extends ConsumerWidget {
       await ref.read(educadorComandosProvider).recusar(convite.vinculoId);
       if (context.mounted) mostrarAviso(context, 'Convite recusado');
     } on EducadorException catch (e) {
-      if (context.mounted) mostrarAviso(context, e.mensagem);
+      if (context.mounted) mostrarErro(context, e.mensagem);
     }
   }
 }

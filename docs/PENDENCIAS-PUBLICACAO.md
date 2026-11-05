@@ -26,12 +26,11 @@ manual recomendado antes do lançamento.
 - **PBI-34 — Trocar a métrica no registro.** Escolher outra métrica (ex.: tempo
   no lugar de reps) na hora de registrar.
 - **PBI-35 — Cronograma semanal.** Planejar quais fichas em quais dias.
-- **PBI-75 — Aviso "Ficha criada" como pop menor.** Hoje o aviso é maior do que
-  o PO quer.
 - **PBI-73 (decisão pendente)** — exercício só de repetições no gráfico: está
   implementada a **melhor série** (maior nº de repetições da sessão). O PO ainda
   pode preferir o total de repetições da sessão.
-- Série adicionada copiando a anterior; "Treino salvo" com ou sem "Ver treino".
+- (Decididos: série adicionada copia a anterior — PBI-84 revertida; "Treino
+  salvo" é só o pop, sem "Ver treino" — PBI-75.)
 
 ## Dados antigos a observar (não bloqueiam)
 
