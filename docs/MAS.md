@@ -351,6 +351,7 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/sessoes?de=&ate=` | Sessões do período | ✅ |
 | GET | `/progresso/exercicios` | Exercícios com histórico (seletor do gráfico) | ✅ |
 | GET | `/progresso/exercicios/{id}?de=&ate=` | Série temporal do exercício, com reps, `sessaoId` e observação por ponto. `metrica` é `CARGA`, `REPETICOES` (força sem carga no período) ou `TEMPO` (isometria), decidida por exercício (PBI-73) | ✅ |
+| GET | `/progresso/pdf?de=&ate=&atletaId=` | Relatório em PDF (evolução por exercício + sessões do período). `Content-Type: application/pdf`. Sem `de`/`ate`, os últimos 90 dias. Serve ao próprio atleta e, com `atletaId`, ao educador com vínculo ativo (sem acesso → 404). Observação privada do aluno não entra | ✅ (PBI-89) |
 | GET | `/progresso/resumo?de=&ate=` | Contagem de treinos e sessões de cardio | 🔵 PBI-30 |
 | POST | `/me/papeis/educador` | Ativa o modo educador (concede o papel EDUCADOR; idempotente) | ✅ (PBI-85) |
 | POST | `/vinculos` | Educador convida aluno por e-mail (cria vínculo PENDENTE). 403 sem papel EDUCADOR; 400 convite a si mesmo; 404 e-mail inexistente; 409 vínculo já aberto | ✅ (PBI-85) |
@@ -359,9 +360,10 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | POST | `/vinculos/{id}/recusar` | Aluno recusa o convite (PENDENTE → ENCERRADO). Vínculo de outro → 404 | ✅ (PBI-85) |
 | POST | `/vinculos/{id}/encerrar` | Educador ou aluno encerra o vínculo ATIVO (→ ENCERRADO). Vínculo de outro → 404 | ✅ (PBI-85) |
 | GET | `/alunos` | Alunos com vínculo ativo do educador logado | ✅ (PBI-85) |
-| GET | `/alunos/{id}/progresso/pdf?de=&ate=` | Relatório em PDF | 🟣 PBI-89 |
 
-Rotas de **leitura** de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre (educador sem vínculo ativo → 404). Implementado na **PBI-86** em: `GET /planos`, `GET /planos/ativo`, `GET /planos/{id}`, `GET /sessoes`, `GET /sessoes/{id}`, `GET /treinos/{id}/rascunho-sessao`, `GET /exercicios/{id}/historico`, `GET /exercicios/{id}/ultima-execucao`, `GET /progresso/exercicios` e `GET /progresso/exercicios/{id}`. A disponibilidade de exercício é avaliada pelo atleta-alvo (o educador enxerga os exercícios próprios do aluno). As rotas de **escrita** seguem só do próprio atleta no modo educador atual.
+Rotas de **leitura** de dados de atleta aceitam `atletaId` opcional na query para o educador; sem ele, vale o usuário logado. A regra da seção 11.3 é aplicada sempre (educador sem vínculo ativo → 404). Implementado na **PBI-86** em: `GET /planos`, `GET /planos/ativo`, `GET /planos/{id}`, `GET /sessoes`, `GET /sessoes/{id}`, `GET /treinos/{id}/rascunho-sessao`, `GET /exercicios/{id}/historico`, `GET /exercicios/{id}/ultima-execucao`, `GET /progresso/exercicios`, `GET /progresso/exercicios/{id}` e `GET /progresso/pdf` (PBI-89). A disponibilidade de exercício é avaliada pelo atleta-alvo (o educador enxerga os exercícios próprios do aluno). As rotas de **escrita** de dado de atleta pelo educador são **criar plano/ficha para o aluno** (PBI-48/88d: `POST /planos` com `atletaId`, autor = educador); as demais escritas seguem só do próprio atleta.
+
+O `GET /progresso/pdf` é o primeiro endpoint que devolve **binário** (`application/pdf` via `Results.File`); o PDF é gerado com a biblioteca QuestPDF (licença Community) na camada Infrastructure, atrás da porta `IGeradorRelatorioPdf` em Application — o domínio e os casos de uso não conhecem a biblioteca (MAS 9.1).
 
 ## 13. Dados
 

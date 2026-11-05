@@ -1,6 +1,7 @@
 using DiarioTreino.Api.Autenticacao;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Progresso;
+using DiarioTreino.Application.Relatorios;
 
 namespace DiarioTreino.Api.Endpoints;
 
@@ -54,6 +55,29 @@ public static class ProgressoEndpoints
         })
         .WithName("ProgressoExercicio").WithTags("Progresso")
         .WithSummary("Evolução de um exercício no período");
+
+        // PDF do progresso (PBI-89): evolução por exercício + sessões do
+        // período. Vale para o próprio atleta ou, com atletaId, para o educador
+        // com vínculo ativo (sem acesso → 404). de/ate opcionais: sem eles, os
+        // últimos 90 dias. A observação privada do aluno não entra no PDF.
+        grupo.MapGet("/progresso/pdf", async (
+            DateOnly? de,
+            DateOnly? ate,
+            Guid? atletaId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoRelatorio relatorio,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var alvo = atletaId ?? perfil.Id;
+            var pdf = await relatorio.GerarProgressoPdfAsync(perfil.Id, alvo, de, ate, ct);
+            return Results.File(pdf, "application/pdf", "progresso.pdf");
+        })
+        .WithName("ProgressoPdf").WithTags("Progresso")
+        .WithSummary("PDF do progresso (evolução + sessões) do período");
 
         return app;
     }
