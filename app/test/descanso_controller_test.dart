@@ -77,6 +77,26 @@ void main() {
     expect(c.read(descansoControllerProvider), isNull);
   });
 
+  test('PBI-90: zerar não encerra; o saldo fica negativo e o restante em zero', () {
+    final relogio = _RelogioFake(DateTime(2026, 10, 15, 19, 0));
+    final c = _container(relogio);
+    final ctrl = c.read(descansoControllerProvider.notifier);
+
+    ctrl.iniciar(60);
+    relogio.avancar(const Duration(seconds: 75));
+
+    final estado = c.read(descansoControllerProvider)!;
+    expect(estado.acabou(relogio.agora()), isTrue);
+    expect(estado.saldo(relogio.agora()), const Duration(seconds: -15));
+    expect(estado.restante(relogio.agora()), Duration.zero);
+
+    // +15s depois de zerar reinicia uma contagem de 15s a partir de agora.
+    ctrl.adicionar();
+    final depois = c.read(descansoControllerProvider)!;
+    expect(depois.acabou(relogio.agora()), isFalse);
+    expect(depois.restante(relogio.agora()), const Duration(seconds: 15));
+  });
+
   test('encerrar (pular) zera o estado', () {
     final relogio = _RelogioFake(DateTime(2026, 10, 15, 19, 0));
     final c = _container(relogio);

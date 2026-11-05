@@ -64,6 +64,11 @@ String formatarDuracao(Duration d) {
   return h > 0 ? '$h:${dois(m)}:${dois(s)}' : '${dois(m)}:${dois(s)}';
 }
 
+/// Saldo do descanso com sinal (PBI-90): "00:34" enquanto falta tempo e
+/// "−00:05" depois que zerou (usa o sinal de menos tipográfico, como "−15s").
+String formatarSaldo(Duration d) =>
+    d.isNegative ? '−${formatarDuracao(-d)}' : formatarDuracao(d);
+
 /// Rótulo acessível, ex.: "38 minutos e 12 segundos".
 String rotuloDuracao(Duration d) {
   final seg = d.isNegative ? 0 : d.inSeconds;
@@ -107,8 +112,10 @@ class BarraSeries extends StatelessWidget {
 }
 
 /// Barra de descanso entre séries (TV-5). Aparece só quando há um descanso
-/// ativo no [descansoControllerProvider]; some sozinha quando o tempo zera ou
-/// o atleta pula. O tempo restante é calculado por `fim - agora` (via
+/// ativo no [descansoControllerProvider]. Ao zerar, NÃO some (PBI-90): segue
+/// contando negativo ("−00:05") e avisa "Descanso acabou, volte ao treino" até
+/// o atleta tocar em "Voltar ao treino" (ou completar a próxima série, que
+/// começa outro descanso). O saldo é calculado por `fim - agora` (via
 /// [relogioProvider]); o `Timer.periodic` só dispara o rebuild de 1 em 1
 /// segundo. Botões −15s / +15s ajustam e "Pular" encerra.
 class BarraDescanso extends ConsumerStatefulWidget {
@@ -124,16 +131,9 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
   @override
   void initState() {
     super.initState();
+    // Só redesenha a cada segundo; zerar não encerra o descanso (PBI-90).
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      // Rebuild para redesenhar o restante; se o tempo acabou, encerra.
-      final estado = ref.read(descansoControllerProvider);
-      final agora = ref.read(relogioProvider).agora();
-      if (estado != null && estado.acabou(agora)) {
-        ref.read(descansoControllerProvider.notifier).encerrar();
-      } else {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
   }
 
@@ -150,17 +150,27 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
 
     final cores = AppColors.of(context);
     final agora = ref.read(relogioProvider).agora();
+    final saldo = estado.saldo(agora);
+    final acabou = estado.acabou(agora);
     final restante = estado.restante(agora);
-    final fracao = estado.total.inSeconds == 0
-        ? 0.0
-        : (restante.inSeconds / estado.total.inSeconds).clamp(0.0, 1.0);
+    // Acabou: a barra fica cheia (o tempo todo foi usado e passou).
+    final fracao = acabou
+        ? 1.0
+        : estado.total.inSeconds == 0
+            ? 0.0
+            : (restante.inSeconds / estado.total.inSeconds).clamp(0.0, 1.0);
     final notifier = ref.read(descansoControllerProvider.notifier);
 
     return Container(
       decoration: BoxDecoration(
         color: cores.primaryTint,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: cores.primaryTint),
+        // Acabou: borda mais forte chama a atenção sem trocar a paleta (o
+        // vermelho do tema é só para exclusão).
+        border: Border.all(
+          color: acabou ? cores.primaryText : cores.primaryTint,
+          width: acabou ? 2 : 1,
+        ),
       ),
       padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
       child: Column(
@@ -168,16 +178,35 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.timer,
+              Icon(acabou ? LucideIcons.bellRing : LucideIcons.timer,
                   size: AppSizes.iconeSm, color: cores.primaryOnTint),
               const SizedBox(width: AppSpacing.x8),
-              Text('Descanso',
-                  style: AppText.label.copyWith(color: cores.primaryOnTint)),
-              const Spacer(),
+              Expanded(
+                child: acabou
+                    // Anunciado uma vez, quando muda para "acabou" (o tempo
+                    // negativo que corre ao lado não é região viva, para não
+                    // narrar cada segundo).
+                    ? Semantics(
+                        liveRegion: true,
+                        label: 'Descanso acabou, volte ao treino',
+                        excludeSemantics: true,
+                        child: Text('Descanso acabou, volte ao treino',
+                            style: AppText.label.copyWith(
+                                color: cores.primaryOnTint,
+                                fontWeight: FontWeight.w700)),
+                      )
+                    : Text('Descanso',
+                        style: AppText.label
+                            .copyWith(color: cores.primaryOnTint)),
+              ),
+              const SizedBox(width: AppSpacing.x8),
               Semantics(
-                liveRegion: true,
-                label: 'Descanso: ${rotuloDuracao(restante)} restantes',
-                child: Text(formatarDuracao(restante),
+                liveRegion: !acabou,
+                label: acabou
+                    ? 'Passou ${rotuloDuracao(-saldo)} do tempo de descanso'
+                    : 'Descanso: ${rotuloDuracao(restante)} restantes',
+                excludeSemantics: true,
+                child: Text(formatarSaldo(saldo),
                     style: AppText.numeralS.copyWith(color: cores.primaryOnTint)),
               ),
             ],
@@ -195,13 +224,16 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
           const SizedBox(height: AppSpacing.x12),
           Row(
             children: [
-              _BotaoDescanso(
-                rotulo: 'Tirar 15 segundos do descanso',
-                texto: '−15s',
-                cores: cores,
-                aoTocar: notifier.subtrair,
-              ),
-              const SizedBox(width: AppSpacing.x8),
+              // Depois de zerar, tirar 15s não faz sentido (só encerraria).
+              if (!acabou) ...[
+                _BotaoDescanso(
+                  rotulo: 'Tirar 15 segundos do descanso',
+                  texto: '−15s',
+                  cores: cores,
+                  aoTocar: notifier.subtrair,
+                ),
+                const SizedBox(width: AppSpacing.x8),
+              ],
               _BotaoDescanso(
                 rotulo: 'Adicionar 15 segundos ao descanso',
                 texto: '+15s',
@@ -210,8 +242,8 @@ class _BarraDescansoState extends ConsumerState<BarraDescanso> {
               ),
               const Spacer(),
               _BotaoDescanso(
-                rotulo: 'Pular descanso',
-                texto: 'Pular',
+                rotulo: acabou ? 'Voltar ao treino' : 'Pular descanso',
+                texto: acabou ? 'Voltar ao treino' : 'Pular',
                 cores: cores,
                 destaque: true,
                 aoTocar: notifier.encerrar,

@@ -404,11 +404,13 @@ class _SaiQuandoEncerradoState extends State<_SaiQuandoEncerrado> {
       );
 }
 
-/// Rodapé da tela do exercício (PBI-65): o aviso das séries sem marcar (que
-/// ficam de fora, sem diálogo) e o botão "Concluir exercício" / "Concluir e ir
-/// ao resumo", 48 px.
-class _RodapeConcluir extends StatelessWidget {
-  const _RodapeConcluir({
+/// Fim da lista de séries (PBI-65, movido na PBI-90): o aviso das séries sem
+/// marcar (que ficam de fora, sem diálogo) e o botão "Concluir exercício" /
+/// "Concluir e ir ao resumo", 48 px. Fica abaixo do "Adicionar série" e rola
+/// junto com a lista, só na aba Séries: concluir é a ação final do exercício e
+/// não precisa ficar na tela o tempo todo.
+class _BlocoConcluir extends StatelessWidget {
+  const _BlocoConcluir({
     required this.exercicio,
     required this.ultimo,
     required this.proximo,
@@ -431,42 +433,37 @@ class _RodapeConcluir extends StatelessWidget {
         ? 'Concluir e ir ao resumo'
         : 'Concluir exercício, ir para o exercício $proximo';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: cores.lineDivider)),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.margemTela, AppSpacing.x8, AppSpacing.margemTela, AppSpacing.x12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (pendentes > 0) ...[
-            Text(
-              pendentes == 1
-                  ? '1 série sem marcar fica de fora.'
-                  : '$pendentes séries sem marcar ficam de fora.',
-              textAlign: TextAlign.center,
-              style: AppText.caption.copyWith(color: cores.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.x6),
-          ],
-          Semantics(
-            button: true,
-            label: falado,
-            excludeSemantics: true,
-            child: FilledButton.icon(
-              onPressed: aoConcluir,
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, AppSizes.botaoSecundario)),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(LucideIcons.chevronRight, size: AppSizes.iconeSm),
-              label: Text(rotulo),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (pendentes > 0) ...[
+          Text(
+            pendentes == 1
+                ? '1 série sem marcar fica de fora.'
+                : '$pendentes séries sem marcar ficam de fora.',
+            textAlign: TextAlign.center,
+            style: AppText.caption.copyWith(color: cores.textSecondary),
           ),
+          const SizedBox(height: AppSpacing.x6),
         ],
-      ),
+        // Nó próprio de acessibilidade: sem o `container`, o aviso de cima e o
+        // botão se fundiam num só rótulo dentro da lista de séries.
+        Semantics(
+          container: true,
+          button: true,
+          label: falado,
+          excludeSemantics: true,
+          child: FilledButton.icon(
+            onPressed: aoConcluir,
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(0, AppSizes.botaoSecundario)),
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(LucideIcons.chevronRight, size: AppSizes.iconeSm),
+            label: Text(rotulo),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -569,18 +566,17 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
                 child: TabBarView(
                   controller: _abas,
                   children: [
-                    _AbaSeries(indice: indice, exercicio: exercicio),
+                    // "Concluir exercício" mora no fim da aba Séries (PBI-90).
+                    _AbaSeries(
+                      indice: indice,
+                      exercicio: exercicio,
+                      ultimo: indice == total - 1,
+                      aoConcluir: () => _concluir(exercicio, indice, total),
+                    ),
                     _AbaHistorico(exercicioId: exercicio.exercicioId),
                     _AbaEvolucao(exercicioId: exercicio.exercicioId),
                   ],
                 ),
-              ),
-              // Concluir e seguir (PBI-65), fixo acima do descanso, nas três abas.
-              _RodapeConcluir(
-                exercicio: exercicio,
-                ultimo: indice == total - 1,
-                proximo: indice + 2,
-                aoConcluir: () => _concluir(exercicio, indice, total),
               ),
               // Descanso entre séries (TV-5): fixo no rodapé, nas três abas.
               const BarraDescansoFixa(),
@@ -741,10 +737,19 @@ class _PontosPosicao extends StatelessWidget {
 /// editar carga/reps com os steppers e a tag; "Completar série" marca e abre a
 /// próxima. Séries feitas aparecem recolhidas e reabrem ao tocar.
 class _AbaSeries extends ConsumerStatefulWidget {
-  const _AbaSeries({required this.indice, required this.exercicio});
+  const _AbaSeries({
+    required this.indice,
+    required this.exercicio,
+    required this.ultimo,
+    required this.aoConcluir,
+  });
 
   final int indice;
   final ExercicioEdicao exercicio;
+
+  /// Último exercício do treino: o botão vira "Concluir e ir ao resumo".
+  final bool ultimo;
+  final VoidCallback aoConcluir;
 
   @override
   ConsumerState<_AbaSeries> createState() => _AbaSeriesState();
@@ -831,6 +836,16 @@ class _AbaSeriesState extends ConsumerState<_AbaSeries> {
         ],
         const SizedBox(height: AppSpacing.x8),
         _BotaoAdicionarSerie(aoTocar: _adicionarSerie),
+        // Concluir e seguir (PBI-65): só aqui, depois da última série, e não
+        // fixo na tela (PBI-90).
+        const SizedBox(height: AppSpacing.x24),
+        _BlocoConcluir(
+          exercicio: _ex,
+          ultimo: widget.ultimo,
+          proximo: widget.indice + 2,
+          aoConcluir: widget.aoConcluir,
+        ),
+        const SizedBox(height: AppSpacing.x16),
       ],
     );
   }

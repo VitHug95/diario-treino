@@ -140,6 +140,15 @@ Future<void> _abrir(WidgetTester tester, ProviderContainer c) async {
 
 const _rotuloSeta = 'Voltar para a Início. O treino continua em andamento';
 
+/// Tela alta (800 × 2400): a lista de séries cabe inteira e o botão do fim dela
+/// já está construído, sem precisar rolar (o "Concluir" mora no fim da lista,
+/// PBI-90).
+void _telaAlta(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   testWidgets('PBI-63: seta com rótulo; barra com Finalizar e Descartar de 48 px',
       (tester) async {
@@ -216,8 +225,10 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('PBI-65: concluir avança para o próximo em Séries, com aviso de séries',
+  testWidgets(
+      'PBI-65/90: concluir fica no fim da aba Séries (não nas outras) e avança para o próximo',
       (tester) async {
+    _telaAlta(tester);
     final c = await _container(const [], exercicios: [
       _ex('Supino', [_serie(feita: true), _serie(feita: false)]),
       _ex('Remada', [_serie(feita: true)]),
@@ -231,9 +242,22 @@ void main() {
     final concluir = find.bySemanticsLabel('Concluir exercício, ir para o exercício 2');
     expect(concluir, findsOneWidget);
     expect(tester.getSize(concluir).height, greaterThanOrEqualTo(48));
+    // PBI-90: fica ABAIXO do "Adicionar série", no fim da lista, e não colado
+    // no rodapé da tela.
+    expect(tester.getTopLeft(concluir).dy,
+        greaterThan(tester.getTopLeft(find.text('Adicionar série')).dy));
 
-    // Estando em Histórico, concluir abre o próximo em Séries (PBI-66).
+    // PBI-90: nas abas Histórico e Evolução o botão (e o aviso) não aparecem.
     await tester.tap(find.text('Histórico'));
+    await tester.pumpAndSettle();
+    expect(find.text('CONCLUIR EXERCÍCIO'), findsNothing);
+    expect(find.textContaining('sem marcar'), findsNothing);
+    await tester.tap(find.text('Evolução'));
+    await tester.pumpAndSettle();
+    expect(find.text('CONCLUIR EXERCÍCIO'), findsNothing);
+
+    // De volta a Séries, concluir abre o próximo em Séries (PBI-66).
+    await tester.tap(find.widgetWithText(Tab, 'Séries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('CONCLUIR EXERCÍCIO'));
     await tester.pumpAndSettle();
@@ -252,8 +276,40 @@ void main() {
     c.dispose();
   });
 
+  testWidgets(
+      'PBI-90: com a lista longa, o botão só aparece ao rolar até o fim da aba Séries',
+      (tester) async {
+    // Tela baixa (padrão 800 × 600) e 8 séries: o fim da lista fica fora da tela.
+    final c = await _container(const [], exercicios: [
+      _ex('Supino', [for (var i = 0; i < 8; i++) _serie(feita: i < 7)]),
+      _ex('Remada', [_serie(feita: false)]),
+    ]);
+    await _abrir(tester, c);
+
+    await tester.tap(find.text('Supino'));
+    await tester.pumpAndSettle();
+
+    // Rola a lista de séries (vertical) até o botão do fim aparecer.
+    final listaVertical = find.descendant(
+      of: find.byType(TabBarView),
+      matching: find.byWidgetPredicate(
+          (w) => w is Scrollable && w.axis == Axis.vertical),
+    );
+    await tester.scrollUntilVisible(
+      find.text('CONCLUIR EXERCÍCIO'),
+      300,
+      scrollable: listaVertical,
+    );
+    await tester.tap(find.text('CONCLUIR EXERCÍCIO'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exercício 2 de 2'), findsOneWidget);
+    c.dispose();
+  });
+
   testWidgets('PBI-65: no último exercício, "Concluir e ir ao resumo" abre o Resumo',
       (tester) async {
+    _telaAlta(tester);
     final c = await _container(const [], exercicios: _tres());
     await _abrir(tester, c);
 
