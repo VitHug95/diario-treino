@@ -133,8 +133,9 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
   empilham. Use para "Ficha criada", "Treino salvo" e afins; `mostrarAviso` em
   `shared/` (para quem navega antes de avisar, `mostrarAvisoNoMessenger`, que
   recebe o messenger e as cores capturados antes do `go`). Quando o aviso
-  precisa de ação (desfazer, ver) ou comunica erro, use outro componente — não
-  esta pílula. Decisão do PO (PBI-75): o "Treino salvo" é só o pop, **sem** a
+  precisa de ação (desfazer, ver), use outro componente — não esta pílula. **Erro**
+  usa a barra padrão do Material pelo `mostrarErro` (mesmo arquivo), nunca a
+  pílula, para não parecer que deu certo. Decisão do PO (PBI-75): o "Treino salvo" é só o pop, **sem** a
   antiga ação "Ver treino" — o treino se reabre pelo cartão de último treino na
   Início.
 - Bloco de observação: `obs-tint`, borda `obs-line`, título `obs-title`, corpo `obs-body`, raio 16.

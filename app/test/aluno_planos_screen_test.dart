@@ -24,6 +24,18 @@ class _FichasFake extends FichasRepository {
     criouParaAtleta = atletaId;
     return 'p-novo';
   }
+
+  String? fichaCriada;
+
+  @override
+  Future<String> adicionarFicha({
+    required String planoId,
+    required String nome,
+    String? descricao,
+  }) async {
+    fichaCriada = nome;
+    return 't-novo';
+  }
 }
 
 PlanoDaLista _plano({
@@ -86,8 +98,10 @@ Widget _telaPlanos({
   );
 }
 
-Widget _telaDetalhe({List<TreinoResumo> treinos = const []}) => ProviderScope(
+Widget _telaDetalhe({List<TreinoResumo> treinos = const [], FichasRepository? repo}) =>
+    ProviderScope(
       overrides: [
+        if (repo != null) fichasRepositoryProvider.overrideWithValue(repo),
         planoDoAlunoDetalheProvider
             .overrideWith((ref, arg) async => _detalhe(treinos: treinos)),
       ],
@@ -146,6 +160,22 @@ void main() {
     expect(find.text('Força 5 dias'), findsOneWidget); // título (AppBar)
     expect(find.text('Nenhuma ficha ainda'), findsOneWidget);
     expect(find.text('NOVA FICHA'), findsOneWidget);
+  });
+
+  testWidgets('PBI-75: nova ficha para o aluno confirma na pílula', (tester) async {
+    final repo = _FichasFake();
+    await tester.pumpWidget(_telaDetalhe(repo: repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('NOVA FICHA'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Nome'), 'A');
+    await tester.tap(find.text('Salvar'));
+    await tester.pump();
+
+    expect(repo.fichaCriada, 'A');
+    expect(find.text('Ficha “A” criada'), findsOneWidget);
+    expect(tester.widget<SnackBar>(find.byType(SnackBar)).shape, isA<StadiumBorder>());
   });
 
   testWidgets('Detalhe do plano: lista as fichas do plano', (tester) async {

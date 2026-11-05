@@ -13,6 +13,7 @@ import '../fichas/fichas_comandos.dart';
 import '../fichas/fichas_repository.dart';
 import '../fichas/fichas_screen.dart';
 import '../fichas/plano_models.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../planos/acoes_plano.dart';
 import 'educador_repository.dart';
 
@@ -53,9 +54,8 @@ class AlunoPlanoDetalheScreen extends ConsumerWidget {
     try {
       await ref.read(fichasComandosProvider).adicionarFicha(
           planoId: planoId, nome: dados.nome, descricao: dados.descricao);
-      if (context.mounted) {
-        avisarPlano(context, 'Ficha “${dados.nome}” criada');
-      }
+      // Confirmação sem ação: pílula, igual ao detalhe do plano do atleta.
+      if (context.mounted) mostrarAviso(context, 'Ficha “${dados.nome}” criada');
     } on FichasException catch (e) {
       if (context.mounted) avisarPlano(context, e.mensagem);
     }

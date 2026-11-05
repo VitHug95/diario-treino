@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../shared/botao_tracejado.dart';
 import '../../shared/estado_vazio.dart';
+import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -116,9 +117,7 @@ class _SelecionarExercicioScreenState
       });
     } else {
       // Não achou (caso raro): a lista atualizada mostra o novo para tocar.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Exercício criado. Toque nele para escolher.')),
-      );
+      mostrarAviso(context, 'Exercício criado. Toque nele para escolher');
     }
   }
 

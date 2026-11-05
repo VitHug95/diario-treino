@@ -76,7 +76,7 @@ class AlunosScreen extends ConsumerWidget {
       await ref.read(educadorComandosProvider).convidar(email);
       if (context.mounted) mostrarAviso(context, 'Convite enviado');
     } on EducadorException catch (e) {
-      if (context.mounted) mostrarAviso(context, e.mensagem);
+      if (context.mounted) mostrarErro(context, e.mensagem);
     }
   }
 }
