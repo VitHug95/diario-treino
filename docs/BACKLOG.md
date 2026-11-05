@@ -1329,8 +1329,17 @@ privacidade já vêm tratados. Build 0/0; 54 unitários verdes + 3 testes do ger
 (geram `%PDF`); integração (`ProgressoPdfEndpointTests`) cobre atleta 200, educador
 com vínculo, sem vínculo 404 e sem token 401 (roda no CI).
 
-**Falta (89-front):** botão "Exportar PDF" na aba **Progresso** (atleta) e na tela
-do aluno (educador), disparando o download no web.
+**Status (89-front):** ✅ **front** feito. Botão "Exportar PDF" (ícone download)
+no AppBar da aba **Progresso** (atleta, usa o período selecionado) e da tela do
+aluno (educador, passa o `atletaId`). `ProgressoRepository.baixarProgressoPdf`
+busca os bytes (Dio `responseType: bytes`); o download é disparado no navegador
+por um helper com import condicional (`package:web`: Blob + link `<a download>`),
+com stub que lança fora do web — os testes (VM) compilam sem tocar em APIs de
+navegador. `flutter analyze` 0; suíte 334 verde (+2 testes do botão).
+
+**PBI-89 concluída (back + front).** Com ela, o **épico E7 (modo educador) está
+completo**: papel, vínculo/convite/consentimento, telas do educador, ver dados do
+aluno, montar plano/ficha e exportar o progresso em PDF.
 
 **Depende de:** PBI-86, PBI-87. **Prioridade:** média.
 

@@ -5,6 +5,15 @@ import '../../core/rede/cliente_http.dart';
 import '../sessao/sessao_repository.dart';
 import 'progresso_models.dart';
 
+/// Erro ao exportar o PDF do progresso (PBI-89), com mensagem amigável.
+class ProgressoException implements Exception {
+  const ProgressoException(this.mensagem);
+  final String mensagem;
+
+  @override
+  String toString() => mensagem;
+}
+
 /// Acesso ao progresso por exercício via API (PBI-20).
 class ProgressoRepository {
   ProgressoRepository(this._dio);
@@ -34,6 +43,39 @@ class ProgressoRepository {
       },
     );
     return ProgressoExercicio.doJson(resposta.data!);
+  }
+
+  /// Baixa o PDF do progresso (PBI-89) como bytes. [atletaId] não nulo é o modo
+  /// educador (o aluno do vínculo). Sem [de]/[ate], a API usa os últimos 90
+  /// dias. Sem acesso, a API responde 404 → [ProgressoException].
+  Future<List<int>> baixarProgressoPdf({
+    DateTime? de,
+    DateTime? ate,
+    String? atletaId,
+  }) async {
+    try {
+      final resposta = await _dio.get<List<int>>(
+        '/progresso/pdf',
+        queryParameters: {
+          if (de != null) 'de': _soData(de),
+          if (ate != null) 'ate': _soData(ate),
+          if (atletaId != null) 'atletaId': atletaId,
+        },
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return resposta.data ?? const [];
+    } on DioException catch (e) {
+      throw ProgressoException(_traduzir(e));
+    }
+  }
+
+  static String _traduzir(DioException e) {
+    final status = e.response?.statusCode;
+    return switch (status) {
+      404 => 'Progresso não encontrado.',
+      null => 'Sem conexão. Verifique sua internet e tente de novo.',
+      _ => 'Não foi possível gerar o PDF. Tente novamente.',
+    };
   }
 
   static String _soData(DateTime d) =>

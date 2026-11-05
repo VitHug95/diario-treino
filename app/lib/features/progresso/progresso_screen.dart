@@ -13,6 +13,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../sessao/sessao_models.dart';
 import '../sessao/sessao_repository.dart';
+import 'exportar_pdf.dart';
 import 'progresso_repository.dart';
 
 /// Tela 4 do protótipo (aba Progresso). Em cima, o gráfico de evolução por
@@ -29,7 +30,10 @@ class ProgressoScreen extends ConsumerWidget {
     final sessoesAsync = ref.watch(sessoesDoPeriodoProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Progresso')),
+      appBar: AppBar(
+        title: const Text('Progresso'),
+        actions: [BotaoExportarPdf(diasPeriodo: periodo.dias)],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => tentarDeNovo(ref, [

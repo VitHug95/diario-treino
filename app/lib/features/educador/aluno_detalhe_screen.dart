@@ -11,6 +11,7 @@ import '../../shared/progresso/grafico_exercicio.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../progresso/exportar_pdf.dart';
 import '../sessao/sessao_models.dart';
 import 'aluno_planos_screen.dart';
 import 'educador_repository.dart';
@@ -41,7 +42,10 @@ class AlunoDetalheScreen extends ConsumerWidget {
     final sessoesAsync = ref.watch(sessoesDoAlunoProvider(atletaId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(alunoNome)),
+      appBar: AppBar(
+        title: Text(alunoNome),
+        actions: [BotaoExportarPdf(atletaId: atletaId)],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => tentarDeNovo(ref, [
