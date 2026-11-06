@@ -5,33 +5,28 @@ O que ainda falta no Diário de Treino, consolidado do [BACKLOG](BACKLOG.md),
 Fly, front no Cloudflare, banco no Neon, com deploy automático a cada merge na
 `main` (ver [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md)).
 
-Data: 19/10/2026. Última entrega: correções de uso real PBI-73 a 80.
+Data: 05/11/2026. Última entrega: PBI-35, semana planejada (PR #135). O Incremento 1
+(modo atleta) e o modo educador (E7) estão entregues.
 
 ---
 
-## Incremento 1 (MVP) — em finalização
+## Incremento 1 (MVP) — entregue
 
-Falta fechar:
-
-- **PBI-26 — E2E Robot completo.** Hoje o fluxo é coberto por teste em
-  `flutter test`; o E2E com a Browser Library está quebrado e será reconciliado
-  manualmente, aplicando as correções de bug depois dos testes manuais.
-
-O backup (PBI-05) e o contraste (PBI-24) foram concluídos. A validação final de
-acessibilidade com tecnologia assistiva (leitor de tela) continua sendo um passo
-manual recomendado antes do lançamento.
+O E2E do fluxo principal (PBI-26), o backup (PBI-05) e o contraste (PBI-24) foram
+concluídos. A validação final de acessibilidade com tecnologia assistiva (leitor de
+tela) continua sendo um passo manual recomendado antes do lançamento.
 
 ## Melhorias e decisões em aberto com o PO
 
-- **PBI-34 — Trocar a métrica no registro.** Escolher outra métrica (ex.: tempo
-  no lugar de reps) na hora de registrar.
-- **PBI-35 — Cronograma semanal.** Planejar quais fichas em quais dias.
+- **PBI-34 — Trocar a métrica no registro.** Bloqueada: (a) por série no registro
+  (flexível, o gráfico agrupa por métrica) ou (b) no alvo da ficha (previsível, com
+  mudança de banco). Recomendação: (a).
 - **PBI-73 (decisão pendente)** — exercício só de repetições no gráfico: está
-  implementada a **melhor série** (maior nº de repetições da sessão). O PO ainda
-  pode preferir o total de repetições da sessão.
-- (Decididos: série adicionada copia a anterior — PBI-84 revertida; "Treino
-  salvo" é só o pop, sem "Ver treino" — PBI-75.)
-
+  implementada a **melhor série**; o PO ainda pode preferir o total de repetições.
+- **Termo de consentimento (PBI-87).** O texto atual é provisório; falta o texto
+  jurídico antes de abrir ao público.
+- (Decididos: série adicionada copia a anterior — PBI-84 revertida; "Treino salvo"
+  é só a pílula; semana do plano — PBI-35 entregue.)
 ## Dados antigos a observar (não bloqueiam)
 
 - **Exercício repetido (PBI-74).** A unicidade por ficha e por sessão vive na
@@ -39,14 +34,13 @@ manual recomendado antes do lançamento.
   podem ter repetição; elas continuam abrindo normalmente, só não é possível
   criar novos casos.
 
-## Modo educador e incremento 2 — não iniciados
+## Próximos épicos e incremento 2 — não iniciados
 
-- **Modo educador (PBI-48, épico E7).** O banco já conhece educador, vínculo e
-  autoria de plano; falta a camada de telas e os endpoints de aluno/vínculo.
-- **Incremento 2 — Cardio (PBI-27 a 30).** Registro por zonas e resumo do
-  período por zona. Modelo de dados preparado (duas métricas por série), telas e
-  consultas ainda não feitas.
-
+- **Incremento 2 — Cardio (PBI-27 a 30).** Registro por zonas e resumo do período
+  por zona. Falta a resposta do Vinicius sobre como a zona é definida (FC, pace ou
+  percepção). Modelo de dados preparado (duas métricas por série).
+- **E8 a E11.** Ver [BACKLOG](BACKLOG.md), seção 9. Inclui a publicação na Google
+  Play (E10).
 ## Operação (herdado da publicação)
 
 - **Backup do banco (PBI-05): concluído.** Backup semanal no CI, secret
@@ -57,3 +51,4 @@ manual recomendado antes do lançamento.
 - Resetar a senha do role do Neon (foi digitada em texto no chat durante o
   setup inicial).
 - Ruído de log cosmético na API (`libgssapi_krb5.so.2`), não afeta a conexão.
+- Confirmar que o `deploy-web` segue verde com o Wrangler v4 (#121).

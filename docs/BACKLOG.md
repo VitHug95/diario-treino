@@ -1,7 +1,7 @@
 # Product Backlog
 
 **Projeto:** Diário de Treino (nome provisório)
-**Versão:** 0.1, antes da primeira Sprint
+**Versão:** 1.0, atualizada em 05/11/2026 (até o PR #135)
 **Documentos relacionados:** [MAS.md](MAS.md), [MER.md](MER.md), [README.md](../README.md), protótipo no canvas "Telas App de Treino"
 
 ---
@@ -10,7 +10,7 @@
 
 > O atleta registra o treino quando puder e entende a própria evolução sem perder o motivo de cada dia fora da curva.
 
-O incremento 1 entrega isso para o modo atleta (musculação e isometria). O incremento 2 acrescenta cardio. O modo educador vem depois, sobre a estrutura que já nasce pronta.
+O incremento 1 entrega isso para o modo atleta (musculação e isometria). O incremento 2 acrescenta cardio. O modo educador já foi entregue (E7), sobre a estrutura que nasceu pronta.
 
 ## 2. Papéis
 
@@ -489,7 +489,7 @@ usuário; não afeta outro usuário; 401 sem token) + 3 de widget.
 
 #### PBI-75 · Aviso simples vira pop pequeno (sem barra preta)
 **História:** Como atleta, quero que avisos curtos (ex.: "Ficha criada") apareçam como um pop pequeno que some sozinho, sem uma barra preta cobrindo a base da tela com um botão que não pedi.
-**Status:** ✅ concluída. Componente compartilhado `mostrarAviso` (pílula flutuante ~2 s, sem ação, cor do tema) em "Ficha criada" (PR #113) e "Treino salvo" sem a ação "Ver treino", por decisão do PO (PR #116). No fechamento, a regra passou a valer no app todo: as confirmações que ainda usavam a barra preta ("agora está em uso", "Cópia criada", "Exercício criado", "Enviamos um e-mail de redefinição" e o "Ficha criada" da tela do educador) viraram pílula, e os **erros** do modo educador, que estavam saindo na pílula, foram para a barra de erro (`mostrarErro`, ao lado do `mostrarAviso`). Testes do componente nos dois temas, do erro x confirmação no educador e da ficha nova do aluno; suíte 344 verde.
+**Status:** ✅ concluída (PRs #113, #116 e #133). Componente compartilhado `mostrarAviso` (pílula flutuante ~2 s, sem ação, cor do tema) em "Ficha criada" (PR #113) e "Treino salvo" sem a ação "Ver treino", por decisão do PO (PR #116). No fechamento, a regra passou a valer no app todo: as confirmações que ainda usavam a barra preta ("agora está em uso", "Cópia criada", "Exercício criado", "Enviamos um e-mail de redefinição" e o "Ficha criada" da tela do educador) viraram pílula, e os **erros** do modo educador, que estavam saindo na pílula, foram para a barra de erro (`mostrarErro`, ao lado do `mostrarAviso`). Testes do componente nos dois temas, do erro x confirmação no educador e da ficha nova do aluno; suíte 344 verde.
 
 #### PBI-76 · "Manter na ficha?": aviso quando a ficha não é lida
 **História:** Como atleta, quero ser avisado quando o app não conseguir ler a ficha ao perguntar "Manter na ficha?", para entender por que a pergunta não apareceu.
@@ -540,7 +540,7 @@ sem mudança de banco). `MarcaDia`/`CirculoTracejado` extraídos para
 `sessoesDoMesProvider` (família por mês) entra no mapa de invalidação (PBI-70).
 Rota `/mes` filha da Início. Os dias passados sem treino levam um "X" (semana e mês).
 **Depende de:** PBI-22, PBI-23, PBI-59.
-**Status:** ✅ FEITO (front). `flutter analyze` 0 e suíte verde; testes da função
+**Status:** ✅ FEITO (front; PRs #104 a #106). `flutter analyze` 0 e suíte verde; testes da função
 de meses, da tela, do link na Início e da invalidação do mês.
 
 #### PBI-90 · Treino ao vivo: "Concluir exercício" no fim das séries e descanso que conta negativo
@@ -571,7 +571,7 @@ e o descanso sumia sozinho ao zerar.
 encerra mais o descanso. `_RodapeConcluir` virou `_BlocoConcluir`, dentro da
 `_AbaSeries`. A barra de descanso continua fixa no rodapé, nas três abas.
 **Depende de:** TV-5 (PBI-42), PBI-65.
-**Status:** ✅ FEITO (front). `flutter analyze` 0; suíte 336 verde (testes do botão
+**Status:** ✅ FEITO (front; PR #132). `flutter analyze` 0; suíte 336 verde (testes do botão
 no fim da lista e fora das outras abas, da lista longa com rolagem, do descanso
 negativo com aviso e do saldo no controller). E2E não usa essas telas.
 
@@ -585,7 +585,7 @@ negativo com aviso e do saldo no controller). E2E não usa essas telas.
 
 **Depende de:** PBI-21.
 
-**Status:** ✅ CONCLUÍDA. E2E do fluxo principal rodando verde no CI (job `e2e`),
+**Status:** ✅ CONCLUÍDA (PRs #108 a #110). E2E do fluxo principal rodando verde no CI (job `e2e`),
 contra a **stack real efêmera**: Postgres (service) + API .NET + Firebase Auth
 Emulator + o app Flutter de verdade. Cenário coberto: entrar (já autenticado) →
 registrar um treino livre (adicionar "Supino reto com barra" do catálogo, marcar
@@ -807,8 +807,8 @@ não aceita mais `grupoMuscular`. Build Release limpo (0 avisos com warnings-as-
 **Depende de:** PBI-23 (parte A), PBI-15.
 **Prioridade:** baixa (evolução; a faixa semanal do PBI-23A já entrega valor sem isto).
 
-**Status (35-back):** ✅ backend feito. Migration só cria a tabela, vazia. `ServicoPlanejamento.DefinirSemanaAsync` passa pelo acesso (outro usuário 404) e pela regra do autor (plano do professor 403; educador autor edita); `DefinirSemanaValidator` (dia 1..7, um por dia) e ficha ativa do plano conferida no serviço (400). Troca da semana por diferença (o EF não aceita remover e reinserir a mesma PK no mesmo `SaveChanges`). Arquivar ficha remove os dias na aplicação; apagar cai por cascata; duplicar mapeia ficha antiga → nova. Build 0/0; 62 unitários verdes (+8); integração (`PlanoSemanaEndpointTests`: fluxo, vazia, 400, 404, 403, educador, excluir/arquivar, duplicar) roda no CI.
-**Status (35-front):** ✅ front feito. **Detalhe do plano:** seção "SEMANA" (seg→dom) logo depois das fichas; tocar num dia abre a escolha da ficha ou "Livre", grava na hora (`FichasComandos.definirSemana`) com a pílula "Segunda: A" e, se falhar, o dia volta ao que era e o erro aparece na barra. Plano do professor mostra a semana sem toque (some se ele não definiu); plano sem fichas não mostra a seção. O mesmo widget (`SecaoSemana`) está na tela do plano do aluno, para o educador. **Início:** com semana, cada dia da faixa mostra o rótulo curto da ficha (A, B…); o "X" fica só para o dia planejado que passou sem treino ("faltou"); dia sem ficha que passou é descanso (círculo vazio); o leitor de tela ouve "planejado A, faltou" / "descanso". A folha do dia mostra "Planejado: A" e o registro segue igual. **Sem semana, a Início é a de antes** (rótulos e marcas idênticos — teste dedicado). Calendário do mês sem mudança. `flutter analyze` 0; suíte 363 verde (+19).
+**Status (35-back):** ✅ backend feito (PR #134). Migration só cria a tabela, vazia. `ServicoPlanejamento.DefinirSemanaAsync` passa pelo acesso (outro usuário 404) e pela regra do autor (plano do professor 403; educador autor edita); `DefinirSemanaValidator` (dia 1..7, um por dia) e ficha ativa do plano conferida no serviço (400). Troca da semana por diferença (o EF não aceita remover e reinserir a mesma PK no mesmo `SaveChanges`). Arquivar ficha remove os dias na aplicação; apagar cai por cascata; duplicar mapeia ficha antiga → nova. Build 0/0; 62 unitários verdes (+8); integração (`PlanoSemanaEndpointTests`: fluxo, vazia, 400, 404, 403, educador, excluir/arquivar, duplicar) roda no CI.
+**Status (35-front):** ✅ front feito (PR #135). **Detalhe do plano:** seção "SEMANA" (seg→dom) logo depois das fichas; tocar num dia abre a escolha da ficha ou "Livre", grava na hora (`FichasComandos.definirSemana`) com a pílula "Segunda: A" e, se falhar, o dia volta ao que era e o erro aparece na barra. Plano do professor mostra a semana sem toque (some se ele não definiu); plano sem fichas não mostra a seção. O mesmo widget (`SecaoSemana`) está na tela do plano do aluno, para o educador. **Início:** com semana, cada dia da faixa mostra o rótulo curto da ficha (A, B…); o "X" fica só para o dia planejado que passou sem treino ("faltou"); dia sem ficha que passou é descanso (círculo vazio); o leitor de tela ouve "planejado A, faltou" / "descanso". A folha do dia mostra "Planejado: A" e o registro segue igual. **Sem semana, a Início é a de antes** (rótulos e marcas idênticos — teste dedicado). Calendário do mês sem mudança. `flutter analyze` 0; suíte 363 verde (+19).
 
 #### PBI-36 · Excluir ficha
 
@@ -965,7 +965,7 @@ nada muda. Vale para qualquer métrica de volume (reps, tempo). Não muda o grá
 **Telas:** 10 (editar exercício da ficha), 13 (resumo). Spec:
 `.kiro/specs/tv-2-faixa-repeticoes/`. **Depende de:** PBI-14.
 
-**Status:** FEITO (back + front), aguardando merge. Branch
+**Status:** ✅ na `main` (PR #56). Branch
 `feat/pbi-39-faixa-repeticoes`.
 - **Banco:** migration `FaixaRepeticoes` — coluna `volume_alvo_max`
   numeric(9,2) NULL + `CHECK (volume_alvo_max IS NULL OR >= volume_alvo)`. Sem
@@ -1022,13 +1022,13 @@ automática, diálogos de sair/continuar), não reescreve.
 `.kiro/specs/treino-ao-vivo-r2/`. **Depende de:** PBI-15, PBI-18, PBI-37,
 PBI-38, PBI-20.
 
-**Status:** FEITO (front + endpoint de histórico), atrás da flag, aguardando
+**Status:** ✅ na `main` (PR #57; flag ligada nos PRs #58 a #61). Era: front + endpoint de histórico, atrás da flag, aguardando
 merge. Branch `feat/treino-ao-vivo-r2`. `flutter analyze` 0; 115 widget verdes;
 31 unit backend verdes; integração do histórico no CI (Testcontainers).
 
 ### Épico Planos: vários por atleta (PBI-44 a PBI-49)
 
-Épico concluído (exceto a PBI-48, no modo educador). As decisões do PO e as
+Épico concluído (a PBI-48 fechou no E7). As decisões do PO e as
 regras do plano em uso estão no [MAS](MAS.md) (ADRs) e no [MER](MER.md)
 (seção 5). O que entrou em cada PR está em
 [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
@@ -1039,8 +1039,8 @@ regras do plano em uso estão no [MAS](MAS.md) (ADRs) e no [MER](MER.md)
 | PBI-45 | Lista de planos (tela 18) | Front | R1 | ✅ na `main` (PR #72) |
 | PBI-46 | Detalhe do plano (tela 19) | Front | R1 | ✅ na `main` (PR #73) |
 | PBI-47 | Início segue o plano em uso | Front | R1 | ✅ na `main` (PR #74) |
-| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | ✅ na `main` — educador monta plano/ficha para o aluno (PBI-88d-back + 88d-front) |
-| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E; falta ajustar o passo do Robot que escolhe o exercício |
+| PBI-48 | Plano do professor: leitura e cópia | Front | R2 | ✅ na `main` — educador monta plano/ficha para o aluno (PBI-88d: #128 back, #129 front) |
+| PBI-49 | Adicionar exercícios: seletor revisado | Front | avulsa | ✅ na `main` (PR #81), sem esperar o E2E |
 
 ### Ajustes de layout (PBI-57 a PBI-67)
 
@@ -1051,7 +1051,7 @@ cada PR está em [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md).
 |---|---|---|---|
 | PBI-57 | Ficha enxuta: só edição da ficha aberta | 22 | ✅ na `main` (PR #77) |
 | PBI-58 | Renomear e excluir como ícones no topo | 19 e 22 | ✅ na `main` (PR #76) |
-| PBI-59 | Início nova: semana e caixas | 23 | ✅ na `main` (PR #79), sem o atalho "Iniciar treino" (decisão do PO em aberto) |
+| PBI-59 | Início nova: semana e caixas | 23 | ✅ na `main` (PR #79), sem o atalho "Iniciar treino" (dispensado pelo PO) |
 | PBI-60 | Dicas de treino na Início (era "caixa de novidades") | 23 | ✅ na `main` (PR #80) |
 | PBI-61 | Treinar a partir do plano | 19 | ✅ na `main` (PR #77) |
 | PBI-62 | Cartão de exercício: mover e excluir | 22 | ✅ na `main` (PR #77) |
@@ -1175,13 +1175,13 @@ Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready aind
 
 | Épico | Itens previstos |
 |---|---|
-| **E7 · Modo educador** | Papel de educador; convite e aceite de vínculo; lista de alunos; ver treino e progresso do aluno; montar ficha para o aluno; exportar progresso em PDF; termo de consentimento LGPD; alerta de aluno sem registrar ou com observações de dor seguidas. **Decisão (PO):** vira um épico próprio na próxima sprint; a PBI-48 (plano do professor) entra junto. Ver nota abaixo da tabela. |
+| **E7 · Modo educador** ✅ *concluído (PBI-85 a 89 e 48; ver nota abaixo)* | Papel de educador; convite e aceite de vínculo; lista de alunos; ver treino e progresso do aluno; montar ficha para o aluno; exportar progresso em PDF; termo de consentimento LGPD; alerta de aluno sem registrar ou com observações de dor seguidas. **Decisão (PO, histórico):** virou um épico próprio; a PBI-48 (plano do professor) entra junto. Ver nota abaixo da tabela. |
 | **E8 · Inteligência no feedback** | Músculos secundários e cartão "séries por músculo na semana" (base no ADR-10); Tags rápidas na observação; recorde pessoal e 1RM estimado; sugestão de aumento de carga |
 | **E9 · Corrida avançada** | Faixas de zona por atleta; importação de arquivo do relógio ou Strava |
 | **E10 · Lojas** | Publicação na Google Play; avaliação de custo e processo da App Store |
-| **E11 · Conforto no registro** | Cronômetro de descanso dentro do registro |
+| **E11 · Conforto no registro** | Cronômetro de descanso dentro do registro (o treino ao vivo já tem descanso, PBI-90; falta confirmar com o PO o que resta no registro posterior) |
 
-**Nota sobre o E7 (decisão do PO, depois do Release 1 do épico Planos):** o modo
+**Nota sobre o E7 (registro histórico; o épico foi entregue):** o modo
 educador fica para a **próxima sprint**, como um **épico próprio**, refinado antes
 de entrar. Pontos já combinados para o refinamento:
 
@@ -1192,7 +1192,7 @@ de entrar. Pontos já combinados para o refinamento:
   (PENDENTE/ATIVO/ENCERRADO), regra única de acesso (`IControleAcesso`: o próprio
   atleta ou educador com vínculo ativo) e plano de autor ≠ atleta como somente
   leitura (403, PBI-44).
-- **Falta virar PBI:** tornar-se educador, convite e aceite de vínculo, lista de
+- **Virou PBI (entregue):** tornar-se educador, convite e aceite de vínculo, lista de
   alunos, ver treino e progresso do aluno, montar plano para o aluno, termo de
   consentimento LGPD (antes de qualquer acesso do educador), PDF e a PBI-48.
 - **Decisões do PO (tomadas, 31/10):**
@@ -1250,7 +1250,7 @@ PBI-88.
 ganhou escrita/consulta; `POST /me/papeis/educador` concede o papel. `TentarCriarAsync`
 tolera a corrida no índice `ux_vinculo_aberto` (409, não 500). Sem mudança de banco.
 **Depende de:** PBI-07 (feito). **Prioridade:** alta (fundação do E7).
-**Status:** ✅ na `main` (backend, PR #120). Falta a UI (PBI-88). Testes de
+**Status:** ✅ na `main` (backend, PR #120). A UI veio na PBI-88 (#125 a #129). Testes de
 integração cobrem fluxo feliz, 403/400/404/409 e o caso "outro usuário" → 404.
 
 #### PBI-86 · Educador vê treino e progresso do aluno — backend
@@ -1299,7 +1299,7 @@ proteger dados sensíveis.
 
 #### PBI-88 · Telas do educador (lista de alunos, treino/progresso, montar ficha)
 
-A PBI-88 foi **fatiada** em entregas menores:
+A PBI-88 foi **fatiada** em entregas menores (PRs: 87 e 88a #124/#125, 88b #126, 88c #127, 88d #128 back e #129 front):
 - **88a** ✅ backend do consentimento no aceite (ver Status da PBI-87 acima).
 - **88b** ✅ **telas do educador no app** (front): seção "Educador" no Perfil com
   gate por papel (quem não é educador vê "Ativar modo educador"; quem é vê "Meus
@@ -1394,15 +1394,17 @@ aluno, montar plano/ficha e exportar o progresso em PDF.
 
 | Pergunta | Bloqueia | Com quem |
 |---|---|---|
-| O gráfico de força usa maior carga da sessão ou volume total (carga × repetições)? | PBI-20 | Vinicius |
 | A zona é definida por frequência cardíaca, pace ou percepção de esforço? | PBI-27 a PBI-29 | Vinicius |
 | Rodada a mais ou incompleta no intervalado: como aparece no feedback? | PBI-29 | Vinicius |
-| Lista de membros e músculos está boa para o uso de vocês e para reabilitação? (não bloqueia: a lista proposta entra e é ajustada por migration) | PBI-31 | Vinicius |
+| Lista de membros e músculos está boa para o uso de vocês e para reabilitação? **Não bloqueia** (a lista entrou; ajuste por migration) | PBI-31 | Vinicius |
 | Nome definitivo do app | PBI-04 (domínio) | Vitor e Vinicius |
+| Trocar a métrica: (a) por série no registro ou (b) no alvo da ficha? Recomendação: (a) | PBI-34 | PO |
+| Gráfico só de repetições: melhor série (implementado) ou total da sessão? | PBI-73 | PO |
+| Texto jurídico do termo de consentimento (hoje provisório) | PBI-87 / abrir ao público | PO |
 
 ---
 
-## 11. Proposta de Sprints
+## 11. Proposta de Sprints (proposta inicial; o que de fato entrou, PR por PR, está no [HISTORICO](HISTORICO-DE-ALTERACOES.md))
 
 Sprints de uma semana, com review no fim de semana usando o app no celular do PO. O Sprint Goal e a seleção final saem da Sprint Planning; abaixo é só um ponto de partida para a conversa.
 

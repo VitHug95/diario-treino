@@ -1,7 +1,7 @@
 # Histórico de alterações — Diário de Treino
 
 Registro de tudo que entrou na `main`, PR por PR, do início do projeto (02/10/2026) até
-a PBI-72 (PR #91), 16/10/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
+o PR #135 (PBI-35), 05/11/2026. Fonte: histórico Git. O detalhe de cada PBI (história,
 critérios de aceite) está no [BACKLOG](BACKLOG.md).
 
 Como manter: a cada PR mergeado, acrescente uma linha na tabela do período e, se mudar o
@@ -142,7 +142,41 @@ fechados sem merge.
 | #108 | PBI-26 | E2E do caminho principal em `integration_test` (`flutter drive` + ChromeDriver), contra a stack real (Postgres + API + Firebase Auth Emulator): entrar, registrar treino livre e ver no progresso. Migrado de Robot/Playwright, inviável no CanvasKit (campos de texto não aceitam entrada via DOM). Inclui auto-login no modo emulador, aceitação do token do emulador (`RequireSignedTokens=false`) e CORS de qualquer localhost no E2E. **Correção de produção:** provisionamento de usuário idempotente — o primeiro acesso disparava `/planos/ativo` e `/sessoes` em paralelo e a 2ª inserção violava o índice único (500); agora trata o conflito e re-busca. |
 | #109 | docs | BACKLOG, MAS e HISTORICO: PBI-26 concluído e as decisões do E2E. |
 | #110 | docs | HISTORICO: registro dos PRs #108 e #109 na tabela. |
-| (este) | PBI-83 | Sincroniza os documentos com a `main`: ESTADO (migration `ReparoPlanoEmUso`, ADR-11, PBIs 73–82 entregues com PR, PBI-81/84 em andamento, decisões do PO separadas das perguntas abertas); BACKLOG ganha as PBIs 73–81 (sem lacuna); README não cita mais o E2E Robot como pendente. |
+| #111 | PBI-83 | Sincroniza os documentos com a `main`: ESTADO (migration `ReparoPlanoEmUso`, ADR-11, PBIs 73–82 entregues com PR, PBI-81/84 em andamento, decisões do PO separadas das perguntas abertas); BACKLOG ganha as PBIs 73–81 (sem lacuna); README não cita mais o E2E Robot como pendente. |
+
+| #107 | docs | Registro do calendário (PBI-82) nos documentos. |
+
+## Bloco 1, infraestrutura e início do educador · 22 a 30/10
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #112 | PBI-81 | "Manter na ficha?" decidido exercício por exercício. |
+| #113 | PBI-75 | Aviso vira pílula (`mostrarAviso`). |
+| #114 | PBI-84 | Série em branco com dica no registro posterior. |
+| #115 | PBI-84 | Reverte o #114 por decisão do PO: "Adicionar série" copia a anterior. |
+| #116 | PBI-75 | "Treino salvo" sem ação (tira o "Ver treino"). |
+| #117 | infra | Deploy da API no Fly com `--ha=false` (evita "no capacity in gru"). |
+| #118 | infra | Job E2E bloqueante com 1 retry (tira o `continue-on-error`). |
+| #119 | fix | Correção de diálogo. |
+| #120 | PBI-85 | Back: tornar-se educador, vínculo (convite/aceite/recusa/encerrar), `GET /alunos`, `GET /vinculos/pendentes`. |
+| #121 | infra | Wrangler v4 no deploy-web (corrige o `code 10013` do upload de assets). |
+| #122 | PBI-86 | Back: educador lê os dados do aluno via `atletaId`, sempre pelo `IControleAcesso`. |
+| #123 | docs | Sincronização dos documentos. |
+| #124 | PBI-87 | Observação privada e consentimento (migration `ObservacaoPrivadaEConsentimento`). |
+
+## Telas do educador, PDF e semana planejada · 30/10 a 05/11
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #125 a #127 | PBI-87 front, 88a a 88c | Consentimento e observação privada no app; contexto/escolha de papel, lista de alunos, convite, treino e progresso do aluno. |
+| #128 | PBI-88d | Back: criar plano para o aluno (autor = educador), plano somente-leitura para quem não é o autor. |
+| #129 | PBI-88d | Front: `AlunoPlanosScreen` e `AlunoPlanoDetalheScreen` (fecha a PBI-48). |
+| #130 | PBI-89 | Back: `GET /progresso/pdf` com QuestPDF Community, `ServicoRelatorio`, `IGeradorRelatorioPdf`. |
+| #131 | PBI-89 | Front: `BotaoExportarPdf` na aba Progresso e na tela do aluno. |
+| #132 | PBI-90 | "Concluir exercício" no fim da aba Séries; descanso conta negativo com o aviso "Descanso acabou, volte ao treino". |
+| #133 | PBI-75 | Pílula em todo o app: confirmações com `mostrarAviso`, erros com `mostrarErro`. |
+| #134 | PBI-35 | Back: tabela `plano_dia_semana` (migration `PlanoSemana`), `PUT /planos/{id}/semana`; duplicar copia a semana, arquivar libera os dias. |
+| #135 | PBI-35 | Front: seção Semana no plano e faixa da Início com planejado/faltou/descanso; "Planejado: X" na folha do dia. |
 
 ---
 
@@ -159,13 +193,15 @@ fechados sem merge.
 | `20261015124844_FaixaRepeticoes` | PBI-39 | `volume_alvo_max` com `CHECK`. |
 | `20261015204940_PlanosVariosEmUso` | PBI-44 | Coluna `em_uso` e vários planos por atleta. |
 | `20261019145756_ReparoPlanoEmUso` | PBI-77 | Reparo de dados: marca em uso o plano ativo com a sessão mais recente para atletas sem plano em uso. |
+| `20261030143221_ObservacaoPrivadaEConsentimento` | PBI-87 | Flag de observação privada e tabela de consentimento. |
+| `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana). |
 
 ## Infraestrutura
 
-- API no Fly.io (`gru`), deploy automático no CI desde o PR #32.
-- Front no Netlify até 15/10; desde o PR #62, no Cloudflare Workers (`wrangler deploy` no CI). Motivo em `POST-MORTEM-deploy-release2.md`.
+- API no Fly.io (`gru`), deploy automático no CI desde o PR #32; `--ha=false` desde o #117.
+- Front no Netlify até 15/10; desde o PR #62, no Cloudflare Workers (`wrangler deploy` no CI; Wrangler v4 desde o #121). Motivo em `POST-MORTEM-deploy-release2.md`.
 - Banco no Neon; migrations aplicadas no startup da API.
-- CI: build .NET sem warnings, testes unitários e de integração (Testcontainers), `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`, build web e o **E2E (PBI-26)** — job `e2e` com `integration_test` via `flutter drive` + ChromeDriver, contra Postgres + API + Firebase Auth Emulator.
+- CI: build .NET sem warnings, testes unitários e de integração (Testcontainers), `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`, build web e o **E2E (PBI-26)** — job `e2e` bloqueante com 1 retry (#118), com `integration_test` via `flutter drive` + ChromeDriver, contra Postgres + API + Firebase Auth Emulator.
 
 ## Estado atual
 
@@ -173,6 +209,6 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- PBI-48 e o épico do educador (E7), na próxima sprint.
-- PBI-34 (trocar a métrica no registro), PBI-35 (cronograma semanal) e cardio (PBI-27 a 30).
+- PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
+- Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).
