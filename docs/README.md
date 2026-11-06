@@ -1,6 +1,6 @@
 # App de Treino
 
-Aplicação para registrar treinos e acompanhar a evolução ao longo do tempo. Nasce para uso pessoal (Vitor e parceiro educador físico), com estrutura preparada para, no futuro, um educador físico montar treinos para os seus alunos.
+Aplicação para registrar treinos e acompanhar a evolução ao longo do tempo. Nasce para uso pessoal (Vitor e parceiro educador físico), com o modo educador físico já entregue: o educador monta treinos e acompanha os seus alunos.
 
 ## Visão
 
@@ -30,16 +30,16 @@ O parceiro não quer usar o app como personal. O uso inicial é pessoal, com a p
 **Acesso**
 - Login simples; cada usuário monta o próprio treino
 
-**Modo educador físico (futuro)**
+**Modo educador físico** ✅
 - O educador cadastra seus alunos (vínculo educador x aluno)
 - Tem acesso ao treino e ao progresso de cada aluno vinculado
 - Pode exportar os dados do aluno em PDF
 
-## Estado atual (21/10/2026)
+## Estado atual (05/11/2026)
 
 O app está **publicado e em uso** (API no Fly, front no Cloudflare, banco no Neon), com deploy automático a cada merge na `main`. O **Incremento 1 (MVP) está completo**: login, catálogo com 89 exercícios filtrado por membro, vários planos com um em uso, fichas com alvos, registro de sessão (editar, excluir, exercício fora da ficha, "Manter na ficha?"), treino livre, primeiro acesso, treino ao vivo série por série, tela inicial com semana, último treino e dicas, progresso completo, perfil com tema e exclusão de conta, e o **E2E do fluxo principal (PBI-26)**. De 16 a 19/10 entraram as correções de uso real (PBI-73 a 80): plano novo nasce em uso, um exercício por ficha e por sessão, editor de alvos e resumo da ficha, gráfico de exercício sem carga, "Manter na ficha?" avisando quando não lê a ficha e tocar numa aba abrindo a raiz dela. Também entrou o calendário do mês (PBI-82): a partir do cartão "Esta semana", o atleta abre o mês inteiro, navega de mês em mês e toca num dia para ver ou registrar o treino.
 
-**Incremento 1 completo**, incluindo o E2E do fluxo principal (PBI-26, `integration_test` via `flutter drive` + ChromeDriver contra a stack real). Backup do banco (PBI-05, `pg_dump` semanal no CI guardado fora do Neon, restauração testada — ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md)) e contraste 4,5:1 nos dois temas (PBI-24, auditado e travado por teste) também concluídos. Depois disso entraram "Manter na ficha?" por exercício (PBI-81), o aviso curto em pílula em todo o app (PBI-75), os ajustes do treino ao vivo (PBI-90) e o **modo educador completo** (épico E7, PBI-85 a 89 e PBI-48): convite e aceite com consentimento, telas do educador, plano montado para o aluno e PDF do progresso. Em aberto, como melhorias: troca de métrica no registro (PBI-34, aguarda decisão do PO) e cronograma semanal (PBI-35). O **Incremento 2** (cardio e resumo do período) ainda não começou.
+**Incremento 1 completo**, incluindo o E2E do fluxo principal (PBI-26, `integration_test` via `flutter drive` + ChromeDriver contra a stack real). Backup do banco (PBI-05, `pg_dump` semanal no CI guardado fora do Neon, restauração testada — ver [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md)) e contraste 4,5:1 nos dois temas (PBI-24, auditado e travado por teste) também concluídos. Depois disso entraram "Manter na ficha?" por exercício (PBI-81), o aviso curto em pílula em todo o app (PBI-75), os ajustes do treino ao vivo (PBI-90) e o **modo educador completo** (épico E7, PBI-85 a 89 e PBI-48): convite e aceite com consentimento, telas do educador, plano montado para o aluno e PDF do progresso. A **semana planejada (PBI-35)** também entrou: cada plano define a ficha de cada dia, e a Início mostra planejado, faltou e descanso. Em aberto, como melhoria: troca de métrica no registro (PBI-34, aguarda decisão do PO). O **Incremento 2** (cardio e resumo do período) ainda não começou.
 
 O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o modelo de dados, no [MAS.md](MAS.md) e [MER.md](MER.md).
 
@@ -59,7 +59,7 @@ O status detalhado por PBI está no [BACKLOG.md](BACKLOG.md); a arquitetura e o 
 - Contagem de treinos no período
 
 **Futuro**
-- Modo educador físico: montar treinos para alunos, acompanhar treino e progresso deles e exportar em PDF
+- Épicos E8 a E11 (ver BACKLOG, seção 9), incluindo publicação na Google Play
 - Modo corrida por zonas (detalhado abaixo)
 - Importação de treinos do relógio ou do Strava (arquivo exportado)
 
@@ -97,7 +97,7 @@ Levantado pelo Vinicius a partir de como as assessorias de corrida passam treino
 - [BACKLOG.md](BACKLOG.md): Product Goal, DoR, DoD, PBIs com critérios de aceite e status
 - [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md): snapshot detalhado do que existe (telas, endpoints, banco, CI)
 - [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md): tudo que entrou na `main`, PR por PR, com as migrations
-- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (cardio, modo educador)
+- [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md): o que ainda falta (cardio, PBI-34, E8 a E11)
 - [DEPLOY-AUTOMATICO.md](DEPLOY-AUTOMATICO.md): como funciona o deploy automático no CI
 - [BACKUP-RESTAURACAO.md](BACKUP-RESTAURACAO.md): backup semanal do banco e como restaurar (PBI-05)
 
@@ -105,7 +105,7 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 
 ## Decisões de arquitetura
 
-- **Estrutura preparada, funcionalidade depois.** O banco já conhece atleta e educador, mas o MVP só tem telas de atleta.
+- **Estrutura preparada, funcionalidade depois.** O banco já conhece atleta e educador, mas o modo educador já tem telas.
 - **Papel em tabela separada**, não coluna única, porque uma mesma pessoa pode ser educador e atleta ao mesmo tempo.
 - **Plano com `AutorId` e `AtletaId` separados.** No MVP os dois apontam para a mesma pessoa. Quando o educador entrar, ele passa a ser o autor.
 - **Prescrito separado do executado.** `TreinoExercicio` guarda o planejado, `SerieExecutada` guarda o realizado. Isso permite, no futuro, o educador comparar planejado x realizado.
@@ -143,19 +143,17 @@ O modelo de dados oficial é o do MER. Este README guarda a visão de produto e 
 ## Pontos de atenção
 
 - **LGPD:** o campo de observação pode conter dado de saúde (ex.: "senti dor no joelho"). Para uso pessoal, tranquilo. Quando houver alunos de terceiros e cobrança, vai precisar de termo de consentimento e de uma hospedagem adequada para esses dados. O consentimento precisa cobrir o acesso do educador e a exportação em PDF, já que o arquivo sai do app.
-- **Não inchar o MVP:** o modo educador fica só no modelo de dados até o MVP estar em uso.
+- **Termo de consentimento:** o texto atual é provisório; falta o texto jurídico antes de abrir ao público.
 
 ## Perguntas em aberto
 
-- O PDF do aluno traz o quê? Período filtrado, gráficos, lista de sessões, observações?
-- O aluno pode marcar uma observação como privada, para o educador não ver?
-- Quando o vínculo com o educador termina, ele perde o acesso ao histórico do aluno?
+- (Respondidas pelo PO em 31/10: o PDF leva treinos + evoluções, 90 dias configuráveis; a observação pode ser privada; ao sair de ATIVO o educador perde o acesso, sem apagar dados.)
+- PBI-34: trocar a métrica por série no registro (a) ou no alvo da ficha (b)?
 - Zona é definida por frequência cardíaca, por pace ou por percepção de esforço? Vale guardar as faixas de cada atleta?
 - Intervalado com sobra de rodada (fez 4 em vez de 3) ou rodada incompleta: como mostrar no feedback?
 
 ## Ideias para depois
 
-- Modo educador físico com cadastro de alunos e vínculo
 - Possibilidade de vender e dividir a receita
 - Ideia antiga do Vitor: app para pessoa comum com IA, objetivo (emagrecimento, ganho de peso), cálculo de taxa metabólica basal e sugestão de treino e dieta, com aviso para procurar profissional em caso de problema de saúde
 

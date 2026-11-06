@@ -1,8 +1,8 @@
 # MAS: Modelo de Arquitetura de Software
 
 **Projeto:** Diário de Treino (nome provisório)
-**Versão:** 1.0 (MVP de registro publicado; progresso, tela inicial e catálogo no ar)
-**Última atualização:** 14/10/2026
+**Versão:** 1.1 (MVP e modo educador publicados)
+**Última atualização:** 05/11/2026
 **Documentos relacionados:** [MER.md](MER.md), [BACKLOG.md](BACKLOG.md), [README.md](README.md)
 
 ---
@@ -11,15 +11,15 @@
 
 Registrar as decisões de arquitetura do aplicativo, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
 
-### 1.1 Estado de implementação (19/10/2026)
+### 1.1 Estado de implementação (05/11/2026)
 
-O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com deploy automático da API e do front a cada merge na `main` (ADR-09). A última entrega é a PBI-82 (calendário do mês).
+O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com deploy automático da API e do front a cada merge na `main` (ADR-09). A última entrega é a PBI-35 (semana planejada, PR #135).
 
 **Concluído e na `main`:** fundação back/front (PBI-01 a 03), publicação (PBI-04), autenticação Firebase, `/me` e controle de acesso centralizado (PBI-06 a 08), catálogo com 89 exercícios globais, busca, criação e filtro por membro e músculo (PBI-10, 11, 31, 32, 54), fichas (PBI-12 a 14, 36), registro de sessão com edição, exercício fora da ficha e treino livre (PBI-15 a 19), primeiro acesso (PBI-09), tela inicial com semana, último treino e dicas (PBI-23, 59, 60), progresso com gráfico, observação no ponto e lista de sessões (PBI-20 a 22), perfil, tema e exclusão de conta (PBI-25 e 24), **backup semanal do banco (PBI-05)**, treino em andamento (PBI-37), épico **Treino ao vivo, série por série** (TV-1 a TV-6 = PBI-38 a 43), épico **Planos** com vários planos e um em uso (PBI-44 a 47, 49), ajustes de layout (PBI-50 a 55 e 57 a 67), correções e fluxos de entrada (PBI-68 a 72: sem plano, criar plano, Registrar treino, "Manter na ficha?", atualização das telas pela origem da mudança), as correções de uso real de 16 a 19/10 (**PBI-73, 74, 76, 77, 78, 79 e 80**) e o **calendário do mês (PBI-82)**.
 
-Também na `main`: o **modo educador (épico E7, PBI-85 a 89 e PBI-48)** — vínculo com consentimento, telas do educador, plano montado para o aluno e PDF do progresso —, o aviso curto em pílula em todo o app (PBI-75) e os ajustes do treino ao vivo (PBI-90).
+Também na `main`: o **modo educador (épico E7, PBI-85 a 89 e PBI-48)** — vínculo com consentimento, telas do educador, plano montado para o aluno e PDF do progresso —, o aviso curto em pílula em todo o app (PBI-75), os ajustes do treino ao vivo (PBI-90) e a **semana planejada do plano (PBI-35)**.
 
-**Pendente:** trocar a métrica no registro (PBI-34, aguarda decisão do PO), cronograma semanal (PBI-35) e todo o incremento 2 de cardio (PBI-27 a 30). (Backup PBI-05, contraste PBI-24 e E2E PBI-26 concluídos.)
+**Pendente:** trocar a métrica no registro (PBI-34, aguarda decisão do PO), e todo o incremento 2 de cardio (PBI-27 a 30). (Backup PBI-05, contraste PBI-24 e E2E PBI-26 concluídos.)
 
 ## 2. Visão do produto em uma frase
 
@@ -27,11 +27,11 @@ Aplicativo para registrar treinos (inclusive dias depois do fato) e acompanhar a
 
 ## 3. Escopo arquitetural
 
-| Dentro do MVP | Preparado na estrutura, sem tela | Fora (incrementos futuros) |
+| Dentro do MVP | Entregue depois (E7) | Fora (incrementos futuros) |
 |---|---|---|
 | Login e cadastro | Papel de educador | Telas do modo educador |
 | Fichas A/B/C com exercícios | Vínculo educador x aluno | Exportação em PDF |
-| Registro da sessão por série, com carga pré-preenchida | Prescrito x executado | Modo corrida por zonas (trechos) |
+| Registro da sessão por série, com carga pré-preenchida | Prescrito x executado | Cardio por zonas (incremento 2) |
 | Observação do dia | Intensidade e volume genéricos | Importação do relógio/Strava |
 | Gráfico de evolução por exercício com filtro de período | | Apps nas lojas (Android/iOS) |
 
@@ -45,7 +45,7 @@ Aplicativo para registrar treinos (inclusive dias depois do fato) e acompanhar a
 - RF04: cada série guarda intensidade (carga, zona, peso corporal) e volume (repetições, tempo, distância).
 - RF05: a sessão tem campo de observação livre.
 - RF06: o atleta vê a evolução por exercício em gráfico, filtrando 10, 15, 30 dias ou período livre, e abre a observação do dia ao tocar num ponto.
-- RF07 (futuro): educador com vínculo ativo vê treino e progresso do aluno e exporta em PDF.
+- RF07 (entregue, E7): educador com vínculo ativo vê treino e progresso do aluno e exporta em PDF.
 
 ### 4.2 Não funcionais
 
@@ -136,7 +136,7 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 ```mermaid
 flowchart LR
     atleta([Atleta])
-    educador([Educador físico<br/>futuro])
+    educador([Educador físico])
     app[Diário de Treino]
     firebase[(Firebase<br/>Authentication)]
     neon[(Neon<br/>PostgreSQL)]
@@ -208,7 +208,7 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 | Módulo | Entidades | Casos de uso principais |
 |---|---|---|
 | Identidade | Usuario, UsuarioPapel | Provisionar usuário no primeiro acesso, consultar perfil |
-| Vínculos (futuro) | Vinculo | Convidar aluno, aceitar, encerrar |
+| Vínculos | Vinculo | Convidar aluno, aceitar, encerrar |
 | Catálogo | Exercicio, Metrica, Membro, Musculo | Listar catálogo global + exercícios próprios com filtro por membro, criar exercício |
 | Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita | Montar e editar fichas; criar, renomear, duplicar, definir em uso e excluir plano (PBI-44) |
 | Execução | Sessao, SerieExecutada | Abrir sessão pré-preenchida, salvar sessão, editar sessão |
@@ -315,7 +315,7 @@ PodeAcessarAtleta(usuarioLogado, atletaId) =
 
 Prefixo `/api/v1`, JSON, datas em ISO 8601, ids em UUID. Erros no formato Problem Details (RFC 9457).
 
-Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 incremento 2 · 🟣 futuro (modo educador).
+Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 incremento 2 · 🟣 reservado.
 
 | Método | Rota | Descrição | Status |
 |---|---|---|---|
@@ -412,7 +412,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 - CORS restrito ao domínio do app.
 - Logs nunca registram token nem texto de observação.
 - Exclusão de conta remove os dados do usuário no banco e no Firebase (PBI-25, implementado). `DELETE /api/v1/me` faz hard delete transacional dos dependentes do usuário (sessões → planos → vínculos → exercícios próprios → papéis → usuário, porque as FKs para `usuario` são `Restrict`); o app então remove o usuário no Firebase (`currentUser.delete()`), pedindo reautenticação se o Firebase exigir login recente.
-- Antes do modo educador: termo de consentimento cobrindo acesso do educador às observações e exportação em PDF.
+- Termo de consentimento (texto atual provisório; falta o texto jurídico): termo de consentimento cobrindo acesso do educador às observações e exportação em PDF.
 
 ## 17. Observabilidade
 
@@ -428,7 +428,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 | Hibernação do Neon | Primeira requisição lenta | Aceito; reavaliar se incomodar no uso real |
 | Mudança nos limites do plano gratuito do Neon | Custo inesperado | Backup próprio permite migrar de provedor |
 | Definição de zona (FC, pace ou percepção) | Afeta modelo do modo corrida | Pergunta enviada ao Vinicius |
-| Privacidade das observações frente ao educador | Afeta regra de acesso | Decidir antes do modo educador |
+| ~~Privacidade das observações frente ao educador~~ | ~~Afeta regra de acesso~~ | **Resolvido (PO, 31/10, PBI-87):** observação pode ser privada; texto jurídico do termo ainda pendente |
 | ~~Métrica do gráfico (maior carga ou volume)~~ | ~~Afeta consulta de progresso~~ | **Resolvido (PO, 14/10):** maior carga da sessão + reps daquela série; isometria = maior tempo. Implementado no PBI-20 |
 | Exercício só de repetições no gráfico: melhor série ou total da sessão | Muda a consulta de progresso | Implementada a **melhor série** (maior número de repetições da sessão, PBI-73). Decisão do PO pendente |
 | Exercício repetido em fichas e sessões antigas | Tela com item duplicado ao abrir dado antigo | A unicidade (PBI-74) vive na aplicação, sem constraint no banco. Dados anteriores podem ter repetição e continuam abrindo |
@@ -436,7 +436,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 ## 19. Evolução prevista
 
 1. Incremento 2: cardio como exercício de modalidade CARDIO (zona x tempo ou distância) e resumo do período.
-2. Modo educador: telas de vínculo, visão do aluno, exportação em PDF gerada a partir da mesma consulta do progresso.
+2. ~~Modo educador~~ — entregue (E7, PBI-85 a 89): vínculo, visão do aluno e PDF.
 3. Modo corrida por zonas: trechos com esforço e recuperação, feedback por tempo em zona.
 4. Importação de arquivo do relógio ou Strava.
 5. Publicação nas lojas.
