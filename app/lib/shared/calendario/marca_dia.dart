@@ -21,12 +21,18 @@ class MarcaDia extends StatelessWidget {
     required this.treinou,
     required this.ehHoje,
     required this.futuro,
+    this.descanso = false,
     this.tamanho = 28.0,
   });
 
   final bool treinou;
   final bool ehHoje;
   final bool futuro;
+
+  /// Dia passado de descanso numa semana planejada (PBI-35): círculo fino sem
+  /// o "X", porque não é falta. Só a faixa semanal passa isto; o calendário do
+  /// mês não, e continua igual.
+  final bool descanso;
   final double tamanho;
 
   @override
@@ -56,6 +62,19 @@ class MarcaDia extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: cores.primaryText, width: 2),
+        ),
+      );
+    }
+
+    // Descanso (PBI-35): círculo de borda fina, vazio — sem o "X" da falta.
+    if (descanso) {
+      return Container(
+        width: tamanho,
+        height: tamanho,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          // Mesma cor do círculo da falta: o que os distingue é a forma (sem "X").
+          border: Border.all(color: cores.lineDashed, width: 1.5),
         ),
       );
     }

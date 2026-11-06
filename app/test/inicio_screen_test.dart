@@ -534,4 +534,98 @@ void main() {
       expect(find.text('Registrar treino'), findsOneWidget);
     });
   });
+
+  group('PBI-35: semana planejada na faixa e na folha do dia', () {
+    // Segunda (1) da semana atual, para achar os dias pela data.
+    final segunda = _hoje.subtract(Duration(days: _hoje.weekday - 1));
+    DateTime diaIso(int d) => segunda.add(Duration(days: d - 1));
+
+    /// Plano A/B com a semana: [dias] dia ISO → id da ficha ('A' ou 'B').
+    PlanoAtivo comSemana(Map<int, String> dias) => PlanoAtivo(
+          id: 'p1',
+          nome: 'Hipertrofia',
+          treinos: _planoAB.treinos,
+          semana: [
+            for (final e in dias.entries) DiaPlanejado(diaSemana: e.key, treinoId: e.value),
+          ],
+        );
+
+    testWidgets('sem semana, a faixa e os rótulos ficam como antes', (tester) async {
+      await tester.pumpWidget(await _tela(_planoAB));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel(RegExp('planejado|descanso|faltou')), findsNothing);
+      expect(find.bySemanticsLabel('Dia ${_dd(_hoje)}, sem treino. Toque para registrar'),
+          findsOneWidget);
+    });
+
+    testWidgets('hoje planejado mostra a ficha e a folha diz "Planejado"', (tester) async {
+      await tester.pumpWidget(await _tela(comSemana({_hoje.weekday: 'A'})));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.bySemanticsLabel('Dia ${_dd(_hoje)}, planejado A. Toque para registrar'),
+          findsOneWidget);
+
+      await tester.tap(_dia(_hoje));
+      await tester.pumpAndSettle();
+      expect(find.text('Planejado: A'), findsOneWidget);
+      // O registro segue como hoje: as fichas continuam na folha.
+      expect(find.bySemanticsLabel('Registrar A em ${dataCurtaInicio(_hoje)}'), findsOneWidget);
+    });
+
+    testWidgets(
+        'passado planejado sem treino é "faltou"; treino com outra ficha conta; '
+        'dia sem ficha que não chegou é descanso', (tester) async {
+      // Precisa de dois dias passados (hoje de quarta em diante) e do domingo
+      // ainda por vir (não é domingo).
+      if (_hoje.weekday < DateTime.wednesday || _hoje.weekday == DateTime.sunday) return;
+
+      // A na segunda (faltou) e B na terça (treinou com a ficha A: conta).
+      await tester.pumpWidget(await _tela(
+        comSemana({1: 'A', 2: 'B'}),
+        sessoes: [_sessao('s1', diaIso(2), treino: 'A')],
+      ));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.bySemanticsLabel(
+              'Dia ${_dd(diaIso(1))}, planejado A, faltou. Toque para registrar'),
+          findsOneWidget);
+      expect(find.bySemanticsLabel('Dia ${_dd(diaIso(2))}, planejado B, treino registrado'),
+          findsOneWidget);
+      expect(find.bySemanticsLabel('Dia ${_dd(diaIso(7))}, descanso, ainda não chegou'),
+          findsOneWidget);
+    });
+
+    testWidgets('dia passado sem ficha numa semana planejada é descanso, não falta',
+        (tester) async {
+      if (_hoje.weekday == DateTime.monday) return; // precisa de um dia passado
+
+      // Só o domingo planejado: a segunda (passada) é descanso.
+      await tester.pumpWidget(await _tela(comSemana({7: 'A'})));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Dia ${_dd(diaIso(1))}, descanso. Toque para registrar'),
+          findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('faltou')), findsNothing);
+    });
+
+    testWidgets('com semana, os 7 dias continuam com alvo de 44 px em 360 de largura',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(await _tela(comSemana({1: 'A', 3: 'B', 5: 'A'})));
+      await tester.pumpAndSettle();
+
+      for (var d = 1; d <= 7; d++) {
+        final alvo = tester.getSize(_dia(diaIso(d)));
+        expect(alvo.width, greaterThanOrEqualTo(44));
+        expect(alvo.height, greaterThanOrEqualTo(44));
+      }
+      expect(tester.takeException(), isNull); // sem estouro de layout
+    });
+  });
 }

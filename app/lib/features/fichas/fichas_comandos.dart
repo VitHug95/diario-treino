@@ -39,6 +39,14 @@ class FichasComandos {
   Future<String> duplicarPlano(String planoId) =>
       _mudar((r) => r.duplicarPlano(planoId));
 
+  /// Semana planejada (PBI-35). Avisa planos e fichas: a Início e o detalhe do
+  /// plano (do atleta e do educador) se atualizam.
+  Future<void> definirSemana({
+    required String planoId,
+    required List<DiaPlanejado> dias,
+  }) =>
+      _mudar((r) => r.definirSemana(planoId: planoId, dias: dias));
+
   Future<void> excluirPlano(String planoId) =>
       _mudar((r) => r.excluirPlano(planoId));
 

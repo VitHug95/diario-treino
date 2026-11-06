@@ -15,6 +15,7 @@ import '../fichas/fichas_screen.dart';
 import '../fichas/plano_models.dart';
 import '../../shared/mostrar_aviso.dart';
 import '../planos/acoes_plano.dart';
+import '../planos/editor_semana.dart';
 import 'educador_repository.dart';
 
 /// Argumentos para abrir o detalhe de um plano do aluno (PBI-88d).
@@ -124,6 +125,10 @@ class AlunoPlanoDetalheScreen extends ConsumerWidget {
                     icon: const Icon(LucideIcons.plus, size: AppSizes.iconeSm),
                     label: const Text('Nova ficha'),
                   ),
+                  // Semana do aluno (PBI-35): o educador que montou o plano
+                  // define a ficha de cada dia. Plano de outro autor dá 403,
+                  // que vira aviso de erro.
+                  SecaoSemana(plano: plano, podeEditar: true),
                 ],
               ],
             ),

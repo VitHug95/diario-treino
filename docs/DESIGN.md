@@ -138,6 +138,22 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
   pílula, para não parecer que deu certo. Decisão do PO (PBI-75): o "Treino salvo" é só o pop, **sem** a
   antiga ação "Ver treino" — o treino se reabre pelo cartão de último treino na
   Início.
+- Marca do dia (faixa "Esta semana" e calendário do mês): treinou = círculo
+  `primary` com check; hoje = anel `primary-text`; futuro = círculo tracejado
+  `line-dashed`; passado sem treino = círculo fino com "X" (`line-dashed`).
+  Com **semana planejada** (PBI-35), só na faixa da Início: o "X" fica só para o
+  dia planejado que passou sem treino ("faltou"); dia sem ficha que passou é
+  **descanso** (círculo fino `line-dashed`, vazio: a diferença para a falta é a
+  forma, sem o "X"); embaixo de cada
+  dia vai o rótulo curto da ficha (A, B ou a posição) em `caption` 700
+  `text-strong`. O estado nunca depende só da cor (forma + texto) e o rótulo
+  falado diz "planejado A, faltou" / "descanso". Sem semana, a faixa é a de antes.
+- Semana do plano (PBI-35): seção "SEMANA" no detalhe do plano, um card
+  (`bg-surface`, borda `line-default`, raio 16) com os 7 dias separados por
+  `line-divider`, linha de 44 no mínimo. A ficha do dia aparece com um selo
+  pílula `primary-tint` / `primary-on-tint` e o nome em `text-strong`; dia sem
+  ficha mostra "Livre" em `text-secondary`. Escolher abre uma folha com as fichas
+  e "Livre"; a escolhida tem borda `primary-text` 2px e check (não só cor).
 - Bloco de observação: `obs-tint`, borda `obs-line`, título `obs-title`, corpo `obs-body`, raio 16.
 - Chip de filtro: pílula 44. Selecionado: fundo `text-primary`, texto `bg-surface`.
 - Abas segmentadas: trilho `bg-track` 4px de respiro, raio 12; aba ativa `bg-surface` raio 9.

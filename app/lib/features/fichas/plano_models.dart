@@ -1,10 +1,19 @@
 /// Plano ativo com suas fichas (GET /api/v1/planos/ativo).
 class PlanoAtivo {
-  const PlanoAtivo({required this.id, required this.nome, required this.treinos});
+  const PlanoAtivo({
+    required this.id,
+    required this.nome,
+    required this.treinos,
+    this.semana = const [],
+  });
 
   final String id;
   final String nome;
   final List<TreinoResumo> treinos;
+
+  /// Semana planejada (PBI-35), ordenada por dia. Vazia = sem semana: a Início
+  /// fica como antes.
+  final List<DiaPlanejado> semana;
 
   factory PlanoAtivo.doJson(Map<String, dynamic> json) => PlanoAtivo(
         id: json['id'] as String,
@@ -13,8 +22,56 @@ class PlanoAtivo {
             .cast<Map<String, dynamic>>()
             .map(TreinoResumo.doJson)
             .toList(),
+        semana: DiaPlanejado.listaDoJson(json['semana']),
       );
 }
+
+/// Um dia da semana planejada do plano (PBI-35): a ficha do dia. [diaSemana]
+/// no padrão ISO, igual ao `DateTime.weekday` (1 = segunda … 7 = domingo).
+/// Dia ausente da lista = livre/descanso.
+class DiaPlanejado {
+  const DiaPlanejado({required this.diaSemana, required this.treinoId});
+
+  final int diaSemana;
+  final String treinoId;
+
+  factory DiaPlanejado.doJson(Map<String, dynamic> json) => DiaPlanejado(
+        diaSemana: (json['diaSemana'] as num).toInt(),
+        treinoId: json['treinoId'] as String,
+      );
+
+  Map<String, dynamic> paraJson() => {'diaSemana': diaSemana, 'treinoId': treinoId};
+
+  /// Lê a lista `semana` da API; ausente (API antiga) = sem semana.
+  static List<DiaPlanejado> listaDoJson(Object? valor) =>
+      ((valor as List<dynamic>?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(DiaPlanejado.doJson)
+          .toList()
+        ..sort((a, b) => a.diaSemana.compareTo(b.diaSemana));
+
+  @override
+  bool operator ==(Object other) =>
+      other is DiaPlanejado && other.diaSemana == diaSemana && other.treinoId == treinoId;
+
+  @override
+  int get hashCode => Object.hash(diaSemana, treinoId);
+}
+
+/// Fichas planejadas por dia da semana (ISO 1..7), só das fichas que ainda
+/// estão em [fichas]. Base da faixa semanal e do editor da semana (PBI-35).
+Map<int, TreinoResumo> fichasPorDia(List<DiaPlanejado> semana, List<TreinoResumo> fichas) {
+  final porId = {for (final f in fichas) f.id: f};
+  return {
+    for (final d in semana)
+      if (porId[d.treinoId] != null) d.diaSemana: porId[d.treinoId]!,
+  };
+}
+
+/// Nome do dia da semana ISO (1 = segunda), para rótulos e leitor de tela.
+String nomeDiaSemana(int diaSemana) => const [
+      'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo',
+    ][diaSemana - 1];
 
 /// Um plano na lista de planos (GET /api/v1/planos, PBI-44/45). Espelha o
 /// `PlanoDaLista` da API.
@@ -69,6 +126,7 @@ class PlanoDetalhe {
     required this.autor,
     required this.somenteLeitura,
     required this.treinos,
+    this.semana = const [],
   });
 
   final String id;
@@ -80,6 +138,9 @@ class PlanoDetalhe {
 
   /// Fichas do plano, na ordem da sequência (`ordem`).
   final List<TreinoResumo> treinos;
+
+  /// Semana planejada (PBI-35), ordenada por dia; vazia = sem semana.
+  final List<DiaPlanejado> semana;
 
   factory PlanoDetalhe.doJson(Map<String, dynamic> json) => PlanoDetalhe(
         id: json['id'] as String,
@@ -93,6 +154,7 @@ class PlanoDetalhe {
                 .map(TreinoResumo.doJson)
                 .toList())
           ..sort((a, b) => a.ordem.compareTo(b.ordem)),
+        semana: DiaPlanejado.listaDoJson(json['semana']),
       );
 }
 
