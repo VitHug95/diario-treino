@@ -1,3 +1,4 @@
+import 'package:diario_treino/features/fichas/plano_models.dart';
 import 'package:diario_treino/features/inicio/inicio_logica.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +85,49 @@ void main() {
       // Quinta em diante é futuro.
       expect(dias[3].futuro, isTrue); // quinta
       expect(dias[2].futuro, isFalse); // quarta = hoje, não futuro
+    });
+
+    // PBI-35: semana planejada (dia ISO → ficha).
+    const a = TreinoResumo(id: 'A', nome: 'A', descricao: null, ordem: 1);
+    const b = TreinoResumo(id: 'B', nome: 'B', descricao: null, ordem: 2);
+
+    test('PBI-35: sem semana, ninguém é "faltou" nem "descanso"', () {
+      final dias = InicioLogica.diasDaSemana(DateTime(2026, 10, 14), const []);
+      expect(dias.any((d) => d.temSemana || d.faltou || d.descanso), isFalse);
+      expect(dias.every((d) => d.planejada == null), isTrue);
+    });
+
+    test('PBI-35: planejado que passou sem treino é "faltou"; sem ficha é descanso; '
+        'treino com outra ficha conta', () {
+      // Quarta 14/10. A na segunda (12, sem treino), B na terça (13, treinou A),
+      // A na sexta (16, futuro). Domingo sem ficha.
+      final dias = InicioLogica.diasDaSemana(
+        DateTime(2026, 10, 14),
+        [_sessao('A', DateTime(2026, 10, 13))],
+        planejadas: const {1: a, 2: b, 5: a},
+      );
+
+      expect(dias[0].planejada, a);
+      expect(dias[0].faltou, isTrue); // segunda: planejado, passou, sem treino
+      expect(dias[1].treinou, isTrue); // terça: treinou (com outra ficha)
+      expect(dias[1].faltou, isFalse);
+      expect(dias[2].faltou, isFalse); // quarta = hoje: ainda dá tempo
+      expect(dias[2].descanso, isFalse);
+      expect(dias[4].planejada, a); // sexta: futuro planejado
+      expect(dias[4].faltou, isFalse);
+      expect(dias[6].descanso, isFalse); // domingo sem ficha, mas futuro
+      expect(dias.every((d) => d.temSemana), isTrue);
+    });
+
+    test('PBI-35: dia passado sem ficha e sem treino é descanso', () {
+      final dias = InicioLogica.diasDaSemana(
+        DateTime(2026, 10, 14),
+        const [],
+        planejadas: const {3: a}, // só a quarta (hoje) planejada
+      );
+      expect(dias[0].descanso, isTrue); // segunda
+      expect(dias[1].descanso, isTrue); // terça
+      expect(dias[0].faltou, isFalse);
     });
   });
 }

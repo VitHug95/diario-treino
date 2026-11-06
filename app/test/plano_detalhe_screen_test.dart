@@ -347,7 +347,11 @@ void main() {
     // Continua no plano; a ficha não abre sozinha. A confirmação é só um aviso
     // curto (PBI-75): mostra o texto, mas não oferece mais a ação de abrir.
     expect(repo.criada, 'D');
-    expect(find.text('HIPERTROFIA'), findsOneWidget);
+    // Continua no detalhe do plano. (Não pelo título "HIPERTROFIA": com a seção
+    // Semana, PBI-35, a página ficou mais longa e o cabeçalho sai da tela ao
+    // rolar até "Nova ficha".)
+    expect(find.byType(PlanoDetalheScreen), findsOneWidget);
+    expect(find.textContaining('Editar '), findsNothing);
     expect(find.text('Ficha “D” criada'), findsOneWidget);
     expect(find.text('Adicionar exercícios'), findsNothing);
   });

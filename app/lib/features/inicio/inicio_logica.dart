@@ -1,3 +1,4 @@
+import '../fichas/plano_models.dart';
 import '../sessao/sessao_models.dart';
 
 /// Regras puras da tela inicial, separadas da UI para teste.
@@ -45,11 +46,17 @@ abstract final class InicioLogica {
   }
 
   /// Os 7 dias da semana (seg→dom) de [referencia], com marcação de treino.
-  /// Um dia é marcado quando há ao menos uma sessão naquela data.
+  /// Um dia é marcado quando há ao menos uma sessão naquela data (com qualquer
+  /// ficha — decisão do PO na PBI-35).
+  ///
+  /// [planejadas] é a semana do plano em uso (dia ISO → ficha, ver
+  /// `fichasPorDia`). Vazia = plano sem semana: os dias saem exatamente como
+  /// antes da PBI-35.
   static List<DiaSemana> diasDaSemana(
     DateTime referencia,
-    List<SessaoResumo> sessoes,
-  ) {
+    List<SessaoResumo> sessoes, {
+    Map<int, TreinoResumo> planejadas = const {},
+  }) {
     final segunda = inicioDaSemana(referencia);
     final hoje = DateTime(referencia.year, referencia.month, referencia.day);
 
@@ -67,6 +74,8 @@ abstract final class InicioLogica {
             treinou: datasComTreino.contains(dia),
             ehHoje: dia == hoje,
             futuro: dia.isAfter(hoje),
+            planejada: planejadas[dia.weekday],
+            temSemana: planejadas.isNotEmpty,
           );
         }(),
     ];
@@ -80,12 +89,31 @@ class DiaSemana {
     required this.treinou,
     required this.ehHoje,
     required this.futuro,
+    this.planejada,
+    this.temSemana = false,
   });
 
   final DateTime data;
   final bool treinou;
   final bool ehHoje;
   final bool futuro;
+
+  /// Ficha planejada para o dia na semana do plano em uso (PBI-35), ou nulo.
+  final TreinoResumo? planejada;
+
+  /// O plano em uso tem semana definida. Sem semana, nenhum dia é "faltou" nem
+  /// "descanso": a faixa fica como antes da PBI-35.
+  final bool temSemana;
+
+  /// Já passou (nem hoje nem futuro) e não teve treino.
+  bool get _passouSemTreino => !treinou && !ehHoje && !futuro;
+
+  /// Dia planejado que passou sem treino.
+  bool get faltou => temSemana && planejada != null && _passouSemTreino;
+
+  /// Dia sem ficha planejada, numa semana planejada, que passou sem treino:
+  /// descanso, não falta.
+  bool get descanso => temSemana && planejada == null && _passouSemTreino;
 
   /// Inicial do dia da semana em pt-BR (S T Q Q S S D), seg→dom.
   String get inicial => const ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'][data.weekday - 1];

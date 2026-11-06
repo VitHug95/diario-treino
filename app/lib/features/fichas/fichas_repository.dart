@@ -106,6 +106,33 @@ class FichasRepository {
   Future<void> excluirPlano(String planoId) =>
       _executarPlano(() => _dio.delete<void>('/planos/$planoId'));
 
+  /// Grava a semana planejada do plano (PBI-35), substituindo a anterior.
+  /// Lista vazia limpa a semana.
+  Future<void> definirSemana({
+    required String planoId,
+    required List<DiaPlanejado> dias,
+  }) async {
+    try {
+      await _dio.put<void>(
+        '/planos/$planoId/semana',
+        data: {'dias': [for (final d in dias) d.paraJson()]},
+      );
+    } on DioException catch (e) {
+      throw FichasException(_traduzirSemana(e));
+    }
+  }
+
+  static String _traduzirSemana(DioException e) {
+    final status = e.response?.statusCode;
+    return switch (status) {
+      400 => 'Não foi possível salvar a semana. Confira as fichas e tente de novo.',
+      403 => 'Só quem montou este plano pode mudar a semana.',
+      404 => 'Plano não encontrado.',
+      null => 'Sem conexão. Verifique sua internet e tente de novo.',
+      _ => 'Não foi possível salvar a semana. Tente novamente.',
+    };
+  }
+
   Future<void> _executarPlano(Future<void> Function() acao) async {
     try {
       await acao();

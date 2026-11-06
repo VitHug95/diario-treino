@@ -141,6 +141,8 @@ class _Conteudo extends StatelessWidget {
   Widget build(BuildContext context) {
     final fichas = [...?plano?.treinos]..sort((a, b) => a.ordem.compareTo(b.ordem));
     final ultima = sessoes.whenOrNull(data: InicioLogica.ultimaSessao);
+    // Semana do plano em uso (PBI-35): dia ISO → ficha. Vazia = Início igual.
+    final planejadas = fichasPorDia(plano?.semana ?? const [], fichas);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,12 +154,15 @@ class _Conteudo extends StatelessWidget {
         ],
         _CartaoSemana(
           sessoes: sessoes,
+          planejadas: planejadas,
+          fichas: fichas,
           aoTentar: aoTentarSessoes,
           aoTocarDia: (dia, lista) => abrirFolhaDoDia(context,
               dia: dia,
               sessoes: InicioLogica.sessoesDoDia(dia, lista),
               fichas: fichas,
-              planoNome: plano?.nome),
+              planoNome: plano?.nome,
+              planejada: planejadas[dia.weekday]),
           aoVerMes: () => context.push(Rotas.mes),
         ),
         // PBI-71: registrar fica sempre à mão, com ou sem plano.
@@ -242,12 +247,20 @@ class _CartaoDica extends ConsumerWidget {
 class _CartaoSemana extends StatelessWidget {
   const _CartaoSemana({
     required this.sessoes,
+    required this.planejadas,
+    required this.fichas,
     required this.aoTentar,
     required this.aoTocarDia,
     required this.aoVerMes,
   });
 
   final AsyncValue<List<SessaoResumo>> sessoes;
+
+  /// Semana do plano em uso (PBI-35); vazia = faixa igual à de antes.
+  final Map<int, TreinoResumo> planejadas;
+
+  /// Fichas do plano em ordem, para o rótulo curto (A, B ou 1, 2) do dia.
+  final List<TreinoResumo> fichas;
   final VoidCallback aoTentar;
   final void Function(DateTime dia, List<SessaoResumo> sessoes) aoTocarDia;
 
@@ -258,7 +271,8 @@ class _CartaoSemana extends StatelessWidget {
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
     final dias = sessoes.whenOrNull(
-        data: (lista) => InicioLogica.diasDaSemana(DateTime.now(), lista));
+        data: (lista) =>
+            InicioLogica.diasDaSemana(DateTime.now(), lista, planejadas: planejadas));
     final treinados = dias?.where((d) => d.treinou).length;
 
     return Container(
@@ -323,6 +337,9 @@ class _CartaoSemana extends StatelessWidget {
           sessoes.when(
             data: (lista) => _FaixaSemana(
               dias: dias!,
+              posicaoFicha: {
+                for (var i = 0; i < fichas.length; i++) fichas[i].id: i + 1,
+              },
               aoTocarDia: (dia) => aoTocarDia(dia, lista),
             ),
             loading: () => const SizedBox(
@@ -352,17 +369,30 @@ class _CartaoSemana extends StatelessWidget {
 }
 
 /// Faixa dos 7 dias (seg→dom). Quatro estados que não dependem só da cor:
-/// treinou (círculo cheio com check), passado sem treino (círculo vazio), hoje
+/// treinou (círculo cheio com check), passado sem treino (círculo com "X"), hoje
 /// (anel e letra azuis) e futuro (tracejado, sem toque).
+///
+/// Com semana planejada (PBI-35), cada dia mostra embaixo o rótulo curto da
+/// ficha (A, B…); o "X" fica só para o dia planejado que passou sem treino
+/// ("faltou") e o dia sem ficha que passou vira descanso (círculo vazio). Sem
+/// semana, nada disso aparece e a faixa é a de antes.
 class _FaixaSemana extends StatelessWidget {
-  const _FaixaSemana({required this.dias, required this.aoTocarDia});
+  const _FaixaSemana({
+    required this.dias,
+    required this.posicaoFicha,
+    required this.aoTocarDia,
+  });
 
   final List<DiaSemana> dias;
+
+  /// Posição (1-based) de cada ficha no plano, para o rótulo curto.
+  final Map<String, int> posicaoFicha;
   final ValueChanged<DateTime> aoTocarDia;
 
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
+    final temSemana = dias.any((d) => d.temSemana);
     return Row(
       children: [
         for (final dia in dias)
@@ -393,7 +423,25 @@ class _FaixaSemana extends StatelessWidget {
                           treinou: dia.treinou,
                           ehHoje: dia.ehHoje,
                           futuro: dia.futuro,
+                          descanso: dia.descanso,
                         ),
+                        // Ficha planejada (PBI-35). Dia livre ganha um texto
+                        // vazio da mesma altura, para os 7 dias alinharem.
+                        if (temSemana) ...[
+                          const SizedBox(height: AppSpacing.x4),
+                          Text(
+                            dia.planejada == null
+                                ? ''
+                                : rotuloQuadradoFicha(dia.planejada!.nome,
+                                    posicaoFicha[dia.planejada!.id] ?? 1),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            style: AppText.caption.copyWith(
+                              color: cores.textStrong,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -407,9 +455,17 @@ class _FaixaSemana extends StatelessWidget {
 
   static String _rotuloAcessivel(DiaSemana dia) {
     final dd = '${dia.data.day.toString().padLeft(2, '0')}/${dia.data.month.toString().padLeft(2, '0')}';
-    if (dia.treinou) return 'Dia $dd, treino registrado';
-    if (dia.futuro) return 'Dia $dd, ainda não chegou';
-    return 'Dia $dd, sem treino. Toque para registrar';
+    // Sem semana planejada: exatamente os rótulos de antes da PBI-35.
+    if (!dia.temSemana) {
+      if (dia.treinou) return 'Dia $dd, treino registrado';
+      if (dia.futuro) return 'Dia $dd, ainda não chegou';
+      return 'Dia $dd, sem treino. Toque para registrar';
+    }
+    final plano = dia.planejada == null ? 'descanso' : 'planejado ${dia.planejada!.nome}';
+    if (dia.treinou) return 'Dia $dd, $plano, treino registrado';
+    if (dia.futuro) return 'Dia $dd, $plano, ainda não chegou';
+    if (dia.faltou) return 'Dia $dd, $plano, faltou. Toque para registrar';
+    return 'Dia $dd, $plano. Toque para registrar';
   }
 }
 
@@ -515,6 +571,9 @@ Future<void> abrirFolhaDoDia(
   required List<SessaoResumo> sessoes,
   required List<TreinoResumo> fichas,
   required String? planoNome,
+  // Ficha planejada para o dia (PBI-35). O calendário do mês não passa: lá a
+  // folha continua como antes.
+  TreinoResumo? planejada,
 }) async {
   final escolha = await showModalBottomSheet<_EscolhaDia>(
     context: context,
@@ -526,6 +585,7 @@ Future<void> abrirFolhaDoDia(
       sessoes: sessoes,
       fichas: fichas,
       planoNome: planoNome,
+      planejada: planejada,
     ),
   );
   if (escolha == null || !context.mounted) return;
@@ -555,12 +615,14 @@ class _FolhaDoDia extends StatelessWidget {
     required this.sessoes,
     required this.fichas,
     required this.planoNome,
+    this.planejada,
   });
 
   final DateTime dia;
   final List<SessaoResumo> sessoes;
   final List<TreinoResumo> fichas;
   final String? planoNome;
+  final TreinoResumo? planejada;
 
   @override
   Widget build(BuildContext context) {
@@ -579,6 +641,20 @@ class _FolhaDoDia extends StatelessWidget {
               header: true,
               child: Text(dataCurtaInicio(dia), style: AppText.displayS),
             ),
+            if (planejada != null) ...[
+              const SizedBox(height: AppSpacing.x6),
+              Row(
+                children: [
+                  Icon(LucideIcons.calendarCheck,
+                      size: AppSizes.iconeSm, color: cores.primaryText),
+                  const SizedBox(width: AppSpacing.x6),
+                  Expanded(
+                    child: Text('Planejado: ${planejada!.nome}',
+                        style: AppText.body.copyWith(color: cores.textStrong)),
+                  ),
+                ],
+              ),
+            ],
             if (sessoes.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x16),
               Text('REGISTRADO', style: AppText.overline.copyWith(color: cores.textSecondary)),

@@ -15,7 +15,7 @@ const _mapa = 'lib/core/dados/invalidacao.dart';
 
 /// Métodos que gravam no servidor, por repositório.
 const _escritas = [
-  'garantirPlano', 'criarPlano', 'renomearPlano', 'definirEmUso',
+  'garantirPlano', 'criarPlano', 'renomearPlano', 'definirEmUso', 'definirSemana',
   'duplicarPlano', 'excluirPlano', 'adicionarFicha', 'salvarComoFicha',
   'editarFicha', 'excluirFicha', 'adicionarExercicio', 'removerExercicio',
   'reordenarExercicios', 'definirAlvos', // fichas e planos

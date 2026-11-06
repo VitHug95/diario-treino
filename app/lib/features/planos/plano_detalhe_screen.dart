@@ -25,6 +25,7 @@ import '../sessao/sessao_repository.dart';
 import '../sessao/treino_em_andamento.dart';
 import '../sessao/widgets_ao_vivo.dart';
 import 'acoes_plano.dart';
+import 'editor_semana.dart';
 
 /// Tela 19 (PBI-46): detalhe de um plano, com as fichas dele. Dá para abrir
 /// qualquer ficha (tela 13) e treinar mesmo com o plano fora de uso: a sessão
@@ -241,6 +242,9 @@ class _Conteudo extends ConsumerWidget {
               if (!plano.somenteLeitura)
                 BotaoTracejado(rotulo: 'Nova ficha', aoTocar: aoNovaFicha),
               ],
+              // Semana planejada (PBI-35): some sem fichas e, no plano do
+              // professor, quando ele não definiu a semana.
+              SecaoSemana(plano: plano, podeEditar: !plano.somenteLeitura),
               const SizedBox(height: AppSpacing.x24),
               if (!plano.emUso)
                 SizedBox(
