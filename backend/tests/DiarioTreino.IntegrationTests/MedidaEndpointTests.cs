@@ -41,8 +41,15 @@ public sealed class MedidaEndpointTests
     private static string Hoje(int diasAtras = 0) =>
         DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-diasAtras).ToString("yyyy-MM-dd");
 
-    private static Task<HttpResponseMessage> Salvar(HttpClient c, string data, object valores) =>
-        c.PutAsJsonAsync($"/api/v1/me/medidas/{data}", new { valores });
+    // Os testes descrevem os valores como objeto anônimo (CINTURA = 83.0), mas o
+    // serializador aplicaria camelCase às propriedades ("cintura"). Um dicionário
+    // preserva as chaves como o app as envia (CINTURA).
+    private static Task<HttpResponseMessage> Salvar(HttpClient c, string data, object valores)
+    {
+        var dicionario = valores.GetType().GetProperties()
+            .ToDictionary(p => p.Name, p => p.GetValue(valores));
+        return c.PutAsJsonAsync($"/api/v1/me/medidas/{data}", new { valores = dicionario });
+    }
 
     private static async Task<ResumoResposta> Resumo(HttpClient c) =>
         (await c.GetFromJsonAsync<ResumoResposta>("/api/v1/me/medidas"))!;
