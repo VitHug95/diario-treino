@@ -101,6 +101,10 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - **Exportar PDF (PBI-89):** botão na aba Progresso; PDF dos últimos 90 dias
   (configurável), gerado no backend.
 
+### Corpo (E12, PBI-92)
+- Perfil: bloco **Corpo** com a linha "Medidas corporais" e o resumo da última medição.
+- Medidas corporais: últimas medidas dos 12 tipos com variação (seta e sinal), histórico por dia; registrar só o que mediu (vírgula ou ponto), editar e excluir um dia. Dado de saúde: só o dono vê; o compartilhamento com o educador ainda não existe.
+
 ### Modo educador (E7)
 - Tornar-se educador, convidar aluno, aceitar/recusar/encerrar vínculo (PBI-85,
   PBI-88a/b), lista de alunos.
@@ -206,7 +210,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   produto (opção a × b — ver "Perguntas ainda abertas"). Em espera.
 - **Incremento 2 — cardio (PBI-27 a 30):** depende da resposta do Vinicius sobre
   como a zona é definida (FC, pace ou percepção).
-- **E12 · Corpo e medidas (PBI-91 a 96):** em andamento. A PBI-91 (back: `/me/medidas`) está pronta; faltam o app (92), dados corporais e TMB (93), gráfico (94) e o compartilhamento com o educador (95 e 96, aguardam respostas do PO).
+- **E12 · Corpo e medidas (PBI-91 a 96):** em andamento. Prontas: a PBI-91 (back, `/me/medidas`, #137) e a PBI-92 (app: Perfil, lista e registro das medidas). Faltam dados corporais e TMB (93), gráfico (94) e o compartilhamento com o educador (95 e 96, aguardam respostas do PO).
 - **Épicos futuros:** E8 a E11 (ver [BACKLOG](BACKLOG.md), seção 9), incluindo
   publicação na Google Play (E10).
 
@@ -272,7 +276,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 Incremento 1 (atleta), E7 (educador), PBI-90, PBI-75 e PBI-35 estão na `main`
 (último PR: #135). Próximos passos, a escolher com o PO:
 
-1. **E12 · Corpo e medidas:** seguir com a PBI-92 (app das medidas), depois 93 e 94; a 95 e a 96 esperam as perguntas ao PO (ver BACKLOG, seção 10).
+1. **E12 · Corpo e medidas:** seguir com a PBI-93 (dados corporais e TMB) e a 94 (gráfico); a 95 e a 96 esperam as perguntas ao PO (ver BACKLOG, seção 10).
 2. **PBI-34:** decidir (a) × (b) e implementar.
 3. **Cardio (PBI-27 a 30):** destravar a definição de zona com o Vinicius.
 4. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.

@@ -13,6 +13,9 @@ import '../../theme/theme_tokens.dart';
 import '../educador/dialogo_convidar_aluno.dart';
 import '../educador/educador_comandos.dart';
 import '../educador/educador_repository.dart';
+import '../medidas/medidas_formato.dart';
+import '../medidas/medidas_models.dart';
+import '../medidas/medidas_repository.dart';
 import 'auth_service.dart';
 import 'perfil_api.dart';
 
@@ -52,6 +55,13 @@ class PerfilScreen extends ConsumerWidget {
               data: (perfil) => _SecaoEducador(perfil: perfil),
               orElse: () => const SizedBox.shrink(),
             ),
+            // Corpo (E12 / PBI-92): só uma linha de toque, sem campos no Perfil.
+            // "Dados corporais" entra aqui com a PBI-93.
+            Text('CORPO',
+                style: AppText.overline.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x8),
+            _LinhaMedidas(resumo: ref.watch(resumoMedidasProvider)),
+            const SizedBox(height: AppSpacing.x28),
             Text('TEMA',
                 style: AppText.overline.copyWith(color: cores.textSecondary)),
             const SizedBox(height: AppSpacing.x8),
@@ -411,6 +421,30 @@ class _SecaoEducador extends ConsumerWidget {
   }
 }
 
+/// "Medidas corporais" com o resumo da última medição (E12 / PBI-92). O resumo
+/// nunca bloqueia a linha: carregando ou com erro, ela continua tocável.
+class _LinhaMedidas extends StatelessWidget {
+  const _LinhaMedidas({required this.resumo});
+
+  final AsyncValue<ResumoMedidas> resumo;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitulo = resumo.when(
+      loading: () => 'Carregando…',
+      error: (_, __) => 'Toque para ver suas medidas',
+      data: resumoParaPerfil,
+    );
+    return _LinhaAcao(
+      icone: LucideIcons.ruler,
+      titulo: 'Medidas corporais',
+      subtitulo: subtitulo,
+      rotuloFalado: 'Medidas corporais. $subtitulo',
+      aoTocar: () => context.push(Rotas.medidas),
+    );
+  }
+}
+
 /// Linha de ação da seção educador: ícone + título + subtítulo, tocável.
 class _LinhaAcao extends StatelessWidget {
   const _LinhaAcao({
@@ -419,6 +453,7 @@ class _LinhaAcao extends StatelessWidget {
     required this.subtitulo,
     required this.aoTocar,
     this.destaque = false,
+    this.rotuloFalado,
   });
 
   final IconData icone;
@@ -427,12 +462,16 @@ class _LinhaAcao extends StatelessWidget {
   final VoidCallback aoTocar;
   final bool destaque;
 
+  /// O que o leitor de tela diz. Sem ele, só o [titulo]; com ele, vale quando o
+  /// subtítulo traz informação (ex.: o resumo das medidas).
+  final String? rotuloFalado;
+
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
     return Semantics(
       button: true,
-      label: titulo,
+      label: rotuloFalado ?? titulo,
       excludeSemantics: true,
       child: InkWell(
         onTap: aoTocar,

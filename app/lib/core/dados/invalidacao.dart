@@ -5,6 +5,7 @@ import '../../features/auth/perfil_api.dart';
 import '../../features/catalogo/catalogo_repository.dart';
 import '../../features/educador/educador_repository.dart';
 import '../../features/fichas/fichas_repository.dart';
+import '../../features/medidas/medidas_repository.dart';
 import '../../features/progresso/progresso_repository.dart';
 import '../../features/sessao/sessao_repository.dart';
 import '../../features/sessao/treino_em_andamento.dart';
@@ -28,6 +29,9 @@ enum Mudanca {
   /// Vínculo educador-aluno: ativar o papel, convidar, aceitar, recusar,
   /// encerrar (PBI-88).
   vinculos,
+
+  /// Medidas corporais: salvar ou excluir as medidas de um dia (E12 / PBI-92).
+  medidas,
 }
 
 /// Mapa único de invalidação (PBI-70): cada mudança invalida tudo o que é
@@ -65,6 +69,11 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         ..invalidate(perfilProvider)
         ..invalidate(convitesPendentesProvider)
         ..invalidate(alunosProvider);
+    case Mudanca.medidas:
+      // Lista, histórico, resumo do Perfil e o dia aberto para edição.
+      ref
+        ..invalidate(resumoMedidasProvider)
+        ..invalidate(diaMedidasProvider);
   }
 }
 

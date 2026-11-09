@@ -16,6 +16,8 @@ import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
+import '../../features/medidas/medidas_corporais_screen.dart';
+import '../../features/medidas/registrar_medidas_screen.dart';
 import '../../features/planos/plano_detalhe_screen.dart';
 import '../../features/planos/planos_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
@@ -69,6 +71,11 @@ abstract final class Rotas {
   static const alunoPlanos = '/perfil/alunos/aluno/planos';
   static const alunoPlanoDetalhe = '/perfil/alunos/aluno/planos/plano';
   static const convites = '/perfil/convites';
+
+  /// Medidas corporais (E12 / PBI-92), empilhadas sobre o Perfil. O registro é
+  /// em tela cheia (extra: DateTime do dia a editar; sem extra, hoje).
+  static const medidas = '/perfil/medidas';
+  static const registrarMedidas = '/perfil/medidas/registrar';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
   static const mes = '/mes';
@@ -244,6 +251,29 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'convites',
                         name: 'convites',
                         builder: (context, state) => const ConvitesScreen(),
+                      ),
+                      // Medidas corporais (E12 / PBI-92).
+                      GoRoute(
+                        path: 'medidas',
+                        name: 'medidas',
+                        builder: (context, state) =>
+                            const MedidasCorporaisScreen(),
+                        routes: [
+                          GoRoute(
+                            parentNavigatorKey: _rootNavigatorKey,
+                            path: 'registrar',
+                            name: 'registrarMedidas',
+                            builder: (context, state) {
+                              final dia = state.extra is DateTime
+                                  ? state.extra! as DateTime
+                                  : null;
+                              return RegistrarMedidasScreen(
+                                key: ValueKey('medidas:${dia?.toIso8601String()}'),
+                                dia: dia,
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
