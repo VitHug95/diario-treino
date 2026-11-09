@@ -113,6 +113,7 @@ try
     app.MapExercicioEndpoints();
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
+    app.MapMedidaEndpoints();
     app.MapProgressoEndpoints();
     app.MapVinculoEndpoints();
 

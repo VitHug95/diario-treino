@@ -1179,6 +1179,7 @@ Estão aqui para dar visão do caminho. Nenhum atende a Definition of Ready aind
 | **E8 · Inteligência no feedback** | Músculos secundários e cartão "séries por músculo na semana" (base no ADR-10); Tags rápidas na observação; recorde pessoal e 1RM estimado; sugestão de aumento de carga |
 | **E9 · Corrida avançada** | Faixas de zona por atleta; importação de arquivo do relógio ou Strava |
 | **E10 · Lojas** | Publicação na Google Play; avaliação de custo e processo da App Store |
+| **E12 · Corpo e medidas** ⏳ *(PBI-91 a 96; ver a seção do épico abaixo)* | Medidas do corpo por dia, gráfico de evolução, TMB e compartilhamento com o educador por cadeado. |
 | **E11 · Conforto no registro** | Cronômetro de descanso dentro do registro (o treino ao vivo já tem descanso, PBI-90; falta confirmar com o PO o que resta no registro posterior) |
 
 **Nota sobre o E7 (registro histórico; o épico foi entregue):** o modo
@@ -1388,6 +1389,76 @@ aluno, montar plano/ficha e exportar o progresso em PDF.
 
 **Depende de:** PBI-86, PBI-87. **Prioridade:** média.
 
+### Épico E12 · Corpo e medidas (pedido do PO, 09/11)
+
+> O atleta registra peso e medidas do corpo no ritmo dele, vê a evolução num gráfico,
+> calcula a taxa metabólica basal e decide, com um cadeado, se o educador pode ver.
+
+Protótipos: canvas "Telas App de Treino", telas 22 a 29 (Clara e Escura). **Substitui** o
+desenho antigo "perfil corporal" (peso único em `usuario`): peso virou medida com histórico
+e o gráfico e o compartilhamento entraram no escopo; seis PBIs pequenas (91 a 96).
+
+**Decisões do épico (a confirmar com o PO na revisão):**
+1. Perfil não ganha campos: ganha o bloco "Corpo" com duas linhas, "Dados corporais" e "Medidas corporais".
+2. 12 tipos de medida, nenhuma obrigatória: peso, pescoço, ombros, peito, cintura, quadril, braço D/E, coxa D/E, panturrilha D/E. Para salvar um dia basta um valor.
+3. Peso tem histórico (tipo `PESO`, kg). A TMB usa sempre o peso mais recente.
+4. Tudo começa **trancado**. Dados corporais e medidas são destrancados separadamente; destrancado, todo educador com vínculo ativo vê, só leitura. Trancar corta o acesso na hora.
+5. TMB: Mifflin-St Jeor, no backend, só para 18 anos ou mais.
+6. Uma medição por dia: salvar de novo no mesmo dia atualiza.
+7. Fora do PDF do progresso, mesmo compartilhado.
+
+**Regras de dados e privacidade (valem nas seis):** só o dono lê e grava, sob `/me`; o educador só
+lê, por rotas próprias `/alunos/{atletaId}/...` (PBI-95); nenhum valor corporal em log, mensagem de
+erro ou `GET /me`; `DELETE /me` apaga tudo (cascata). Os textos "Só você vê" e de compartilhamento
+dependem do texto jurídico do termo de consentimento (hoje provisório).
+
+| PBI | Título | Camada | Depende de | Status |
+|---|---|---|---|---|
+| PBI-91 | Medidas corporais: banco e API | back | — | ✅ back feito (ver abaixo) |
+| PBI-92 | Medidas corporais no app (Perfil, lista, registrar) | front | 91 | ⏳ |
+| PBI-93 | Dados corporais e TMB (`PerfilCorporal`) | back + front | 91, 92 | ⏳ |
+| PBI-94 | Gráfico de evolução da medida | back + front | 91, 92 | ⏳ |
+| PBI-95 | Compartilhamento com o educador: back (`CompartilhamentoCorporal`) | back | 91, 93 | ⏳ (aguarda perguntas 1 e 2) |
+| PBI-96 | Compartilhamento: cadeado e visão do educador | front | 92, 93, 94, 95 | ⏳ (aguarda perguntas 1 e 2) |
+
+#### PBI-91 · Medidas corporais: banco e API
+**História:** Como atleta, quero que o app guarde as minhas medidas por dia, para consultar e comparar depois.
+**Critérios de aceite**
+1. `PUT` com dois tipos cria só esses dois registros; os outros tipos continuam sem registro.
+2. `PUT` no mesmo dia atualiza, sem criar duplicata.
+3. A variação de cada tipo compara com a medição anterior dele, mesmo que as outras medidas tenham sido feitas em outras datas.
+4. Dia sem nenhum valor, data futura, tipo inválido e valor fora da faixa respondem 400.
+5. Usuário B não enxerga nem altera as medidas do A. Sem token, 401.
+6. `DELETE /me` apaga as medidas.
+
+**Status:** ✅ back feito. Migration `MedidaCorporal` (tabela `medida_corporal`, MER 3.15; `CHECK` de tipo e `valor > 0`, único `(usuario_id, data, tipo)`, cascata do usuário); `GET /me/medidas`, `GET|PUT|DELETE /me/medidas/{data}` (MAS 12); `ServicoMedidas` com `MontarUltimas` (variação por tipo), `SalvarMedidasValidator` (erro na chave do tipo, sem repetir o valor) e `TipoMedida` como fonte única dos 12 tipos e das faixas. Build 0/0; 84 unitários verdes (+22); integração (`MedidaEndpointTests`: upsert, remoção por nulo, dia vazio 400, variação com lacunas, `DELETE` do dia, validações, 401, outro usuário, `DELETE /me`, esquema) roda no CI. A data usa o dia UTC do servidor, sem a tolerância de "amanhã" do registro de treino.
+**Fora do escopo:** front, gráfico, compartilhamento, TMB.
+
+#### PBI-92 · Medidas corporais no app
+**História:** Como atleta, quero registrar e consultar minhas medidas pelo Perfil, sem lotar a tela.
+**Escopo:** bloco "Corpo" no Perfil (entre Conta e Tema) com "Dados corporais" (a linha só entra com a PBI-93) e "Medidas corporais" (resumo "Última em 05/11 · cintura 84,0 cm" ou "Nenhuma medida ainda"); tela "Medidas corporais" (tela 24: "Registrar medidas", cartão "Últimas medidas" com valor, unidade e variação com seta e sinal, nunca só cor, "Sem registro", nota "A variação compara com a medição anterior de cada medida.", histórico por dia); tela "Registrar medidas" (tela 25: dia da medição, hoje por padrão, passado sim, futuro não; grupos Corpo todo, Tronco, Braços e Pernas; todos opcionais; campos **vazios** com a ajuda "última: 84,0"; vírgula ou ponto; aberta pelo histórico vem preenchida e ganha "Excluir medição" com confirmação); salvar sem valor avisa "Preencha ao menos uma medida"; `mostrarAviso`/`mostrarErro` (PBI-75); escrita por `MedidasComandos` e `Mudanca.medidas` em `invalidarDerivados`; estados carregando, erro com "Tentar de novo" e vazio; 44 px; 360 px e fonte 1,3x nos dois temas; rótulos falados ("Cintura, em centímetros"; "caiu 1,5 centímetro").
+**Status:** ⏳ depende da 91.
+
+#### PBI-93 · Dados corporais e TMB
+**História:** Como atleta, quero informar sexo, nascimento, altura e peso para ver quantas calorias meu corpo gasta em repouso.
+**Escopo:** migration `PerfilCorporal` (`usuario.sexo` M/F, `data_nascimento`, `altura_cm` 100 a 250; peso vem da medida `PESO` mais recente); função pura de domínio Mifflin-St Jeor (`10×kg + 6,25×cm − 5×idade + s`, s = +5 M / −161 F, arredondado; nula faltando dado ou com menos de 18; conferência: M, 31, 180 cm, 78,0 kg = 1.755; F, 31, 165 cm, 60,0 kg = 1.315); `GET|PUT|DELETE /me/perfil-corporal` (o `PUT` com `pesoKg` grava a medida de hoje; o `DELETE` não apaga o histórico de peso; `GET /me` não muda); tela 23 com os três estados do cartão (calculada, incompleta, menor de idade).
+**Status:** ⏳ depende da 91 e 92.
+
+#### PBI-94 · Gráfico de evolução da medida
+**História:** Como atleta, quero ver num gráfico como cada medida e o meu peso mudaram.
+**Escopo:** `GET /me/medidas/{tipo}/evolucao?de=&ate=` (`pontos`, `primeira`, `ultima`, `variacao`; vazio não é erro); tela 26 com filtros 30 dias, 90 dias (padrão), 1 ano e Tudo; eixo **não começa do zero**; ponto único sem linha; toque no ponto com alvo de 44 px; rótulo falado com início, fim e variação e lista "Registros do período" como alternativa em texto; reaproveitar o gráfico de `progresso_screen.dart` (fl_chart 1.0.0).
+**Status:** ⏳ depende da 91 e 92.
+
+#### PBI-95 · Compartilhamento com o educador: back
+**História:** Como atleta, quero decidir se o meu educador vê meus dados e medidas corporais.
+**Escopo:** migration `CompartilhamentoCorporal` (`usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em`; nulo = trancado); `GET|PUT /me/compartilhamento-corporal`; para o educador, `GET /alunos/{atletaId}/corpo` (seções trancadas voltam nulas) e `GET /alunos/{atletaId}/medidas/{tipo}/evolucao` (403 `corpo-nao-compartilhado` se trancado). Ordem: sem vínculo ATIVO, 404 (MAS 11.3); depois o gate, 403. Vínculo encerrado, recusado ou pendente não vê nada. O educador nunca grava; o PDF segue sem dado corporal. Teste da matriz educador (ATIVO, PENDENTE, ENCERRADO, sem vínculo) × cadeado.
+**Status:** ⏳ aguarda as perguntas 1 e 2.
+
+#### PBI-96 · Compartilhamento: cadeado e visão do educador
+**História:** Como atleta, quero um cadeado simples para liberar ou trancar o meu corpo; como educador, quero ver o corpo do aluno quando ele liberar.
+**Escopo:** selo "Privado"/"Compartilhado" nas telas 23, 24 e 26; tela "Compartilhar" (tela 27) com dois interruptores, lista de quem vê e aviso de que sem vínculo ativo ninguém vê; **destrancar pede confirmação, trancar não**; para o educador, linha "Corpo" na tela do aluno, tela 28 (somente leitura, dados e últimas medidas, evolução sem edição) e tela 29 (trancado, seções independentes); 403 na evolução cai no estado trancado.
+**Status:** ⏳ aguarda as perguntas 1 e 2.
+
 ---
 
 ## 10. Perguntas em aberto que bloqueiam PBIs
@@ -1401,6 +1472,11 @@ aluno, montar plano/ficha e exportar o progresso em PDF.
 | Trocar a métrica: (a) por série no registro ou (b) no alvo da ficha? Recomendação: (a) | PBI-34 | PO |
 | Gráfico só de repetições: melhor série (implementado) ou total da sessão? | PBI-73 | PO |
 | Texto jurídico do termo de consentimento (hoje provisório) | PBI-87 / abrir ao público | PO |
+| E12: compartilhar com todos os educadores com vínculo ativo ou escolher por educador? Recomendação: todos, por enquanto | PBI-95, 96 | PO |
+| E12: o educador vê os dados corporais (sexo, idade, altura, peso, TMB) ou só as medidas? O cadeado separa os dois, padrão trancado | PBI-95, 96 | PO |
+| E12: o PDF do progresso leva as medidas quando compartilhadas? Recomendação: não agora | futura | PO |
+| E12: a lista de 12 medidas atende? Pescoço e ombros podem sair | PBI-91, 92 | PO |
+| E12: os textos de privacidade (Só você vê e o aviso de compartilhamento) passam pelo texto jurídico do termo | PBI-92, 96 | PO |
 
 ---
 

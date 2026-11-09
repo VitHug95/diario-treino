@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Application.Corpo;
 using DiarioTreino.Application.Execucao;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioPlano, RepositorioPlano>();
         services.AddScoped<IRepositorioSessao, RepositorioSessao>();
         services.AddScoped<IRepositorioProgresso, RepositorioProgresso>();
+        services.AddScoped<IRepositorioMedida, RepositorioMedida>();
 
         // Geração de PDF do progresso (PBI-89). A licença Community do QuestPDF
         // é configurada pelo próprio gerador (cctor), então ele é autossuficiente.

@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
+using DiarioTreino.Application.Corpo;
 using DiarioTreino.Application.Execucao;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<ServicoProgresso>();
         services.AddScoped<ServicoVinculo>();
         services.AddScoped<ServicoRelatorio>();
+        services.AddScoped<ServicoMedidas>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
         services.AddScoped<IValidator<SalvarTreinoRequest>, SalvarTreinoValidator>();
@@ -32,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<DefinirAlvosRequest>, DefinirAlvosValidator>();
         services.AddScoped<IValidator<CriarSessaoRequest>, CriarSessaoValidator>();
         services.AddScoped<IValidator<ConvidarAlunoRequest>, ConvidarAlunoValidator>();
+        services.AddScoped<IValidator<SalvarMedidasEntrada>, SalvarMedidasValidator>();
 
         return services;
     }
