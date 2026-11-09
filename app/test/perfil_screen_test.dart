@@ -3,6 +3,8 @@ import 'package:diario_treino/features/auth/perfil_api.dart';
 import 'package:diario_treino/features/auth/perfil_screen.dart';
 import 'package:diario_treino/features/educador/educador_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
+import 'package:diario_treino/features/medidas/medidas_models.dart';
+import 'package:diario_treino/features/medidas/medidas_repository.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,9 +26,20 @@ Future<Widget> _tela({Perfil? perfil, List<ConvitePendente> convites = const []}
             papeis: ['ATLETA'],
           )),
       convitesPendentesProvider.overrideWith((ref) async => convites),
+      // O bloco Corpo (E12) lê o resumo das medidas; aqui, sem medidas.
+      resumoMedidasProvider.overrideWith(
+          (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
     ],
     child: MaterialApp(theme: AppTheme.claro, home: const PerfilScreen()),
   );
+}
+
+/// O bloco Corpo (E12) alongou o Perfil: estes testes usam uma tela mais alta
+/// para os itens do fim da lista (Tema, Excluir conta) ficarem visíveis.
+void _telaAlta(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
 }
 
 void main() {
@@ -39,6 +52,7 @@ void main() {
   });
 
   testWidgets('Oferece as três opções de tema', (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(await _tela());
     await tester.pumpAndSettle();
 
@@ -48,6 +62,7 @@ void main() {
   });
 
   testWidgets('Excluir conta exige digitar EXCLUIR para liberar', (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(await _tela());
     await tester.pumpAndSettle();
 

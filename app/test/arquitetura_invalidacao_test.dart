@@ -21,6 +21,7 @@ const _escritas = [
   'reordenarExercicios', 'definirAlvos', // fichas e planos
   'criarSessao', 'editarSessao', 'excluirSessao', // sessões
   'criarExercicio', // catálogo
+  'salvarMedidas', 'excluirMedidas', // medidas corporais (E12)
 ];
 
 Iterable<File> _arquivosDart() => Directory('lib')

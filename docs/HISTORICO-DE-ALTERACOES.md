@@ -183,7 +183,8 @@ fechados sem merge.
 | PR | PBI | O que mudou |
 |---|---|---|
 | #136 | docs | Estado, histórico, pendências, backlog, MAS e README atualizados até o #135. |
-| (este) | PBI-91 | Back: medidas corporais por dia. Migration `MedidaCorporal` (tabela `medida_corporal`, 12 tipos, peso como medida com histórico), `GET /me/medidas`, `GET\|PUT\|DELETE /me/medidas/{data}`, variação por tipo, validação por faixa sem repetir o valor digitado, só o dono. E12 registrado no BACKLOG (PBIs 91 a 96), MER 3.15 e MAS 12. |
+| #137 | PBI-91 | Back: medidas corporais por dia. Migration `MedidaCorporal` (tabela `medida_corporal`, 12 tipos, peso como medida com histórico), `GET /me/medidas`, `GET\|PUT\|DELETE /me/medidas/{data}`, variação por tipo, validação por faixa sem repetir o valor digitado, só o dono. E12 registrado no BACKLOG (PBIs 91 a 96), MER 3.15 e MAS 12. |
+| (este) | PBI-92 | Front: bloco CORPO no Perfil, tela Medidas corporais (últimas medidas com variação, histórico) e Registrar medidas (parcial, vírgula ou ponto, editar e excluir o dia). `Mudanca.medidas` na invalidação. Widget `CampoData` compartilhado. |
 
 ---
 
@@ -217,7 +218,7 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- E12 · Corpo e medidas: PBI-92 a 96 (a 91, back, está neste PR).
+- E12 · Corpo e medidas: PBI-93 a 96 (a 91 e a 92 estão prontas).
 - PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
 - Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).
