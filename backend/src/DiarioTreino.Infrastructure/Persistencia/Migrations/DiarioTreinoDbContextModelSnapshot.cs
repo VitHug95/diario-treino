@@ -1432,6 +1432,56 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Corpo.MedidaCorporal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Data", "Tipo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_medida_corporal_usuario_data_tipo");
+
+                    b.HasIndex("UsuarioId", "Tipo", "Data")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("ix_medida_corporal_usuario_tipo_data");
+
+                    b.ToTable("medida_corporal", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_medida_corporal_tipo", "tipo IN ('PESO','PESCOCO','OMBROS','PEITO','CINTURA','QUADRIL','BRACO_D','BRACO_E','COXA_D','COXA_E','PANTURRILHA_D','PANTURRILHA_E')");
+
+                            t.HasCheckConstraint("ck_medida_corporal_valor", "valor > 0");
+                        });
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Execucao.SerieExecutada", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2028,6 +2078,15 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .WithMany()
                         .HasForeignKey("MembroId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Corpo.MedidaCorporal", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Identidade.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

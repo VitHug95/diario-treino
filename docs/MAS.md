@@ -322,6 +322,10 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/health`, `/health/ready` | Liveness e readiness (readiness confere o banco) | ✅ |
 | GET | `/me` | Perfil e papéis do usuário logado (provisiona no primeiro acesso) | ✅ |
 | DELETE | `/me` | Exclui a conta e os dados do usuário (hard delete transacional) | ✅ |
+| GET | `/me/medidas` | Medidas corporais: `{ ultimas: [{ tipo, valor, data, variacao }], historico: [{ data, quantidade }] }`. Variação é contra o registro anterior do mesmo tipo (nula se só há um); histórico em ordem decrescente. Só o dono | ✅ (PBI-91) |
+| GET | `/me/medidas/{data}` | Valores do dia: `{ valores: { "CINTURA": 83.0 } }`. 404 se não houver | ✅ (PBI-91) |
+| PUT | `/me/medidas/{data}` | `{ valores: { "CINTURA": 83.0, "PEITO": 102.5 } }`. Upsert por tipo; valor nulo remove só aquele tipo; dia que ficaria vazio, 400. Data não futura, tipo na lista (12), faixa por tipo (peso 30 a 300 kg; demais 5 a 250 cm), uma casa decimal; erros em Problem Details por tipo, sem repetir o valor. Devolve o dia | ✅ (PBI-91) |
+| DELETE | `/me/medidas/{data}` | Apaga o dia inteiro. 204; 404 se não houver | ✅ (PBI-91) |
 | GET | `/metricas` | Métricas disponíveis | ✅ |
 | GET | `/membros` | Membros e seus músculos, na ordem dos chips | ✅ (PBI-31 etapa 2) |
 | GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |

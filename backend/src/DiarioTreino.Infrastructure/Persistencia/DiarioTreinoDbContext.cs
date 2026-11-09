@@ -1,4 +1,5 @@
 using DiarioTreino.Domain.Catalogo;
+using DiarioTreino.Domain.Corpo;
 using DiarioTreino.Domain.Execucao;
 using DiarioTreino.Domain.Identidade;
 using DiarioTreino.Domain.Planejamento;
@@ -35,6 +36,7 @@ public class DiarioTreinoDbContext : DbContext
     public DbSet<PlanoDiaSemana> PlanoDiasSemana => Set<PlanoDiaSemana>();
     public DbSet<Sessao> Sessoes => Set<Sessao>();
     public DbSet<SerieExecutada> SeriesExecutadas => Set<SerieExecutada>();
+    public DbSet<MedidaCorporal> MedidasCorporais => Set<MedidaCorporal>();
 
     /// <summary>
     /// Mapeia a função <c>unaccent</c> do Postgres (extensão habilitada por

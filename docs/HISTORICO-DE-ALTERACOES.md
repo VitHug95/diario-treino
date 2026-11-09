@@ -178,6 +178,13 @@ fechados sem merge.
 | #134 | PBI-35 | Back: tabela `plano_dia_semana` (migration `PlanoSemana`), `PUT /planos/{id}/semana`; duplicar copia a semana, arquivar libera os dias. |
 | #135 | PBI-35 | Front: seção Semana no plano e faixa da Início com planejado/faltou/descanso; "Planejado: X" na folha do dia. |
 
+## Corpo e medidas (E12) · 09/11
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| #136 | docs | Estado, histórico, pendências, backlog, MAS e README atualizados até o #135. |
+| (este) | PBI-91 | Back: medidas corporais por dia. Migration `MedidaCorporal` (tabela `medida_corporal`, 12 tipos, peso como medida com histórico), `GET /me/medidas`, `GET\|PUT\|DELETE /me/medidas/{data}`, variação por tipo, validação por faixa sem repetir o valor digitado, só o dono. E12 registrado no BACKLOG (PBIs 91 a 96), MER 3.15 e MAS 12. |
+
 ---
 
 ## Migrations do banco
@@ -195,6 +202,7 @@ fechados sem merge.
 | `20261019145756_ReparoPlanoEmUso` | PBI-77 | Reparo de dados: marca em uso o plano ativo com a sessão mais recente para atletas sem plano em uso. |
 | `20261030143221_ObservacaoPrivadaEConsentimento` | PBI-87 | Flag de observação privada e tabela de consentimento. |
 | `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana). |
+| `20261109174739_MedidaCorporal` | PBI-91 | Tabela `medida_corporal` (medidas do corpo por dia e tipo; peso incluso). |
 
 ## Infraestrutura
 
@@ -209,6 +217,7 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
+- E12 · Corpo e medidas: PBI-92 a 96 (a 91, back, está neste PR).
 - PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
 - Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).

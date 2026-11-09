@@ -19,7 +19,7 @@ pronto.
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
   `treino_exercicio`, `etapa_prescrita`, `rodada_marcador`, `sessao`,
   `serie_executada`, `consentimento` (PBI-87, ver 3.13), `plano_dia_semana`
-  (PBI-35, ver 3.14).
+  (PBI-35, ver 3.14), `medida_corporal` (PBI-91, ver 3.15).
 - `vinculo` deixou de ser "estrutura sem uso": o modo educador usa o vínculo a
   partir da PBI-85 (convite/aceite) e PBI-86 (leitura dos dados do aluno).
 - `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
@@ -44,7 +44,7 @@ o plano ativo com a sessão mais recente (empate: início mais novo). É idempot
 e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
 `consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
-tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões.
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -87,6 +87,7 @@ erDiagram
     plano_treino ||--|{ treino : "contém"
     plano_treino ||--o{ plano_dia_semana : "planeja a semana (PBI-35)"
     treino ||--o{ plano_dia_semana : "é a ficha do dia"
+    usuario ||--o{ medida_corporal : "mede o corpo (PBI-91)"
     treino ||--|{ treino_exercicio : "contém"
     exercicio ||--o{ treino_exercicio : "é prescrito em"
     treino_exercicio ||--|{ etapa_prescrita : "define"
@@ -522,6 +523,27 @@ PBI-35. No máximo uma ficha por dia; a mesma ficha pode estar em vários dias.
 | dia_semana | smallint | não | PK composta. ISO: 1 = segunda … 7 = domingo. `CHECK (dia_semana BETWEEN 1 AND 7)` |
 | treino_id | uuid | não | FK `treino`, `ON DELETE CASCADE`. Ficha ativa do mesmo plano (validado na aplicação) |
 
+### 3.15 `medida_corporal`
+
+Medidas do corpo por dia (E12, PBI-91): uma linha por (dia, tipo). **Peso é um tipo
+como os outros** (`PESO`, em kg), o que dá histórico e gráfico; os demais são em cm.
+Nenhuma medida é obrigatória: o atleta preenche só o que mediu. **Dado de saúde:**
+só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro ou
+`GET /me`.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | uuid | não | PK |
+| usuario_id | uuid | não | FK `usuario`, `ON DELETE CASCADE` (a conta leva as medidas junto) |
+| data | date | não | Dia da medição; não pode ser futura (validado na aplicação) |
+| tipo | varchar(24) | não | `CHECK` em `PESO`, `PESCOCO`, `OMBROS`, `PEITO`, `CINTURA`, `QUADRIL`, `BRACO_D`, `BRACO_E`, `COXA_D`, `COXA_E`, `PANTURRILHA_D`, `PANTURRILHA_E` |
+| valor | numeric(5,1) | não | `CHECK (valor > 0)`. Faixa por tipo na aplicação: `PESO` 30 a 300 kg; os demais 5 a 250 cm; uma casa decimal |
+| criado_em | timestamptz | não | `DEFAULT now()` |
+
+Único em `(usuario_id, data, tipo)`: salvar de novo no mesmo dia atualiza. Índice
+`(usuario_id, tipo, data DESC)` para a última medida e a evolução por tipo. Tipo novo
+é uma entrada em `TipoMedida` mais uma migration pequena do `CHECK`.
+
 ## 4. Índices de consulta
 
 | Índice | Atende |
@@ -535,6 +557,7 @@ PBI-35. No máximo uma ficha por dia; a mesma ficha pode estar em vários dias.
 | `treino_exercicio (treino_id, ordem)` | Exercícios da ficha |
 | `vinculo (aluno_id) WHERE status = 'ATIVO'` | Regra de acesso do educador |
 | `plano_dia_semana (treino_id)` | Liberar os dias de uma ficha ao excluí-la ou arquivá-la (PBI-35) |
+| `medida_corporal (usuario_id, tipo, data DESC)` | Última medida, variação e evolução por tipo (PBI-91) |
 
 ## 5. Regras de negócio que dependem do modelo
 
@@ -552,6 +575,7 @@ PBI-35. No máximo uma ficha por dia; a mesma ficha pode estar em vários dias.
 12. **Excluir conta:** apaga sessões e depois todos os planos do atleta, inclusive os escondidos (comportamento atual de `ExcluirContaAsync`).
 13. **Exercício único (PBI-74):** cada exercício aparece uma vez por ficha (`treino_exercicio`) e uma vez por sessão (`serie_executada` agrupada por `exercicio_id`). A regra é da aplicação (409 ao adicionar à ficha, 400 ao salvar a sessão), sem constraint única no banco. Dados anteriores à regra podem ter repetição.
 14. **Semana planejada (PBI-35):** a semana é do plano e opcional. `PUT /planos/{id}/semana` substitui a semana inteira (lista vazia limpa); só o autor define (regra 11). Cada ficha precisa ser ficha **ativa do mesmo plano** (senão 400); no máximo uma por dia (PK), mesma ficha em vários dias permitida. Excluir a ficha libera os dias dela: apagar de verdade cai por cascata; arquivar (ficha com sessões) remove as linhas na aplicação. Duplicar o plano copia a semana para as fichas copiadas. Mudar a semana nunca mexe em sessões já registradas. A leitura (detalhe e plano em uso) só devolve dias de fichas ativas.
+15. **Medidas corporais (PBI-91):** a variação de cada tipo compara com a medição anterior **daquele mesmo tipo**, mesmo que as outras medidas tenham sido feitas em outras datas; com um registro só, não há variação. `PUT /me/medidas/{data}` faz upsert por tipo, valor nulo remove só aquele tipo e um dia que ficaria sem nenhum valor é recusado (400); para apagar o dia existe o `DELETE`. Só o dono acessa (rotas sob `/me`).
 
 ## 6. Exemplo de dados
 

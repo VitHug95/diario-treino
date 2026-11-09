@@ -167,6 +167,7 @@ Migrations versionadas (todas aplicam do zero):
 | `20261019145756_ReparoPlanoEmUso` | PBI-77 | Reparo de dados: marca em uso o plano com a sessão mais recente para atletas sem plano em uso |
 | `20261030143221_ObservacaoPrivadaEConsentimento` | PBI-87 | Flag de observação privada e tabela de consentimento |
 | `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana) |
+| `20261109174739_MedidaCorporal` | PBI-91 | Tabela `medida_corporal` (medidas do corpo por dia e tipo) |
 
 As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 (só dados). As demais correções, o calendário (PBI-82), o E2E (PBI-26), o PDF
@@ -205,6 +206,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   produto (opção a × b — ver "Perguntas ainda abertas"). Em espera.
 - **Incremento 2 — cardio (PBI-27 a 30):** depende da resposta do Vinicius sobre
   como a zona é definida (FC, pace ou percepção).
+- **E12 · Corpo e medidas (PBI-91 a 96):** em andamento. A PBI-91 (back: `/me/medidas`) está pronta; faltam o app (92), dados corporais e TMB (93), gráfico (94) e o compartilhamento com o educador (95 e 96, aguardam respostas do PO).
 - **Épicos futuros:** E8 a E11 (ver [BACKLOG](BACKLOG.md), seção 9), incluindo
   publicação na Google Play (E10).
 
@@ -270,7 +272,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 Incremento 1 (atleta), E7 (educador), PBI-90, PBI-75 e PBI-35 estão na `main`
 (último PR: #135). Próximos passos, a escolher com o PO:
 
-1. **PBI-34:** decidir (a) × (b) e implementar.
-2. **Cardio (PBI-27 a 30):** destravar a definição de zona com o Vinicius.
-3. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.
-4. Texto jurídico do termo de consentimento antes de abrir ao público.
+1. **E12 · Corpo e medidas:** seguir com a PBI-92 (app das medidas), depois 93 e 94; a 95 e a 96 esperam as perguntas ao PO (ver BACKLOG, seção 10).
+2. **PBI-34:** decidir (a) × (b) e implementar.
+3. **Cardio (PBI-27 a 30):** destravar a definição de zona com o Vinicius.
+4. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.
+5. Texto jurídico do termo (também cobre os textos de privacidade do E12) de consentimento antes de abrir ao público.
