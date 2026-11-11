@@ -50,6 +50,40 @@ public sealed class ServicoMedidas
         return resultado;
     }
 
+    /// <summary>
+    /// Evolução de um tipo no período. Tipo desconhecido ou período invertido
+    /// viram <see cref="ArgumentException"/> (400). Sem registro, lista vazia.
+    /// </summary>
+    public async Task<EvolucaoMedida> ObterEvolucaoAsync(
+        Guid usuarioId, string tipo, DateOnly? de, DateOnly? ate, CancellationToken ct)
+    {
+        if (!TipoMedida.EhValido(tipo))
+        {
+            throw new ArgumentException("Tipo de medida inválido.");
+        }
+
+        if (de is not null && ate is not null && de > ate)
+        {
+            throw new ArgumentException("O início do período não pode ser depois do fim.");
+        }
+
+        var linhas = await _repositorio.ListarEvolucaoAsync(usuarioId, tipo, de, ate, ct);
+        return MontarEvolucao(tipo, linhas);
+    }
+
+    /// <summary>Primeira, última e variação (última − primeira) de pontos em ordem de data.</summary>
+    public static EvolucaoMedida MontarEvolucao(string tipo, IEnumerable<MedidaCorporal> linhas)
+    {
+        var pontos = linhas
+            .OrderBy(m => m.Data)
+            .Select(m => new PontoMedida(m.Data, m.Valor))
+            .ToList();
+        var primeira = pontos.Count > 0 ? pontos[0] : null;
+        var ultima = pontos.Count > 0 ? pontos[^1] : null;
+        decimal? variacao = pontos.Count > 1 ? ultima!.Valor - primeira!.Valor : null;
+        return new EvolucaoMedida(tipo, TipoMedida.Unidade(tipo), pontos, primeira, ultima, variacao);
+    }
+
     public async Task<DiaMedidas> ObterDiaAsync(Guid usuarioId, DateOnly data, CancellationToken ct)
     {
         var doDia = await _repositorio.ListarDoDiaAsync(usuarioId, data, ct);

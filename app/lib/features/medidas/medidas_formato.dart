@@ -26,6 +26,15 @@ String falarVariacao(double variacao, TipoMedida tipo) {
   return '$verbo ${formatarValor(abs)} ${tipo.unidadePorExtenso(plural: _plural(abs))}';
 }
 
+/// Para o leitor de tela, no resumo do gráfico: "queda de 3,0 centímetros",
+/// "alta de 0,5 quilo" ou "sem variação".
+String falarTendencia(double variacao, TipoMedida tipo) {
+  if (_ehZero(variacao)) return 'sem variação';
+  final abs = variacao.abs();
+  final substantivo = variacao < 0 ? 'queda' : 'alta';
+  return '$substantivo de ${formatarValor(abs)} ${tipo.unidadePorExtenso(plural: _plural(abs))}';
+}
+
 /// "84,0 centímetros" para o leitor de tela.
 String falarValor(double valor, TipoMedida tipo) =>
     '${formatarValor(valor)} ${tipo.unidadePorExtenso(plural: _plural(valor))}';

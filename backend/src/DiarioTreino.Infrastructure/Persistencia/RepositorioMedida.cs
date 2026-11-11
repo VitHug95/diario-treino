@@ -57,6 +57,17 @@ public sealed class RepositorioMedida : IRepositorioMedida
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
+    public Task<List<MedidaCorporal>> ListarEvolucaoAsync(
+        Guid usuarioId, string tipo, DateOnly? de, DateOnly? ate, CancellationToken ct)
+    {
+        var consulta = _db.MedidasCorporais
+            .AsNoTracking()
+            .Where(m => m.UsuarioId == usuarioId && m.Tipo == tipo);
+        if (de is { } inicio) consulta = consulta.Where(m => m.Data >= inicio);
+        if (ate is { } fim) consulta = consulta.Where(m => m.Data <= fim);
+        return consulta.OrderBy(m => m.Data).ToListAsync(ct);
+    }
+
     public async Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct) =>
         await _db.MedidasCorporais
             .AsNoTracking()

@@ -17,7 +17,9 @@ import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
 import '../../features/medidas/dados_corporais_screen.dart';
+import '../../features/medidas/medida_evolucao_screen.dart';
 import '../../features/medidas/medidas_corporais_screen.dart';
+import '../../features/medidas/medidas_models.dart' show TipoMedida;
 import '../../features/medidas/registrar_medidas_screen.dart';
 import '../../features/planos/plano_detalhe_screen.dart';
 import '../../features/planos/planos_screen.dart';
@@ -80,6 +82,9 @@ abstract final class Rotas {
   /// Dados corporais e TMB (E12 / PBI-93), empilhados sobre o Perfil.
   static const dadosCorporais = '/perfil/dados-corporais';
   static const registrarMedidas = '/perfil/medidas/registrar';
+
+  /// Gráfico de evolução de uma medida (PBI-94); extra: o TipoMedida.
+  static const medidaEvolucao = '/perfil/medidas/evolucao';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
   static const mes = '/mes';
@@ -270,6 +275,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                         builder: (context, state) =>
                             const MedidasCorporaisScreen(),
                         routes: [
+                          GoRoute(
+                            path: 'evolucao',
+                            name: 'medidaEvolucao',
+                            builder: (context, state) {
+                              final tipo = state.extra is TipoMedida
+                                  ? state.extra! as TipoMedida
+                                  : TipoMedida.peso;
+                              return MedidaEvolucaoScreen(
+                                key: ValueKey('evolucao:${tipo.codigo}'),
+                                tipo: tipo,
+                              );
+                            },
+                          ),
                           GoRoute(
                             parentNavigatorKey: _rootNavigatorKey,
                             path: 'registrar',

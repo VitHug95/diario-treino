@@ -19,6 +19,10 @@ public interface IRepositorioMedida
 
     public Task SalvarAsync(CancellationToken ct);
 
+    /// <summary>Medições de um tipo no período (limites inclusive, ambos opcionais), da mais antiga à mais nova.</summary>
+    public Task<List<MedidaCorporal>> ListarEvolucaoAsync(
+        Guid usuarioId, string tipo, DateOnly? de, DateOnly? ate, CancellationToken ct);
+
     /// <summary>Valor mais recente de um tipo (nulo se nunca foi medido).</summary>
     public Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct);
 

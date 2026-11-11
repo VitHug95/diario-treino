@@ -30,6 +30,30 @@ public static class MedidaEndpoints
         .WithName("ResumoMedidas")
         .WithSummary("Últimas medidas (com variação) e histórico por dia");
 
+        grupo.MapGet("/{tipo}/evolucao", async (
+            string tipo,
+            DateOnly? de,
+            DateOnly? ate,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoMedidas medidas,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            try
+            {
+                return Results.Ok(await medidas.ObterEvolucaoAsync(perfil.Id, tipo, de, ate, ct));
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        })
+        .WithName("EvolucaoMedida")
+        .WithSummary("Evolução de uma medida no período (sem de/ate, tudo; sem registro, lista vazia)");
+
         grupo.MapGet("/{data}", async (
             DateOnly data,
             HttpContext http,

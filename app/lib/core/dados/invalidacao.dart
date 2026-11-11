@@ -75,17 +75,20 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         ..invalidate(convitesPendentesProvider)
         ..invalidate(alunosProvider);
     case Mudanca.medidas:
-      // Lista, histórico, resumo do Perfil e o dia aberto para edição.
+      // Lista, histórico, resumo do Perfil, o dia aberto para edição e o gráfico.
       ref
         ..invalidate(resumoMedidasProvider)
         ..invalidate(diaMedidasProvider)
+        ..invalidate(evolucaoMedidaProvider)
         // O peso mais recente alimenta a TMB.
         ..invalidate(perfilCorporalProvider);
     case Mudanca.perfilCorporal:
       ref
         ..invalidate(perfilCorporalProvider)
         ..invalidate(resumoMedidasProvider)
-        ..invalidate(diaMedidasProvider);
+        ..invalidate(diaMedidasProvider)
+        // O peso salvo vira um ponto novo no gráfico do peso.
+        ..invalidate(evolucaoMedidaProvider);
   }
 }
 
