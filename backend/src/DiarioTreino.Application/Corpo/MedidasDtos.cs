@@ -21,3 +21,20 @@ public sealed record DiaHistoricoMedidas(DateOnly Data, int Quantidade);
 public sealed record ResumoMedidas(
     IReadOnlyList<UltimaMedida> Ultimas,
     IReadOnlyList<DiaHistoricoMedidas> Historico);
+
+/// <summary>Um ponto da evolução: o valor medido naquele dia.</summary>
+public sealed record PontoMedida(DateOnly Data, decimal Valor);
+
+/// <summary>
+/// Evolução de uma medida no período (E12 / PBI-94), em ordem de data.
+/// <see cref="Primeira"/> e <see cref="Ultima"/> são o primeiro e o último ponto;
+/// <see cref="Variacao"/> é ultima − primeira (nula com menos de dois pontos).
+/// Período sem registro devolve lista vazia, não erro.
+/// </summary>
+public sealed record EvolucaoMedida(
+    string Tipo,
+    string Unidade,
+    IReadOnlyList<PontoMedida> Pontos,
+    PontoMedida? Primeira,
+    PontoMedida? Ultima,
+    decimal? Variacao);

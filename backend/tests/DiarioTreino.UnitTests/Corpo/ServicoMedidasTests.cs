@@ -27,6 +27,14 @@ public sealed class ServicoMedidasTests
         public Task<List<MedidaCorporal>> ListarDoDiaAsync(Guid usuarioId, DateOnly data, CancellationToken ct) =>
             Task.FromResult(Linhas.Where(m => m.UsuarioId == usuarioId && m.Data == data).ToList());
 
+        public Task<List<MedidaCorporal>> ListarEvolucaoAsync(
+            Guid usuarioId, string tipo, DateOnly? de, DateOnly? ate, CancellationToken ct) =>
+            Task.FromResult(Linhas
+                .Where(m => m.UsuarioId == usuarioId && m.Tipo == tipo
+                    && (de == null || m.Data >= de) && (ate == null || m.Data <= ate))
+                .OrderBy(m => m.Data)
+                .ToList());
+
         public Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct) =>
             Task.FromResult(Linhas
                 .Where(m => m.UsuarioId == usuarioId && m.Tipo == tipo)
@@ -254,4 +262,71 @@ public sealed class ServicoMedidasTests
         Assert.Equal([Dia, Dia.AddDays(-10)], resumo.Historico.Select(h => h.Data));
         Assert.Equal(2, resumo.Historico[0].Quantidade);
     }
-}
+
+    // ---- Evolução (PBI-94) ----
+
+    [Fact]
+    public void Evolucao_com_varios_pontos_tem_primeira_ultima_e_variacao()
+    {
+        var evolucao = ServicoMedidas.MontarEvolucao(TipoMedida.Cintura,
+        [
+            Linha(TipoMedida.Cintura, 84.0m, Dia),
+            Linha(TipoMedida.Cintura, 87.0m, Dia.AddDays(-90)),
+            Linha(TipoMedida.Cintura, 85.5m, Dia.AddDays(-30)),
+        ]);
+
+        Assert.Equal("cm", evolucao.Unidade);
+        Assert.Equal([Dia.AddDays(-90), Dia.AddDays(-30), Dia], evolucao.Pontos.Select(p => p.Data)); // em ordem de data
+        Assert.Equal(87.0m, evolucao.Primeira!.Valor);
+        Assert.Equal(84.0m, evolucao.Ultima!.Valor);
+        Assert.Equal(-3.0m, evolucao.Variacao);
+    }
+
+    [Fact]
+    public void Evolucao_com_um_ponto_nao_tem_variacao()
+    {
+        var evolucao = ServicoMedidas.MontarEvolucao(TipoMedida.Peso, [Linha(TipoMedida.Peso, 78.0m, Dia)]);
+
+        Assert.Equal("kg", evolucao.Unidade);
+        Assert.Equal(evolucao.Primeira, evolucao.Ultima);
+        Assert.Null(evolucao.Variacao);
+    }
+
+    [Fact]
+    public void Evolucao_sem_pontos_e_lista_vazia_nao_erro()
+    {
+        var evolucao = ServicoMedidas.MontarEvolucao(TipoMedida.Peito, []);
+
+        Assert.Empty(evolucao.Pontos);
+        Assert.Null(evolucao.Primeira);
+        Assert.Null(evolucao.Ultima);
+        Assert.Null(evolucao.Variacao);
+    }
+
+    [Fact]
+    public async Task Evolucao_filtra_o_periodo_com_limites_inclusive_e_so_o_tipo_pedido()
+    {
+        var repo = new RepositorioMedidaFake();
+        repo.Linhas.Add(Linha(TipoMedida.Cintura, 90.0m, Dia.AddDays(-60)));
+        repo.Linhas.Add(Linha(TipoMedida.Cintura, 88.0m, Dia.AddDays(-30)));
+        repo.Linhas.Add(Linha(TipoMedida.Cintura, 86.0m, Dia));
+        repo.Linhas.Add(Linha(TipoMedida.Peso, 78.0m, Dia));
+        var servico = new ServicoMedidas(repo);
+
+        var evolucao = await servico.ObterEvolucaoAsync(
+            Usuario, TipoMedida.Cintura, Dia.AddDays(-30), Dia, default);
+
+        Assert.Equal([88.0m, 86.0m], evolucao.Pontos.Select(p => p.Valor));
+        Assert.Equal(-2.0m, evolucao.Variacao);
+    }
+
+    [Fact]
+    public async Task Evolucao_com_tipo_invalido_ou_periodo_invertido_e_argumento_invalido()
+    {
+        var servico = new ServicoMedidas(new RepositorioMedidaFake());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            servico.ObterEvolucaoAsync(Usuario, "COTOVELO", null, null, default));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            servico.ObterEvolucaoAsync(Usuario, TipoMedida.Peso, Dia, Dia.AddDays(-1), default));
+    }}

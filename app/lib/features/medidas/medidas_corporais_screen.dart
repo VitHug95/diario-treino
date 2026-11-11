@@ -113,8 +113,8 @@ class _CartaoVazio extends StatelessWidget {
   }
 }
 
-/// Uma linha por tipo, na ordem de [TipoMedida]. Sem toque por enquanto: o
-/// gráfico de cada medida chega na PBI-94.
+/// Uma linha por tipo, na ordem de [TipoMedida]. A linha com registro abre o
+/// gráfico da evolução (PBI-94); a sem registro fica sem ação e sem seta.
 class _CartaoUltimas extends StatelessWidget {
   const _CartaoUltimas({required this.resumo});
 
@@ -168,34 +168,52 @@ class _LinhaMedida extends StatelessWidget {
 
     // container: cada linha é um item próprio para o leitor de tela (sem isso o
     // cartão inteiro viraria uma frase só).
+    final conteudo = Container(
+      constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
+      child: Row(
+        children: [
+          Expanded(child: Text(tipo.rotulo, style: AppText.body)),
+          if (u == null)
+            Text('Sem registro',
+                style: AppText.body.copyWith(color: cores.textSecondary))
+          else ...[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(formatarComUnidade(u.valor, tipo), style: AppText.title),
+                if (u.variacao != null) _Variacao(variacao: u.variacao!, tipo: tipo),
+              ],
+            ),
+            const SizedBox(width: AppSpacing.x8),
+            Icon(LucideIcons.chevronRight,
+                size: AppSizes.iconeSm, color: cores.iconMuted),
+          ],
+        ],
+      ),
+    );
+
+    if (u == null) {
+      return Semantics(
+        container: true,
+        label: falado,
+        excludeSemantics: true,
+        child: conteudo,
+      );
+    }
+
     return Semantics(
       container: true,
-      label: falado,
+      button: true,
+      label: '$falado. Toque para ver a evolução',
       excludeSemantics: true,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
-        child: Row(
-          children: [
-            Expanded(child: Text(tipo.rotulo, style: AppText.body)),
-            if (u == null)
-              Text('Sem registro',
-                  style: AppText.body.copyWith(color: cores.textSecondary))
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(formatarComUnidade(u.valor, tipo), style: AppText.title),
-                  if (u.variacao != null) _Variacao(variacao: u.variacao!, tipo: tipo),
-                ],
-              ),
-          ],
-        ),
+      child: InkWell(
+        onTap: () => context.push(Rotas.medidaEvolucao, extra: tipo),
+        child: conteudo,
       ),
     );
   }
 }
-
 /// Seta + sinal + valor: a direção nunca depende só de cor.
 class _Variacao extends StatelessWidget {
   const _Variacao({required this.variacao, required this.tipo});

@@ -1417,7 +1417,7 @@ dependem do texto jurídico do termo de consentimento (hoje provisório).
 | PBI-91 | Medidas corporais: banco e API | back | — | ✅ na `main` (PR #137) |
 | PBI-92 | Medidas corporais no app (Perfil, lista, registrar) | front | 91 | ✅ na `main` (PR #138) |
 | PBI-93 | Dados corporais e TMB (`PerfilCorporal`) | back + front | 91, 92 | ✅ feito (ver abaixo) |
-| PBI-94 | Gráfico de evolução da medida | back + front | 91, 92 | ⏳ |
+| PBI-94 | Gráfico de evolução da medida | back + front | 91, 92 | ✅ feito (ver abaixo) |
 | PBI-95 | Compartilhamento com o educador: back (`CompartilhamentoCorporal`) | back | 91, 93 | ⏳ (aguarda perguntas 1 e 2) |
 | PBI-96 | Compartilhamento: cadeado e visão do educador | front | 92, 93, 94, 95 | ⏳ (aguarda perguntas 1 e 2) |
 
@@ -1447,7 +1447,7 @@ dependem do texto jurídico do termo de consentimento (hoje provisório).
 #### PBI-94 · Gráfico de evolução da medida
 **História:** Como atleta, quero ver num gráfico como cada medida e o meu peso mudaram.
 **Escopo:** `GET /me/medidas/{tipo}/evolucao?de=&ate=` (`pontos`, `primeira`, `ultima`, `variacao`; vazio não é erro); tela 26 com filtros 30 dias, 90 dias (padrão), 1 ano e Tudo; eixo **não começa do zero**; ponto único sem linha; toque no ponto com alvo de 44 px; rótulo falado com início, fim e variação e lista "Registros do período" como alternativa em texto; reaproveitar o gráfico de `progresso_screen.dart` (fl_chart 1.0.0).
-**Status:** ⏳ depende da 91 e 92.
+**Status:** ✅ back + front feitos. **Back:** `GET /me/medidas/{tipo}/evolucao?de=&ate=` (MAS 12): pontos em ordem de data, limites inclusive, `primeira`/`ultima`/`variacao` (última − primeira), período sem registro = lista vazia, tipo inválido e `de` > `ate` = 400, só o dono. `ServicoMedidas.MontarEvolucao` é função estática testável. Sem migration. 114 unitários (+5); integração (`MedidaEvolucaoEndpointTests`: ordem, peso em kg, só o tipo pedido, limites inclusive, um ponto, vazio, 400, 401, outro usuário) roda no CI. **Front:** a linha de uma medida **com registro** abre a tela de evolução (rota `/perfil/medidas/evolucao`, empilhada; a linha "Sem registro" continua sem ação e sem seta); título da medida, filtros "30 dias", "90 dias" (padrão), "1 ano" e "Tudo", três cartões (Primeira, Última, Variação com seta e sinal), gráfico de linha com **eixo que não parte do zero** (faixa dos dados + folga, mesmo com valores iguais), eixo X por dia real, ponto único só como ponto, toque no ponto com alvo de 44 px (tooltip e linha "05/11/2026 · 84,0 cm") e a lista **Registros do período** em texto, do mais recente ao mais antigo. Estados: carregando e erro ("Tentar de novo") dentro da mesma caixa de altura fixa, e "Sem registros neste período". Reaproveita `CaixaGrafico` e `MensagemGrafico` do gráfico de exercício; a `LineChart` é própria (o do exercício é por sessão e tem observação). O peso usa a mesma tela, em kg. O gráfico tem rótulo falado ("Cintura de 87,0 centímetros em 10/08 para 84,0 centímetros em 05/11, queda de 3,0 centímetros"). `Mudanca.medidas` e `Mudanca.perfilCorporal` atualizam o gráfico aberto (salvar um peso nos dados corporais também). `flutter analyze` 0; 438 testes verdes, 21 novos (19 em `medida_evolucao_test.dart`).
 
 #### PBI-95 · Compartilhamento com o educador: back
 **História:** Como atleta, quero decidir se o meu educador vê meus dados e medidas corporais.

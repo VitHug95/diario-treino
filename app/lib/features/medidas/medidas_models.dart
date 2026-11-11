@@ -142,6 +142,66 @@ class DiaMedidas {
   }
 }
 
+/// Um ponto da evolução: o valor medido num dia.
+class PontoMedida {
+  const PontoMedida({required this.data, required this.valor});
+
+  final DateTime data;
+  final double valor;
+
+  factory PontoMedida.doJson(Map<String, dynamic> json) => PontoMedida(
+        data: dataDoJson(json['data'] as String),
+        valor: (json['valor'] as num).toDouble(),
+      );
+}
+
+/// Evolução de uma medida no período, em ordem de data (E12 / PBI-94).
+/// [variacao] é última − primeira (nula com menos de dois pontos).
+class EvolucaoMedida {
+  const EvolucaoMedida({
+    required this.tipo,
+    required this.pontos,
+    this.primeira,
+    this.ultima,
+    this.variacao,
+  });
+
+  final TipoMedida tipo;
+  final List<PontoMedida> pontos;
+  final PontoMedida? primeira;
+  final PontoMedida? ultima;
+  final double? variacao;
+
+  bool get vazia => pontos.isEmpty;
+
+  factory EvolucaoMedida.doJson(Map<String, dynamic> json, TipoMedida tipo) {
+    PontoMedida? ponto(dynamic bruto) =>
+        bruto == null ? null : PontoMedida.doJson(bruto as Map<String, dynamic>);
+    return EvolucaoMedida(
+      tipo: tipo,
+      pontos: (json['pontos'] as List<dynamic>? ?? [])
+          .map((e) => PontoMedida.doJson(e as Map<String, dynamic>))
+          .toList(),
+      primeira: ponto(json['primeira']),
+      ultima: ponto(json['ultima']),
+      variacao: (json['variacao'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// Período do gráfico de evolução. [dias] nulo = tudo.
+enum PeriodoMedida {
+  dias30('30 dias', 30),
+  dias90('90 dias', 90),
+  ano1('1 ano', 365),
+  tudo('Tudo', null);
+
+  const PeriodoMedida(this.rotulo, this.dias);
+
+  final String rotulo;
+  final int? dias;
+}
+
 /// "2026-11-05" → 05/11/2026 à meia-noite local (a API manda só o dia).
 DateTime dataDoJson(String texto) {
   final partes = texto.split('-');

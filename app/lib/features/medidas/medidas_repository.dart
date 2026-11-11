@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
+import '../../core/relogio.dart';
 import 'medidas_formato.dart';
 import 'medidas_models.dart';
 
@@ -25,6 +26,22 @@ class MedidasRepository {
   Future<ResumoMedidas> obterResumo() async {
     final resposta = await _dio.get<Map<String, dynamic>>('/me/medidas');
     return ResumoMedidas.doJson(resposta.data!);
+  }
+
+  /// Evolução de um tipo no período (de/te inclusive; sem eles, tudo).
+  Future<EvolucaoMedida> obterEvolucao(
+    TipoMedida tipo, {
+    DateTime? de,
+    DateTime? ate,
+  }) async {
+    final resposta = await _dio.get<Map<String, dynamic>>(
+      '/me/medidas/${tipo.codigo}/evolucao',
+      queryParameters: {
+        if (de != null) 'de': dataParaApi(de),
+        if (ate != null) 'ate': dataParaApi(ate),
+      },
+    );
+    return EvolucaoMedida.doJson(resposta.data!, tipo);
   }
 
   /// Valores de um dia. 404 se o dia não tem medida.
@@ -106,3 +123,20 @@ final diaMedidasProvider =
     FutureProvider.autoDispose.family<DiaMedidas, DateTime>(
   (ref, data) => ref.watch(medidasRepositoryProvider).obterDia(data),
 );
+
+/// Chave da evolução: o tipo e o período escolhido. Record = igualdade por valor,
+/// então a mesma escolha reaproveita o provider.
+typedef ChaveEvolucao = ({TipoMedida tipo, PeriodoMedida periodo});
+
+/// Evolução de uma medida no período (E12 / PBI-94). O período conta a partir de
+/// hoje, pelo relógio do app (dia local), e Tudo não manda limite.
+final evolucaoMedidaProvider =
+    FutureProvider.autoDispose.family<EvolucaoMedida, ChaveEvolucao>((ref, chave) {
+  final dias = chave.periodo.dias;
+  DateTime? de;
+  if (dias != null) {
+    final agora = ref.watch(relogioProvider).agora();
+    de = DateTime(agora.year, agora.month, agora.day).subtract(Duration(days: dias));
+  }
+  return ref.watch(medidasRepositoryProvider).obterEvolucao(chave.tipo, de: de);
+});

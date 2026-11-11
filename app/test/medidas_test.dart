@@ -127,6 +127,10 @@ Future<GoRouter> _abrir(
           builder: (_, __) => const Scaffold(body: Text('home'))),
       GoRoute(path: '/tela', builder: (_, __) => tela),
       GoRoute(
+          path: '/perfil/medidas/evolucao',
+          builder: (_, state) => Scaffold(
+              body: Text('evolucao ${(state.extra as TipoMedida).codigo}'))),
+      GoRoute(
           path: '/perfil/medidas/registrar',
           builder: (_, state) => Scaffold(
               body: Text('registrar ${(state.extra as DateTime?)?.day ?? 'hoje'}'))),
@@ -267,8 +271,31 @@ void main() {
             r'Cintura: 84,0 centímetros, caiu 1,5 centímetros desde a medição anterior')),
         findsOneWidget);
     expect(find.bySemanticsLabel('Pescoço: sem registro'), findsOneWidget);
-    expect(find.bySemanticsLabel('Peito: 100,0 centímetros, sem variação desde a medição anterior'),
+    expect(find.bySemanticsLabel(RegExp(r'Peito: 100,0 centímetros, sem variação desde a medição anterior')),
         findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('Lista: a linha com registro abre a evolução daquela medida', (tester) async {
+    await _abrir(tester, _RepoComResumo(_resumoExemplo()), const MedidasCorporaisScreen());
+
+    await tester.tap(find.text('Cintura'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('evolucao CINTURA'), findsOneWidget);
+  });
+
+  testWidgets('Lista: a linha sem registro não abre nada e não tem seta', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _abrir(tester, _RepoComResumo(_resumoExemplo()), const MedidasCorporaisScreen());
+
+    await tester.tap(find.text('Pescoço'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('evolucao'), findsNothing);
+    expect(find.byType(MedidasCorporaisScreen), findsOneWidget);
+    // Só as 4 linhas com registro anunciam o toque para ver a evolução.
+    expect(find.bySemanticsLabel(RegExp('Toque para ver a evolução')), findsNWidgets(4));
     handle.dispose();
   });
 

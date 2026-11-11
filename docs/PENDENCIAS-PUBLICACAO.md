@@ -23,7 +23,7 @@ tela) continua sendo um passo manual recomendado antes do lançamento.
   mudança de banco). Recomendação: (a).
 - **PBI-73 (decisão pendente)** — exercício só de repetições no gráfico: está
   implementada a **melhor série**; o PO ainda pode preferir o total de repetições.
-- **E12 · Corpo e medidas (PBI-91 a 96).** Medidas (PBI-91, 92) e dados corporais com TMB (PBI-93) prontos. Falta o gráfico; o compartilhamento com o educador espera as respostas do PO (todos os educadores ou por educador; educador vê dados corporais ou só medidas; PDF com medidas; lista de 12 medidas).
+- **E12 · Corpo e medidas (PBI-91 a 96).** Medidas (PBI-91, 92) e dados corporais com TMB (PBI-93) e gráfico de evolução (PBI-94) prontos. Falta só o compartilhamento (PBI-95 e 96); o compartilhamento com o educador espera as respostas do PO (todos os educadores ou por educador; educador vê dados corporais ou só medidas; PDF com medidas; lista de 12 medidas).
 - **Termo de consentimento (PBI-87).** O texto atual é provisório; falta o texto
   jurídico antes de abrir ao público.
 - (Decididos: série adicionada copia a anterior — PBI-84 revertida; "Treino salvo"
