@@ -19,6 +19,9 @@ public interface IRepositorioMedida
 
     public Task SalvarAsync(CancellationToken ct);
 
+    /// <summary>Valor mais recente de um tipo (nulo se nunca foi medido).</summary>
+    public Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct);
+
     /// <summary>Apaga o dia inteiro; devolve quantas linhas foram removidas.</summary>
     public Task<int> ExcluirDiaAsync(Guid usuarioId, DateOnly data, CancellationToken ct);
 }

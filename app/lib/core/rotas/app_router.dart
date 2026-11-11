@@ -16,6 +16,7 @@ import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
+import '../../features/medidas/dados_corporais_screen.dart';
 import '../../features/medidas/medidas_corporais_screen.dart';
 import '../../features/medidas/registrar_medidas_screen.dart';
 import '../../features/planos/plano_detalhe_screen.dart';
@@ -75,6 +76,9 @@ abstract final class Rotas {
   /// Medidas corporais (E12 / PBI-92), empilhadas sobre o Perfil. O registro é
   /// em tela cheia (extra: DateTime do dia a editar; sem extra, hoje).
   static const medidas = '/perfil/medidas';
+
+  /// Dados corporais e TMB (E12 / PBI-93), empilhados sobre o Perfil.
+  static const dadosCorporais = '/perfil/dados-corporais';
   static const registrarMedidas = '/perfil/medidas/registrar';
 
   /// Calendário do mês (PBI-82), empilhado sobre a aba Início.
@@ -251,6 +255,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'convites',
                         name: 'convites',
                         builder: (context, state) => const ConvitesScreen(),
+                      ),
+                      // Dados corporais e TMB (E12 / PBI-93).
+                      GoRoute(
+                        path: 'dados-corporais',
+                        name: 'dadosCorporais',
+                        builder: (context, state) =>
+                            const DadosCorporaisScreen(),
                       ),
                       // Medidas corporais (E12 / PBI-92).
                       GoRoute(

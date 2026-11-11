@@ -6,6 +6,7 @@ import '../../features/catalogo/catalogo_repository.dart';
 import '../../features/educador/educador_repository.dart';
 import '../../features/fichas/fichas_repository.dart';
 import '../../features/medidas/medidas_repository.dart';
+import '../../features/medidas/perfil_corporal_repository.dart';
 import '../../features/progresso/progresso_repository.dart';
 import '../../features/sessao/sessao_repository.dart';
 import '../../features/sessao/treino_em_andamento.dart';
@@ -32,6 +33,10 @@ enum Mudanca {
 
   /// Medidas corporais: salvar ou excluir as medidas de um dia (E12 / PBI-92).
   medidas,
+
+  /// Dados corporais (sexo, nascimento, altura, peso) salvos ou limpos. O peso
+  /// salvo vira uma medida PESO, então as medidas também mudam (E12 / PBI-93).
+  perfilCorporal,
 }
 
 /// Mapa único de invalidação (PBI-70): cada mudança invalida tudo o que é
@@ -72,6 +77,13 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
     case Mudanca.medidas:
       // Lista, histórico, resumo do Perfil e o dia aberto para edição.
       ref
+        ..invalidate(resumoMedidasProvider)
+        ..invalidate(diaMedidasProvider)
+        // O peso mais recente alimenta a TMB.
+        ..invalidate(perfilCorporalProvider);
+    case Mudanca.perfilCorporal:
+      ref
+        ..invalidate(perfilCorporalProvider)
         ..invalidate(resumoMedidasProvider)
         ..invalidate(diaMedidasProvider);
   }

@@ -57,6 +57,14 @@ public sealed class RepositorioMedida : IRepositorioMedida
 
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
+    public async Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct) =>
+        await _db.MedidasCorporais
+            .AsNoTracking()
+            .Where(m => m.UsuarioId == usuarioId && m.Tipo == tipo)
+            .OrderByDescending(m => m.Data)
+            .Select(m => (decimal?)m.Valor)
+            .FirstOrDefaultAsync(ct);
+
     public Task<int> ExcluirDiaAsync(Guid usuarioId, DateOnly data, CancellationToken ct) =>
         _db.MedidasCorporais
             .Where(m => m.UsuarioId == usuarioId && m.Data == data)

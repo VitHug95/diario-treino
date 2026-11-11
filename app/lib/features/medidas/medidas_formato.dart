@@ -1,4 +1,5 @@
 import 'medidas_models.dart';
+import 'perfil_corporal_models.dart';
 
 /// Formatação das medidas em pt-BR (o app não usa `intl`): uma casa decimal com
 /// vírgula, datas como dd/MM.
@@ -61,3 +62,39 @@ bool _ehZero(double v) => v.abs() < 0.05;
 
 // "1,0 centímetro" no singular; o resto no plural.
 bool _plural(double v) => (v - 1).abs() >= 0.05;
+
+/// 1755 → "1.755" (separador de milhar pt-BR, sem intl).
+String formatarMilhar(int n) {
+  final texto = n.abs().toString();
+  final buf = StringBuffer(n < 0 ? '-' : '');
+  for (var i = 0; i < texto.length; i++) {
+    if (i > 0 && (texto.length - i) % 3 == 0) buf.write('.');
+    buf.write(texto[i]);
+  }
+  return buf.toString();
+}
+
+/// Peso sem casa decimal quando é inteiro: 78.0 → "78 kg", 78.5 → "78,5 kg".
+String formatarPesoCurto(double kg) {
+  final inteiro = (kg - kg.roundToDouble()).abs() < 0.05;
+  return inteiro ? '${kg.round()} kg' : '${formatarValor(kg)} kg';
+}
+
+/// Texto do Perfil: "78 kg · 180 cm · TMB 1.755 kcal por dia" ou
+/// "Preencha para calcular sua TMB".
+String resumoDadosParaPerfil(PerfilCorporal p) {
+  final partes = [
+    if (p.pesoKg != null) formatarPesoCurto(p.pesoKg!),
+    if (p.alturaCm != null) '${p.alturaCm} cm',
+  ];
+  if (p.tmbKcal != null) {
+    partes.add('TMB ${formatarMilhar(p.tmbKcal!)} kcal por dia');
+  }
+  if (partes.isEmpty) return 'Preencha para calcular sua TMB';
+  if (p.tmbKcal == null) {
+    partes.add(p.motivoSemTmb == MotivoSemTmb.menorDeIdade
+        ? 'TMB só para adultos'
+        : 'preencha para calcular a TMB');
+  }
+  return partes.join(' · ');
+}

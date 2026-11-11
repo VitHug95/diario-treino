@@ -9,6 +9,8 @@ import 'package:diario_treino/features/medidas/medidas_corporais_screen.dart';
 import 'package:diario_treino/features/medidas/medidas_formato.dart';
 import 'package:diario_treino/features/medidas/medidas_models.dart';
 import 'package:diario_treino/features/medidas/medidas_repository.dart';
+import 'package:diario_treino/features/medidas/perfil_corporal_models.dart';
+import 'package:diario_treino/features/medidas/perfil_corporal_repository.dart';
 import 'package:diario_treino/features/medidas/registrar_medidas_screen.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -95,6 +97,8 @@ Future<ProviderScope> _escopo(_RepoFake repo, Widget filho) async {
       perfilProvider.overrideWith((ref) async => const Perfil(
           id: 'u1', nome: 'Vitor', email: 'v@teste.local', papeis: ['ATLETA'])),
       convitesPendentesProvider.overrideWith((ref) async => []),
+      // O Perfil também lê os dados corporais; aqui, sem eles.
+      perfilCorporalProvider.overrideWith((ref) async => const PerfilCorporal()),
     ],
     child: filho,
   );
