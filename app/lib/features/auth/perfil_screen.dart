@@ -16,6 +16,8 @@ import '../educador/educador_repository.dart';
 import '../medidas/medidas_formato.dart';
 import '../medidas/medidas_models.dart';
 import '../medidas/medidas_repository.dart';
+import '../medidas/perfil_corporal_models.dart';
+import '../medidas/perfil_corporal_repository.dart';
 import 'auth_service.dart';
 import 'perfil_api.dart';
 
@@ -55,10 +57,11 @@ class PerfilScreen extends ConsumerWidget {
               data: (perfil) => _SecaoEducador(perfil: perfil),
               orElse: () => const SizedBox.shrink(),
             ),
-            // Corpo (E12 / PBI-92): só uma linha de toque, sem campos no Perfil.
-            // "Dados corporais" entra aqui com a PBI-93.
+            // Corpo (E12): só linhas de toque, sem campos no Perfil.
             Text('CORPO',
                 style: AppText.overline.copyWith(color: cores.textSecondary)),
+            const SizedBox(height: AppSpacing.x8),
+            _LinhaDados(perfil: ref.watch(perfilCorporalProvider)),
             const SizedBox(height: AppSpacing.x8),
             _LinhaMedidas(resumo: ref.watch(resumoMedidasProvider)),
             const SizedBox(height: AppSpacing.x28),
@@ -418,6 +421,30 @@ class _SecaoEducador extends ConsumerWidget {
     } on EducadorException catch (e) {
       if (context.mounted) mostrarErro(context, e.mensagem);
     }
+  }
+}
+
+/// "Dados corporais" com o resumo (peso, altura e TMB) (E12 / PBI-93). Como o
+/// resumo das medidas, nunca bloqueia a linha.
+class _LinhaDados extends StatelessWidget {
+  const _LinhaDados({required this.perfil});
+
+  final AsyncValue<PerfilCorporal> perfil;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitulo = perfil.when(
+      loading: () => 'Carregando…',
+      error: (_, __) => 'Toque para ver seus dados',
+      data: resumoDadosParaPerfil,
+    );
+    return _LinhaAcao(
+      icone: LucideIcons.user,
+      titulo: 'Dados corporais',
+      subtitulo: subtitulo,
+      rotuloFalado: 'Dados corporais. $subtitulo',
+      aoTocar: () => context.push(Rotas.dadosCorporais),
+    );
   }
 }
 

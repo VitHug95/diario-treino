@@ -41,7 +41,8 @@ class CampoData extends StatelessWidget {
               Icon(LucideIcons.calendar,
                   size: AppSizes.iconeSm, color: cores.iconMuted),
               const SizedBox(width: AppSpacing.x8),
-              Text(texto, style: AppText.inputValue),
+              // Expanded: com fonte grande o texto quebra em vez de estourar a linha.
+              Expanded(child: Text(texto, style: AppText.inputValue)),
             ],
           ),
         ),

@@ -184,7 +184,8 @@ fechados sem merge.
 |---|---|---|
 | #136 | docs | Estado, histórico, pendências, backlog, MAS e README atualizados até o #135. |
 | #137 | PBI-91 | Back: medidas corporais por dia. Migration `MedidaCorporal` (tabela `medida_corporal`, 12 tipos, peso como medida com histórico), `GET /me/medidas`, `GET\|PUT\|DELETE /me/medidas/{data}`, variação por tipo, validação por faixa sem repetir o valor digitado, só o dono. E12 registrado no BACKLOG (PBIs 91 a 96), MER 3.15 e MAS 12. |
-| (este) | PBI-92 | Front: bloco CORPO no Perfil, tela Medidas corporais (últimas medidas com variação, histórico) e Registrar medidas (parcial, vírgula ou ponto, editar e excluir o dia). `Mudanca.medidas` na invalidação. Widget `CampoData` compartilhado. |
+| #138 | PBI-92 | Front: bloco CORPO no Perfil, tela Medidas corporais (últimas medidas com variação, histórico) e Registrar medidas (parcial, vírgula ou ponto, editar e excluir o dia). `Mudanca.medidas` na invalidação. Widget `CampoData` compartilhado. |
+| (este) | PBI-93 | Back: migration `PerfilCorporal` (`sexo`, `data_nascimento`, `altura_cm` em `usuario`), `CalculoTmb` (Mifflin-St Jeor), `GET\|PUT\|DELETE /me/perfil-corporal` (o `PUT` com `pesoKg` grava a medida PESO; o `DELETE` preserva o histórico de peso). Front: linha "Dados corporais" no Perfil e tela com o cartão da TMB (calculada, incompleta, menor de idade). |
 
 ---
 
@@ -204,6 +205,7 @@ fechados sem merge.
 | `20261030143221_ObservacaoPrivadaEConsentimento` | PBI-87 | Flag de observação privada e tabela de consentimento. |
 | `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana). |
 | `20261109174739_MedidaCorporal` | PBI-91 | Tabela `medida_corporal` (medidas do corpo por dia e tipo; peso incluso). |
+| `20261111144536_PerfilCorporal` | PBI-93 | Colunas `sexo`, `data_nascimento` e `altura_cm` em `usuario`, com CHECK de sexo e de altura. |
 
 ## Infraestrutura
 
@@ -218,7 +220,7 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- E12 · Corpo e medidas: PBI-93 a 96 (a 91 e a 92 estão prontas).
+- E12 · Corpo e medidas: PBI-94 a 96 (a 91, a 92 e a 93 estão prontas).
 - PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
 - Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).

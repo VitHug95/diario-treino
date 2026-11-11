@@ -5,6 +5,8 @@ import 'package:diario_treino/features/educador/educador_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
 import 'package:diario_treino/features/medidas/medidas_models.dart';
 import 'package:diario_treino/features/medidas/medidas_repository.dart';
+import 'package:diario_treino/features/medidas/perfil_corporal_models.dart';
+import 'package:diario_treino/features/medidas/perfil_corporal_repository.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +31,7 @@ Future<Widget> _tela({Perfil? perfil, List<ConvitePendente> convites = const []}
       // O bloco Corpo (E12) lê o resumo das medidas; aqui, sem medidas.
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
+      perfilCorporalProvider.overrideWith((ref) async => const PerfilCorporal()),
     ],
     child: MaterialApp(theme: AppTheme.claro, home: const PerfilScreen()),
   );

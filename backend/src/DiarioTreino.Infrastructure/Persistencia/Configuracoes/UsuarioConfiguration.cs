@@ -1,4 +1,5 @@
 using DiarioTreino.Domain.Comum;
+using DiarioTreino.Domain.Corpo;
 using DiarioTreino.Domain.Identidade;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,7 +10,14 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 {
     public void Configure(EntityTypeBuilder<Usuario> builder)
     {
-        builder.ToTable("usuario");
+        builder.ToTable("usuario", t =>
+        {
+            // Nulo passa nos dois CHECKs: os dados corporais são opcionais.
+            t.HasCheckConstraint(
+                "ck_usuario_sexo",
+                $"sexo IN ('{SexoBiologico.Masculino}','{SexoBiologico.Feminino}')");
+            t.HasCheckConstraint("ck_usuario_altura_cm", "altura_cm BETWEEN 100 AND 250");
+        });
 
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id).HasColumnName("id");
@@ -19,6 +27,10 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.Ativo).HasColumnName("ativo").HasDefaultValue(true).IsRequired();
         builder.Property(u => u.CriadoEm).HasColumnName("criado_em")
             .HasDefaultValueSql("now()").IsRequired();
+
+        builder.Property(u => u.Sexo).HasColumnName("sexo").HasColumnType("character(1)");
+        builder.Property(u => u.DataNascimento).HasColumnName("data_nascimento");
+        builder.Property(u => u.AlturaCm).HasColumnName("altura_cm");
 
         builder.HasIndex(u => u.FirebaseUid).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();

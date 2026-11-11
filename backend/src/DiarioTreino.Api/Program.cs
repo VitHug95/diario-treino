@@ -114,6 +114,7 @@ try
     app.MapPlanoEndpoints();
     app.MapSessaoEndpoints();
     app.MapMedidaEndpoints();
+    app.MapPerfilCorporalEndpoints();
     app.MapProgressoEndpoints();
     app.MapVinculoEndpoints();
 

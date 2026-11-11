@@ -22,6 +22,7 @@ const _escritas = [
   'criarSessao', 'editarSessao', 'excluirSessao', // sessões
   'criarExercicio', // catálogo
   'salvarMedidas', 'excluirMedidas', // medidas corporais (E12)
+  'salvarPerfilCorporal', 'limparPerfilCorporal', // dados corporais (E12)
 ];
 
 Iterable<File> _arquivosDart() => Directory('lib')

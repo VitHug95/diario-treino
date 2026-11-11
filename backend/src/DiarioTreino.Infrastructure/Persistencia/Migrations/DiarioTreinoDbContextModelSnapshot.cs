@@ -1673,6 +1673,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<short?>("AlturaCm")
+                        .HasColumnType("smallint")
+                        .HasColumnName("altura_cm");
+
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1684,6 +1688,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly?>("DataNascimento")
+                        .HasColumnType("date")
+                        .HasColumnName("data_nascimento");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -1703,6 +1711,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("nome");
 
+                    b.Property<string>("Sexo")
+                        .HasColumnType("character(1)")
+                        .HasColumnName("sexo");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -1711,7 +1723,12 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.HasIndex("FirebaseUid")
                         .IsUnique();
 
-                    b.ToTable("usuario", (string)null);
+                    b.ToTable("usuario", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_usuario_altura_cm", "altura_cm BETWEEN 100 AND 250");
+
+                            t.HasCheckConstraint("ck_usuario_sexo", "sexo IN ('M','F')");
+                        });
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Identidade.UsuarioPapel", b =>

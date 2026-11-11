@@ -27,6 +27,13 @@ public sealed class ServicoMedidasTests
         public Task<List<MedidaCorporal>> ListarDoDiaAsync(Guid usuarioId, DateOnly data, CancellationToken ct) =>
             Task.FromResult(Linhas.Where(m => m.UsuarioId == usuarioId && m.Data == data).ToList());
 
+        public Task<decimal?> UltimoValorAsync(Guid usuarioId, string tipo, CancellationToken ct) =>
+            Task.FromResult(Linhas
+                .Where(m => m.UsuarioId == usuarioId && m.Tipo == tipo)
+                .OrderByDescending(m => m.Data)
+                .Select(m => (decimal?)m.Valor)
+                .FirstOrDefault());
+
         public void Adicionar(MedidaCorporal medida) => Linhas.Add(medida);
 
         public void Remover(MedidaCorporal medida) => Linhas.Remove(medida);

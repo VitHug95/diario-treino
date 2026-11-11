@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<ServicoVinculo>();
         services.AddScoped<ServicoRelatorio>();
         services.AddScoped<ServicoMedidas>();
+        services.AddScoped<ServicoPerfilCorporal>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
         services.AddScoped<IValidator<SalvarTreinoRequest>, SalvarTreinoValidator>();
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CriarSessaoRequest>, CriarSessaoValidator>();
         services.AddScoped<IValidator<ConvidarAlunoRequest>, ConvidarAlunoValidator>();
         services.AddScoped<IValidator<SalvarMedidasEntrada>, SalvarMedidasValidator>();
+        services.AddScoped<IValidator<SalvarPerfilCorporalRequest>, SalvarPerfilCorporalValidator>();
 
         return services;
     }
