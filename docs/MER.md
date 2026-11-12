@@ -44,7 +44,7 @@ o plano ativo com a sessão mais recente (empate: início mais novo). É idempot
 e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
 `consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
-tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura.
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000. A `CompartilhamentoCorporal` (PBI-95) virá depois dela.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -227,8 +227,9 @@ Pessoa que usa o app. A identidade (senha, Google) fica no Firebase; aqui fica o
 | sexo | char(1) | sim | `CHECK IN ('M','F')`. Só para a TMB (E12 / PBI-93) |
 | data_nascimento | date | sim | No passado, idade entre 10 e 100 anos (validado na aplicação) |
 | altura_cm | smallint | sim | `CHECK BETWEEN 100 AND 250` |
+| tmb_manual_kcal | smallint | sim | `CHECK BETWEEN 800 AND 5000`. TMB informada pelo atleta (PBI-98); nula = automática |
 
-Os três últimos são os **dados corporais** (E12 / PBI-93): opcionais, dado de saúde, só o dono lê e grava (rotas sob `/me`), fora do `GET /me` e dos logs. **Não há peso aqui:** o peso é a medida `PESO` mais recente (3.15). A TMB não é guardada: é calculada na hora no backend (regra 16).
+Os quatro últimos são os **dados corporais** (E12 / PBI-93 e PBI-98): opcionais, dado de saúde, só o dono lê e grava (rotas sob `/me`), fora do `GET /me` e dos logs. **Não há peso aqui:** o peso é a medida `PESO` mais recente (3.15). A TMB calculada não é guardada: é calculada na hora no backend (regra 16). Só a TMB **informada** pelo atleta é guardada (`tmb_manual_kcal`).
 
 ### 3.2 `usuario_papel`
 Papéis do usuário. Tabela separada porque uma pessoa pode ser atleta e educador ao mesmo tempo.
@@ -582,6 +583,7 @@ só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro 
 14. **Semana planejada (PBI-35):** a semana é do plano e opcional. `PUT /planos/{id}/semana` substitui a semana inteira (lista vazia limpa); só o autor define (regra 11). Cada ficha precisa ser ficha **ativa do mesmo plano** (senão 400); no máximo uma por dia (PK), mesma ficha em vários dias permitida. Excluir a ficha libera os dias dela: apagar de verdade cai por cascata; arquivar (ficha com sessões) remove as linhas na aplicação. Duplicar o plano copia a semana para as fichas copiadas. Mudar a semana nunca mexe em sessões já registradas. A leitura (detalhe e plano em uso) só devolve dias de fichas ativas.
 15. **Medidas corporais (PBI-91):** a variação de cada tipo compara com a medição anterior **daquele mesmo tipo**, mesmo que as outras medidas tenham sido feitas em outras datas; com um registro só, não há variação. `PUT /me/medidas/{data}` faz upsert por tipo, valor nulo remove só aquele tipo e um dia que ficaria sem nenhum valor é recusado (400); para apagar o dia existe o `DELETE`. Só o dono acessa (rotas sob `/me`).
 16. **TMB (PBI-93):** Mifflin-St Jeor, calculada no backend a cada leitura (nunca guardada): `10 × peso(kg) + 6,25 × altura(cm) − 5 × idade + s`, `s = +5` para M e `−161` para F, arredondada ao inteiro (meio para cima). O peso é a medida `PESO` de data mais recente. Sem número se faltar sexo, nascimento, altura ou peso (`DADOS_INCOMPLETOS`) ou com menos de 18 anos (`MENOR_DE_IDADE`); o dado faltando vem antes. Idade em anos completos; quem nasceu em 29/02 faz anos em 28/02 nos anos não bissextos. O `PUT /me/perfil-corporal` com `pesoKg` grava a medida `PESO` do dia (`dataPeso` do app, ou hoje no servidor) no mesmo `SaveChanges` dos dados; sem `pesoKg` o histórico de peso não é tocado, e o `DELETE` limpa só os três campos de `usuario`.
+17. **TMB informada (PBI-98):** o valor que vale no app (`tmbKcal`) é o informado (`tmb_manual_kcal`), se houver; senão o calculado (regra 16). O informado vale mesmo sem dados completos e para menor de idade, e **não é apagado** quando sexo, nascimento, altura ou peso mudam (só a linha "Calculada" acompanha). Grava-se e apaga-se por rota própria (`PUT|DELETE /me/perfil-corporal/tmb-manual`), para não sobrescrever os outros dados; "Limpar dados corporais" apaga junto.
 
 ## 6. Exemplo de dados
 

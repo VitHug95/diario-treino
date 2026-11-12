@@ -1715,6 +1715,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("character(1)")
                         .HasColumnName("sexo");
 
+                    b.Property<short?>("TmbManualKcal")
+                        .HasColumnType("smallint")
+                        .HasColumnName("tmb_manual_kcal");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -1728,6 +1732,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                             t.HasCheckConstraint("ck_usuario_altura_cm", "altura_cm BETWEEN 100 AND 250");
 
                             t.HasCheckConstraint("ck_usuario_sexo", "sexo IN ('M','F')");
+
+                            t.HasCheckConstraint("ck_usuario_tmb_manual_kcal", "tmb_manual_kcal BETWEEN 800 AND 5000");
                         });
                 });
 

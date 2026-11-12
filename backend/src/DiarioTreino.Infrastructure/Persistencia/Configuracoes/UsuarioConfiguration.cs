@@ -17,6 +17,9 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
                 "ck_usuario_sexo",
                 $"sexo IN ('{SexoBiologico.Masculino}','{SexoBiologico.Feminino}')");
             t.HasCheckConstraint("ck_usuario_altura_cm", "altura_cm BETWEEN 100 AND 250");
+            t.HasCheckConstraint(
+                "ck_usuario_tmb_manual_kcal",
+                $"tmb_manual_kcal BETWEEN {CalculoTmb.ManualMinimaKcal} AND {CalculoTmb.ManualMaximaKcal}");
         });
 
         builder.HasKey(u => u.Id);
@@ -31,6 +34,7 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.Sexo).HasColumnName("sexo").HasColumnType("character(1)");
         builder.Property(u => u.DataNascimento).HasColumnName("data_nascimento");
         builder.Property(u => u.AlturaCm).HasColumnName("altura_cm");
+        builder.Property(u => u.TmbManualKcal).HasColumnName("tmb_manual_kcal");
 
         builder.HasIndex(u => u.FirebaseUid).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();

@@ -40,6 +40,13 @@ class PerfilCorporalComandos {
           ));
 
   Future<void> limpar() => _mudar((r) => r.limparPerfilCorporal());
+
+  /// TMB informada pelo atleta (PBI-98). Devolve os dados já recalculados.
+  Future<PerfilCorporal> definirTmbManual(int kcal) =>
+      _mudar((r) => r.definirTmbManual(kcal));
+
+  /// Volta à TMB calculada.
+  Future<void> usarTmbCalculada() => _mudar((r) => r.usarTmbCalculada());
 }
 
 final perfilCorporalComandosProvider =

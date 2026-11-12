@@ -109,7 +109,7 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - Medidas corporais: últimas medidas dos 12 tipos com variação (seta e sinal), histórico por dia; registrar só o que mediu (vírgula ou ponto), editar e excluir um dia. Dado de saúde: só o dono vê; o compartilhamento com o educador ainda não existe.
 
 - Gráfico de evolução de cada medida e do peso (30 dias, 90 dias, 1 ano ou tudo), com os registros também em texto.
-- Dados corporais: sexo, nascimento, altura e peso, e a **taxa metabólica basal** (Mifflin-St Jeor, só para adultos), calculada pelo backend.
+- Dados corporais: sexo, nascimento, altura e peso, e a **taxa metabólica basal** (Mifflin-St Jeor, só para adultos), calculada pelo backend; o atleta pode informar o próprio valor, que passa a valer até ele voltar ao cálculo (PBI-98).
 
 ### Modo educador (E7)
 - Tornar-se educador, convidar aluno, aceitar/recusar/encerrar vínculo (PBI-85,
@@ -178,6 +178,8 @@ Migrations versionadas (todas aplicam do zero):
 | `20261030143221_ObservacaoPrivadaEConsentimento` | PBI-87 | Flag de observação privada e tabela de consentimento |
 | `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana) |
 | `20261109174739_MedidaCorporal` | PBI-91 | Tabela `medida_corporal` (medidas do corpo por dia e tipo) |
+| `20261111144536_PerfilCorporal` | PBI-93 | `sexo`, `data_nascimento`, `altura_cm` em `usuario` |
+| `20261112202209_TmbManual` | PBI-98 | `tmb_manual_kcal` em `usuario` (TMB informada) |
 
 As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 (só dados). As demais correções, o calendário (PBI-82), o E2E (PBI-26), o PDF

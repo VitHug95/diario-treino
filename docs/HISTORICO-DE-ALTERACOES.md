@@ -188,11 +188,12 @@ fechados sem merge.
 | #139 | PBI-93 | Back: migration `PerfilCorporal` (`sexo`, `data_nascimento`, `altura_cm` em `usuario`), `CalculoTmb` (Mifflin-St Jeor), `GET\|PUT\|DELETE /me/perfil-corporal` (o `PUT` com `pesoKg` grava a medida PESO; o `DELETE` preserva o histórico de peso). Front: linha "Dados corporais" no Perfil e tela com o cartão da TMB (calculada, incompleta, menor de idade). |
 | (PR da PBI-94) | PBI-94 | Back: `GET /me/medidas/{tipo}/evolucao` (pontos por data, primeira, última e variação; período vazio é lista vazia). Front: tela de evolução da medida (filtros 30 dias/90 dias/1 ano/Tudo, gráfico com eixo fora do zero, cartões, lista em texto e rótulo falado); a linha de cada medida com registro passa a ser tocável. |
 
-## Campo de data · 11/11
+## Campo de data e TMB informada · 11 e 12/11
 
 | PR | PBI | O que mudou |
 |---|---|---|
 | (PR da PBI-97) | PBI-97 | Front: `CampoData` compartilhado (campo inteiro tocável; o nó de semântica ganhou o `onTap` que faltava, causa do toque perdido na web) e seletor próprio `escolherData` (calendário + digitação com máscara dd/mm/aaaa, barras automáticas, teclado numérico). Substitui as duas cópias privadas do registro e do resumo e o `showDatePicker` nas quatro telas. |
+| (PR da PBI-98) | PBI-98 | Back: migration `TmbManual` (`usuario.tmb_manual_kcal`), `tmbKcal` efetivo + `tmbCalculadaKcal` + `tmbManual` no `GET /me/perfil-corporal`, `PUT\|DELETE /me/perfil-corporal/tmb-manual`; limpar os dados corporais limpa a TMB informada. Front: botão "Editar" no cartão da TMB, diálogo com "Usar o cálculo", selo "Informada por você" e linha "Calculada". |
 
 ---
 
@@ -213,6 +214,7 @@ fechados sem merge.
 | `20261105201232_PlanoSemana` | PBI-35 | Tabela `plano_dia_semana` (ficha por dia da semana). |
 | `20261109174739_MedidaCorporal` | PBI-91 | Tabela `medida_corporal` (medidas do corpo por dia e tipo; peso incluso). |
 | `20261111144536_PerfilCorporal` | PBI-93 | Colunas `sexo`, `data_nascimento` e `altura_cm` em `usuario`, com CHECK de sexo e de altura. |
+| `20261112202209_TmbManual` | PBI-98 | Coluna `tmb_manual_kcal` em `usuario` (TMB informada), com CHECK de 800 a 5000. |
 
 ## Infraestrutura
 

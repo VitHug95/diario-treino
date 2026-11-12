@@ -1451,12 +1451,12 @@ dependem do texto jurídico do termo de consentimento (hoje provisório).
 
 #### PBI-95 · Compartilhamento com o educador: back
 **História:** Como atleta, quero decidir se o meu educador vê meus dados e medidas corporais.
-**Escopo:** migration `CompartilhamentoCorporal` (`usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em`; nulo = trancado); `GET|PUT /me/compartilhamento-corporal`; para o educador, `GET /alunos/{atletaId}/corpo` (seções trancadas voltam nulas) e `GET /alunos/{atletaId}/medidas/{tipo}/evolucao` (403 `corpo-nao-compartilhado` se trancado). Ordem: sem vínculo ATIVO, 404 (MAS 11.3); depois o gate, 403. Vínculo encerrado, recusado ou pendente não vê nada. O educador nunca grava; o PDF segue sem dado corporal. Teste da matriz educador (ATIVO, PENDENTE, ENCERRADO, sem vínculo) × cadeado.
+**Escopo:** migration `CompartilhamentoCorporal` (`usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em`; nulo = trancado); `GET|PUT /me/compartilhamento-corporal`; para o educador, `GET /alunos/{atletaId}/corpo` (seções trancadas voltam nulas) e `GET /alunos/{atletaId}/medidas/{tipo}/evolucao` (403 `corpo-nao-compartilhado` se trancado). Ordem: sem vínculo ATIVO, 404 (MAS 11.3); depois o gate, 403. Vínculo encerrado, recusado ou pendente não vê nada. O educador nunca grava; o PDF segue sem dado corporal. **TMB (PBI-98):** o cadeado de "Dados corporais" cobre também a TMB; o educador com acesso vê o valor efetivo e se ele foi informado pelo atleta (`tmbManual`). Teste da matriz educador (ATIVO, PENDENTE, ENCERRADO, sem vínculo) × cadeado.
 **Status:** ⏳ aguarda as perguntas 1 e 2.
 
 #### PBI-96 · Compartilhamento: cadeado e visão do educador
 **História:** Como atleta, quero um cadeado simples para liberar ou trancar o meu corpo; como educador, quero ver o corpo do aluno quando ele liberar.
-**Escopo:** selo "Privado"/"Compartilhado" nas telas 23, 24 e 26; tela "Compartilhar" (tela 27) com dois interruptores, lista de quem vê e aviso de que sem vínculo ativo ninguém vê; **destrancar pede confirmação, trancar não**; para o educador, linha "Corpo" na tela do aluno, tela 28 (somente leitura, dados e últimas medidas, evolução sem edição) e tela 29 (trancado, seções independentes); 403 na evolução cai no estado trancado.
+**Escopo:** selo "Privado"/"Compartilhado" nas telas 23, 24 e 26; tela "Compartilhar" (tela 27) com dois interruptores, lista de quem vê e aviso de que sem vínculo ativo ninguém vê; **destrancar pede confirmação, trancar não**; para o educador, linha "Corpo" na tela do aluno, tela 28 (somente leitura, dados e últimas medidas, evolução sem edição; a TMB mostra o valor efetivo com o selo "Informada pelo aluno" quando for o caso, PBI-98) e tela 29 (trancado, seções independentes); 403 na evolução cai no estado trancado.
 **Status:** ⏳ aguarda as perguntas 1 e 2.
 
 #### PBI-97 · Campo de data: toque no campo inteiro e digitação com barras automáticas (pedido do PO, 11/11)
@@ -1480,6 +1480,22 @@ dependem do texto jurídico do termo de consentimento (hoje provisório).
 - **E2E:** ``fluxo_pbi26_test.dart`` não toca no campo de data; sem impacto.
 - ``flutter analyze`` 0; 491 testes verdes, 53 novos (``campo_data_test.dart`` e os das telas).
 **Fora do escopo:** mudar o formato de exibição, seletor com visual novo, internacionalização de formato de data.
+#### PBI-98 · TMB calculada que o atleta pode editar (pedido do PO, 12/11)
+**História:** Como atleta, quero que a taxa metabólica basal apareça calculada sozinha, mas poder trocar pelo valor que eu sei (bioimpedância, nutricionista ou outro método), para não ficar preso à estimativa da fórmula.
+**Regra:** a calculada continua sendo a padrão e acompanha peso, altura, nascimento e sexo. Enquanto houver valor informado, ele vale em todo o app; o atleta volta ao cálculo quando quiser; o informado não some quando os dados mudam.
+**Critérios de aceite**
+1. Com os dados completos, a TMB aparece calculada sozinha, como hoje.
+2. "Editar", informar 1.800 e salvar mostra 1.800 com o selo "Informada por você" e a linha "Calculada: 1.755".
+3. Mudar o peso ou a altura depois não muda o 1.800, mas atualiza a linha "Calculada".
+4. "Usar o cálculo" volta ao número calculado e o selo some.
+5. Sem dados completos, ainda dá para informar; aparece sem a linha "Calculada".
+6. Fora de 800 a 5.000, vazio ou não inteiro é recusado com mensagem e nada é gravado.
+7. O resumo do Perfil e o cartão mostram sempre o mesmo valor.
+8. "Limpar dados corporais" apaga sexo, nascimento, altura e a TMB informada, e mantém o histórico de peso.
+9. 360 px e fonte 1,3x, nos dois temas.
+
+**Status:** ✅ back + front feitos. **Back:** migration ``TmbManual`` (``usuario.tmb_manual_kcal`` smallint nula, ``CHECK`` 800 a 5000; MER 3.1 e regra 17); ``CalculoTmb.ValorEfetivo`` e ``ManualNaFaixa`` no domínio (a ``ResultadoTmb`` já separava valor e motivo, então a fórmula não mudou); ``GET /me/perfil-corporal`` devolve ``tmbKcal`` efetivo, ``tmbCalculadaKcal`` e ``tmbManual`` (o único consumidor de ``tmbKcal`` é o app; o PDF não usa a TMB); ``PUT|DELETE /me/perfil-corporal/tmb-manual`` (rota própria, MAS 12); ``DefinirTmbManualValidator`` com o valor em ``decimal`` para o quebrado virar 400 com mensagem; ""Limpar dados corporais"" limpa o informado. Build 0/0; 129 unitários (+15); integração (``TmbManualEndpointTests``: ida e volta, efetivo/calculado/manual, sobrevive a mudar os quatro dados, ``DELETE`` volta ao automático, 400 nas faixas e no quebrado, sem dados completos, menor de idade, limpar, 401, outro usuário, ``DELETE /me``, ``CHECK`` do banco) roda no CI. **Front:** o cartão ganhou ""Editar"" (lápis, 44 px) em todos os estados; diálogo ""TMB, em kcal por dia"" já preenchido, só dígitos, com ""Salvar"", ""Usar o cálculo"" (só com valor informado) e ""Cancelar"", erro ""Use um valor entre 800 e 5.000 kcal.""; estados calculada, informada (selo ""Informada por você"" e ""Calculada: 1.755 kcal"" quando há cálculo), informada sem cálculo e sem valor nenhum. Salvar a TMB não envia nem apaga o que está digitado no formulário. Resumo do Perfil: ""TMB informada 1.800 kcal por dia"". O texto de ""Limpar dados corporais"" avisa que a TMB informada também sai. Rótulo falado ""Taxa metabólica basal, 1.800 kcal por dia, informada por você. Calculada, 1.755"" e o botão ""Editar"". ``flutter analyze`` 0; 509 testes verdes (+18). **Ordem das migrations:** ``TmbManual`` vem antes da ``CompartilhamentoCorporal`` (PBI-95, ainda não feita); o cadeado de dados corporais passa a cobrir a TMB (anotado nas PBIs 95 e 96).
+**Fora do escopo:** outras fórmulas, histórico e gráfico da TMB, gasto total e metas, aviso quando o informado se afasta do calculado.
 ---
 
 ## 10. Perguntas em aberto que bloqueiam PBIs

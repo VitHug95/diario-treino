@@ -37,6 +37,20 @@ public static class CalculoTmb
 {
     public const int IdadeMinimaAdulto = 18;
 
+    /// <summary>Faixa aceita para a TMB informada pelo atleta (PBI-98), em kcal por dia.</summary>
+    public const int ManualMinimaKcal = 800;
+    public const int ManualMaximaKcal = 5000;
+
+    public static bool ManualNaFaixa(int kcal) => kcal >= ManualMinimaKcal && kcal <= ManualMaximaKcal;
+
+    /// <summary>
+    /// O valor que vale no app (PBI-98): o informado pelo atleta, se houver;
+    /// senão o calculado; senão nenhum. O manual vale mesmo sem dados completos e
+    /// para menor de idade: quem sabe o número pode informar.
+    /// </summary>
+    public static (int? Kcal, bool Manual) ValorEfetivo(int? manual, int? calculada) =>
+        manual is { } m ? (m, true) : (calculada, false);
+
     public static ResultadoTmb Calcular(
         string? sexo,
         DateOnly? dataNascimento,
