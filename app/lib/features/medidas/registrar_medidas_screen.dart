@@ -8,6 +8,7 @@ import '../../shared/campo_data.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/mostrar_aviso.dart';
+import '../../shared/seletor_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -96,13 +97,13 @@ class _RegistrarMedidasScreenState
   Future<void> _escolherData() async {
     final hoje = ref.read(relogioProvider).agora();
     final fimDeHoje = DateTime(hoje.year, hoje.month, hoje.day);
-    final escolhida = await showDatePicker(
-      context: context,
-      initialDate: _data.isAfter(fimDeHoje) ? fimDeHoje : _data,
-      firstDate: DateTime(hoje.year - 5),
+    final escolhida = await escolherData(
+      context,
+      titulo: 'Dia da medição',
+      primeira: DateTime(hoje.year - 5),
       // Medida é do que já aconteceu: hoje é o limite (a API recusa o futuro).
-      lastDate: fimDeHoje,
-      helpText: 'Dia da medição',
+      ultima: fimDeHoje,
+      inicial: _data.isAfter(fimDeHoje) ? fimDeHoje : _data,
     );
     if (escolhida != null) {
       setState(() => _data = DateTime(escolhida.year, escolhida.month, escolhida.day));
