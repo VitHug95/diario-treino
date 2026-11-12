@@ -45,7 +45,14 @@ class _RepoPerfil extends PerfilCorporalRepository {
       : atual = inicial ?? const PerfilCorporal(motivoSemTmb: MotivoSemTmb.dadosIncompletos),
         super(Dio());
 
+  /// Dados como o back os tem; [atual] guarda a TMB CALCULADA em 	mbKcal.
   PerfilCorporal atual;
+
+  /// TMB informada (PBI-98). Nula = automática.
+  int? manual;
+  bool falharTmb = false;
+  final tmbSalvas = <int>[];
+  int voltasAoCalculo = 0;
   int leituras = 0;
   int limpezas = 0;
   bool falharLeitura = false;
@@ -56,7 +63,35 @@ class _RepoPerfil extends PerfilCorporalRepository {
   Future<PerfilCorporal> obter() async {
     leituras++;
     if (falharLeitura) throw Exception('rede');
-    return atual;
+    return _efetivo();
+  }
+
+  /// O que o GET devolve: o efetivo (manual, senão calculado), o calculado e o selo.
+  PerfilCorporal _efetivo() => PerfilCorporal(
+        sexo: atual.sexo,
+        nascimento: atual.nascimento,
+        alturaCm: atual.alturaCm,
+        pesoKg: atual.pesoKg,
+        idade: atual.idade,
+        tmbKcal: manual ?? atual.tmbKcal,
+        motivoSemTmb: atual.motivoSemTmb,
+        tmbCalculadaKcal: atual.tmbKcal,
+        tmbManual: manual != null,
+      );
+
+  @override
+  Future<PerfilCorporal> definirTmbManual(int kcal) async {
+    if (falharTmb) throw const PerfilCorporalException('Sem conexão.');
+    tmbSalvas.add(kcal);
+    manual = kcal;
+    return _efetivo();
+  }
+
+  @override
+  Future<void> usarTmbCalculada() async {
+    if (falharTmb) throw const PerfilCorporalException('Sem conexão.');
+    voltasAoCalculo++;
+    manual = null;
   }
 
   @override
@@ -86,12 +121,13 @@ class _RepoPerfil extends PerfilCorporalRepository {
       tmbKcal: completo ? 1755 : null,
       motivoSemTmb: completo ? null : MotivoSemTmb.dadosIncompletos,
     );
-    return atual;
+    return _efetivo();
   }
 
   @override
   Future<void> limparPerfilCorporal() async {
     limpezas++;
+    manual = null; // limpar apaga a TMB informada (PBI-98)
     // O peso é uma medida: continua depois de limpar.
     atual = PerfilCorporal(
         pesoKg: atual.pesoKg, motivoSemTmb: MotivoSemTmb.dadosIncompletos);
@@ -590,6 +626,321 @@ void main() {
       expect(find.text('1.755 kcal por dia'), findsOneWidget);
     });
   }
+
+  // ---- TMB informada pelo atleta (PBI-98) ----
+
+  Future<void> abrirEditar(WidgetTester tester) async {
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+  }
+
+  // O formulário também tem um "Salvar": o do diálogo é o de dentro do AlertDialog.
+  Finder salvarTmb() => find.descendant(
+      of: find.byType(AlertDialog), matching: find.widgetWithText(FilledButton, 'Salvar'));
+
+  Finder campoTmb() =>
+      find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField));
+
+  testWidgets('PBI-98: o botão "Editar" está em todos os estados, com alvo de 44 px',
+      (tester) async {
+    for (final repo in [
+      _RepoPerfil(_completo()),
+      _RepoPerfil(),
+      _RepoPerfil(_completo())..manual = 1800,
+      _RepoPerfil()..manual = 1800,
+    ]) {
+      await _abrir(tester, repo);
+      // TextButton.icon é uma subclasse privada: procura por is TextButton.
+      final botao = find.ancestor(
+          of: find.text('Editar'), matching: find.byWidgetPredicate((w) => w is TextButton));
+      expect(botao, findsOneWidget);
+      expect(tester.getSize(botao).height, greaterThanOrEqualTo(44));
+    }
+  });
+
+  testWidgets('PBI-98: informar 1.800 mostra o selo e a linha "Calculada: 1.755"',
+      (tester) async {
+    final repo = _RepoPerfil(_completo());
+    await _abrir(tester, repo);
+
+    await abrirEditar(tester);
+    // Já vem preenchido com o valor atual (o calculado).
+    expect(tester.widget<TextField>(campoTmb()).controller!.text, '1755');
+    expect(find.text('TMB, em kcal por dia'), findsOneWidget);
+    expect(find.text('Usar o cálculo'), findsNothing); // ainda não há manual
+    await tester.enterText(campoTmb(), '1800');
+    await tester.tap(salvarTmb());
+    await tester.pumpAndSettle();
+
+    expect(repo.tmbSalvas, [1800]);
+    expect(find.text('1.800 kcal por dia'), findsOneWidget);
+    expect(find.text('Informada por você'), findsOneWidget);
+    expect(find.text('Calculada: 1.755 kcal'), findsOneWidget);
+    expect(find.text('TMB salva'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: salvar a TMB não envia nem apaga o que está digitado no formulário',
+      (tester) async {
+    final repo = _RepoPerfil(_completo());
+    await _abrir(tester, repo);
+
+    await tester.enterText(_campo('Altura'), '190'); // digitado, não salvo
+    await abrirEditar(tester);
+    await tester.enterText(campoTmb(), '1800');
+    await tester.tap(salvarTmb());
+    await tester.pumpAndSettle();
+
+    expect(repo.salvos, isEmpty); // o PUT dos dados não foi chamado
+    expect(_texto(tester, 'Altura'), '190'); // e o campo continua como estava
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: mudar a altura depois não muda o 1.800, mas atualiza a linha "Calculada"',
+      (tester) async {
+    final repo = _RepoPerfil(_completo())..manual = 1800;
+    await _abrir(tester, repo);
+    expect(find.text('Calculada: 1.755 kcal'), findsOneWidget);
+
+    // O back recalcula com a altura nova; o fake devolve outro calculado.
+    await tester.enterText(_campo('Altura'), '190');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    repo.atual = PerfilCorporal(
+      sexo: repo.atual.sexo,
+      nascimento: repo.atual.nascimento,
+      alturaCm: 190,
+      pesoKg: repo.atual.pesoKg,
+      idade: 31,
+      tmbKcal: 1818,
+    );
+    // Uma nova leitura (o que a invalidação faz) traz o calculado novo.
+    final container = ProviderScope.containerOf(tester.element(find.byType(DadosCorporaisScreen)));
+    container.invalidate(perfilCorporalProvider);
+    await tester.pumpAndSettle();
+
+    expect(find.text('1.800 kcal por dia'), findsOneWidget);
+    expect(find.text('Calculada: 1.818 kcal'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: "Usar o cálculo" volta ao número calculado e o selo some',
+      (tester) async {
+    final repo = _RepoPerfil(_completo())..manual = 1800;
+    await _abrir(tester, repo);
+
+    await abrirEditar(tester);
+    await tester.tap(find.text('Usar o cálculo'));
+    await tester.pumpAndSettle();
+
+    expect(repo.voltasAoCalculo, 1);
+    expect(find.text('1.755 kcal por dia'), findsOneWidget);
+    expect(find.text('Informada por você'), findsNothing);
+    expect(find.textContaining('Calculada:'), findsNothing);
+    expect(find.text('Voltou ao cálculo'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: sem dados completos dá para informar; aparece sem a linha "Calculada"',
+      (tester) async {
+    final repo = _RepoPerfil();
+    await _abrir(tester, repo);
+    expect(find.text('Preencha sexo, nascimento, altura e peso'), findsOneWidget);
+
+    await abrirEditar(tester);
+    expect(tester.widget<TextField>(campoTmb()).controller!.text, isEmpty);
+    await tester.enterText(campoTmb(), '1800');
+    await tester.tap(salvarTmb());
+    await tester.pumpAndSettle();
+
+    expect(find.text('1.800 kcal por dia'), findsOneWidget);
+    expect(find.text('Informada por você'), findsOneWidget);
+    expect(find.textContaining('Calculada:'), findsNothing);
+    expect(find.text('Preencha sexo, nascimento, altura e peso'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: fora de 800 a 5.000 ou vazio é recusado e nada é gravado',
+      (tester) async {
+    final repo = _RepoPerfil(_completo());
+    await _abrir(tester, repo);
+    await abrirEditar(tester);
+
+    for (final invalido in ['799', '5001', '']) {
+      await tester.enterText(campoTmb(), invalido);
+      await tester.tap(salvarTmb());
+      await tester.pumpAndSettle();
+      expect(find.text('Use um valor entre 800 e 5.000 kcal.'), findsOneWidget, reason: invalido);
+      expect(find.byType(AlertDialog), findsOneWidget); // o diálogo segue aberto
+    }
+    expect(repo.tmbSalvas, isEmpty);
+
+    // Só dígitos entram: vírgula e ponto são descartados (não há valor quebrado).
+    await tester.enterText(campoTmb(), '1800,5');
+    expect(tester.widget<TextField>(campoTmb()).controller!.text, '18005');
+
+    // O valor digitado não entra na mensagem.
+    await tester.enterText(campoTmb(), '6123');
+    await tester.tap(salvarTmb());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('6123', findRichText: true), findsOneWidget); // só no campo
+  });
+
+  testWidgets('PBI-98: Cancelar não grava nada', (tester) async {
+    final repo = _RepoPerfil(_completo())..manual = 1800;
+    await _abrir(tester, repo);
+
+    await abrirEditar(tester);
+    await tester.enterText(campoTmb(), '2000');
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    expect(repo.tmbSalvas, isEmpty);
+    expect(repo.voltasAoCalculo, 0);
+    expect(find.text('1.800 kcal por dia'), findsOneWidget);
+  });
+
+  testWidgets('PBI-98: falha ao salvar a TMB mostra o erro e não muda o cartão', (tester) async {
+    final repo = _RepoPerfil(_completo())..falharTmb = true;
+    await _abrir(tester, repo);
+
+    await abrirEditar(tester);
+    await tester.enterText(campoTmb(), '1800');
+    await tester.tap(salvarTmb());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Sem conexão.'), findsOneWidget);
+    expect(find.text('1.755 kcal por dia'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('PBI-98: menor de idade também pode informar', (tester) async {
+    final repo = _RepoPerfil(PerfilCorporal(
+      sexo: SexoBiologico.masculino,
+      nascimento: DateTime(2010, 1, 1),
+      alturaCm: 160,
+      pesoKg: 50.0,
+      idade: 16,
+      motivoSemTmb: MotivoSemTmb.menorDeIdade,
+    ))
+      ..manual = 1500;
+    await _abrir(tester, repo);
+
+    expect(find.text('1.500 kcal por dia'), findsOneWidget);
+    expect(find.text('Informada por você'), findsOneWidget);
+    expect(find.text('A estimativa vale para adultos'), findsNothing);
+  });
+
+  testWidgets('PBI-98: rótulo falado com o valor, o selo e o calculado', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _abrir(tester, _RepoPerfil(_completo())..manual = 1800);
+
+    expect(
+        find.bySemanticsLabel(
+            'Taxa metabólica basal, 1.800 kcal por dia, informada por você. Calculada, 1.755'),
+        findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Editar$')), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('PBI-98: rótulo falado da calculada', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _abrir(tester, _RepoPerfil(_completo()));
+
+    expect(find.bySemanticsLabel('Taxa metabólica basal, 1.755 kcal por dia'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('PBI-98: "Limpar dados corporais" avisa que a TMB informada também sai',
+      (tester) async {
+    final repo = _RepoPerfil(_completo())..manual = 1800;
+    await _abrir(tester, repo);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Limpar dados corporais'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('a TMB informada por você serão apagados'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Limpar dados'));
+    await tester.pumpAndSettle();
+
+    expect(repo.manual, isNull);
+    expect(find.text('Informada por você'), findsNothing);
+    expect(_texto(tester, 'Peso'), '78,0'); // o histórico de peso fica
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('PBI-98: o Perfil mostra o mesmo valor do cartão e diz "informada"',
+      (tester) async {
+    await tester.pumpWidget(await _escopo(_RepoPerfil(_completo())..manual = 1800,
+        MaterialApp(theme: AppTheme.claro, home: const PerfilScreen())));
+    await tester.pumpAndSettle();
+
+    expect(find.text('78 kg · 180 cm · TMB informada 1.800 kcal por dia'), findsOneWidget);
+  });
+
+  test('PBI-98: resumo do Perfil usa o valor efetivo', () {
+    expect(
+        resumoDadosParaPerfil(const PerfilCorporal(
+            pesoKg: 78.0, alturaCm: 180, tmbKcal: 1800, tmbCalculadaKcal: 1755, tmbManual: true)),
+        '78 kg · 180 cm · TMB informada 1.800 kcal por dia');
+    expect(
+        resumoDadosParaPerfil(const PerfilCorporal(
+            tmbKcal: 1800, tmbManual: true, motivoSemTmb: MotivoSemTmb.dadosIncompletos)),
+        'TMB informada 1.800 kcal por dia');
+  });
+
+  for (final escuro in [false, true]) {
+    testWidgets('PBI-98: cartão informado e diálogo em 360 px e fonte 1,3x '
+        '(${escuro ? 'escuro' : 'claro'})', (tester) async {
+      _telaDeCelular(tester);
+      await tester.pumpWidget(await _escopo(
+        _RepoPerfil(_completo())..manual = 1800,
+        MaterialApp(
+          theme: escuro ? AppTheme.escuro : AppTheme.claro,
+          home: const DadosCorporaisScreen(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Informada por você'), findsOneWidget);
+
+      await tester.tap(find.text('Editar'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Usar o cálculo'), findsOneWidget);
+    });
+  }
+
+  test('PBI-98: salvar a TMB invalida os dados corporais (Mudanca.perfilCorporal)', () async {
+    final repo = _RepoPerfil(_completo());
+    final c = ProviderContainer(overrides: [
+      perfilCorporalRepositoryProvider.overrideWithValue(repo),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(perfilCorporalProvider, (_, __) {});
+    expect((await c.read(perfilCorporalProvider.future)).tmbKcal, 1755);
+
+    await c.read(perfilCorporalComandosProvider).definirTmbManual(1800);
+    var p = await c.read(perfilCorporalProvider.future);
+    expect(p.tmbKcal, 1800);
+    expect(p.tmbManual, isTrue);
+
+    await c.read(perfilCorporalComandosProvider).usarTmbCalculada();
+    p = await c.read(perfilCorporalProvider.future);
+    expect(p.tmbKcal, 1755);
+    expect(p.tmbManual, isFalse);
+  });
 
   // ---- Invalidação ----
 

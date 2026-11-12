@@ -54,7 +54,31 @@ class PerfilCorporalRepository {
     }
   }
 
-  /// Limpa sexo, nascimento e altura. O histórico de peso fica nas medidas.
+  /// Grava a TMB informada pelo atleta (PBI-98), 800 a 5000 kcal. Rota própria:
+  /// não mexe em sexo, nascimento e altura. Devolve os dados já recalculados.
+  Future<PerfilCorporal> definirTmbManual(int kcal) async {
+    try {
+      final resposta = await _dio.put<Map<String, dynamic>>(
+        '/me/perfil-corporal/tmb-manual',
+        data: {'kcal': kcal},
+      );
+      return PerfilCorporal.doJson(resposta.data!);
+    } on DioException catch (e) {
+      throw PerfilCorporalException(_traduzir(e, 'Não foi possível salvar a TMB.'));
+    }
+  }
+
+  /// Volta à TMB calculada (apaga a informada).
+  Future<void> usarTmbCalculada() async {
+    try {
+      await _dio.delete<void>('/me/perfil-corporal/tmb-manual');
+    } on DioException catch (e) {
+      throw PerfilCorporalException(_traduzir(e, 'Não foi possível voltar ao cálculo.'));
+    }
+  }
+
+  /// Limpa sexo, nascimento, altura e a TMB informada. O histórico de peso fica
+  /// nas medidas.
   Future<void> limparPerfilCorporal() async {
     try {
       await _dio.delete<void>('/me/perfil-corporal');

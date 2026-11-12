@@ -36,10 +36,11 @@ class DadosCorporaisScreen extends ConsumerWidget {
           // sumir nesse meio tempo (perderia o aviso e o que está digitado).
           skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => EstadoErro(
-            mensagem: 'Não foi possível carregar seus dados corporais.',
-            aoTentar: () => tentarDeNovo(ref, [perfilCorporalProvider]),
-          ),
+          error:
+              (_, __) => EstadoErro(
+                mensagem: 'Não foi possível carregar seus dados corporais.',
+                aoTentar: () => tentarDeNovo(ref, [perfilCorporalProvider]),
+              ),
           data: (dados) => _Formulario(perfil: dados),
         ),
       ),
@@ -166,12 +167,15 @@ class _FormularioState extends ConsumerState<_Formulario> {
     final peso = double.tryParse(_peso.text.trim().replaceAll(',', '.'));
     if (!_validar(altura: altura, peso: peso)) return;
 
-    final pesoMudou = peso != null &&
+    final pesoMudou =
+        peso != null &&
         (_pesoOriginal == null || (peso - _pesoOriginal!).abs() > 0.001);
 
     setState(() => _ocupado = true);
     try {
-      final salvo = await ref.read(perfilCorporalComandosProvider).salvar(
+      final salvo = await ref
+          .read(perfilCorporalComandosProvider)
+          .salvar(
             sexo: _sexo,
             nascimento: _nascimento,
             alturaCm: altura,
@@ -196,7 +200,8 @@ class _FormularioState extends ConsumerState<_Formulario> {
     final confirmou = await confirmarPerigo(
       context,
       titulo: 'Limpar dados corporais?',
-      texto: 'Sexo, nascimento e altura serão apagados. '
+      texto:
+          'Sexo, nascimento, altura e a TMB informada por você serão apagados. '
           'Seu histórico de peso continua nas medidas.',
       rotuloConfirmar: 'Limpar dados',
     );
@@ -233,17 +238,25 @@ class _FormularioState extends ConsumerState<_Formulario> {
         // Privacidade: o compartilhamento com o educador chega na PBI-96.
         Row(
           children: [
-            Icon(LucideIcons.lock, size: AppSizes.iconeSm, color: cores.iconMuted),
+            Icon(
+              LucideIcons.lock,
+              size: AppSizes.iconeSm,
+              color: cores.iconMuted,
+            ),
             const SizedBox(width: AppSpacing.x8),
             Expanded(
-              child: Text('Só você vê estes dados.',
-                  style: AppText.caption.copyWith(color: cores.textSecondary)),
+              child: Text(
+                'Só você vê estes dados.',
+                style: AppText.caption.copyWith(color: cores.textSecondary),
+              ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.x24),
-        Text('SEXO, PARA O CÁLCULO',
-            style: AppText.overline.copyWith(color: cores.textSecondary)),
+        Text(
+          'SEXO, PARA O CÁLCULO',
+          style: AppText.overline.copyWith(color: cores.textSecondary),
+        ),
         const SizedBox(height: AppSpacing.x8),
         // Grupo anunciado como um só ("Sexo, para o cálculo") com os dois botões.
         Semantics(
@@ -260,8 +273,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
                   ButtonSegment(value: s, label: Text(s.rotulo)),
               ],
               selected: _sexo == null ? const {} : {_sexo!},
-              onSelectionChanged: (escolha) => setState(
-                  () => _sexo = escolha.isEmpty ? null : escolha.first),
+              onSelectionChanged:
+                  (escolha) => setState(
+                    () => _sexo = escolha.isEmpty ? null : escolha.first,
+                  ),
             ),
           ),
         ),
@@ -273,8 +288,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
         ),
         if (idade != null) ...[
           const SizedBox(height: AppSpacing.x4),
-          Text(idade == 1 ? '1 ano' : '$idade anos',
-              style: AppText.caption.copyWith(color: cores.textSecondary)),
+          Text(
+            idade == 1 ? '1 ano' : '$idade anos',
+            style: AppText.caption.copyWith(color: cores.textSecondary),
+          ),
         ],
         const SizedBox(height: AppSpacing.x16),
         TextField(
@@ -296,7 +313,9 @@ class _FormularioState extends ConsumerState<_Formulario> {
         TextField(
           controller: _peso,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+          ],
           textInputAction: TextInputAction.done,
           style: AppText.inputValue,
           onChanged: (_) {
@@ -335,70 +354,255 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 }
 
-/// Cartão "Taxa metabólica basal" com os três estados: calculada, incompleta e
-/// menor de idade. O número é o que a API devolveu; não há conta no app.
-class _CartaoTmb extends StatelessWidget {
+/// Cartão "Taxa metabólica basal" (PBI-93, editável na PBI-98). Estados:
+/// calculada; informada pelo atleta (com a linha "Calculada" quando há cálculo);
+/// sem valor nenhum (dado faltando ou menor de idade). O número é sempre o que a
+/// API devolveu como efetivo; não há conta no app. "Editar" aparece em todos os
+/// estados, inclusive sem dados: quem sabe a própria TMB pode informar direto.
+///
+/// Salvar a TMB tem rota própria: o que está digitado no formulário acima e
+/// ainda não foi salvo não é enviado nem perdido.
+class _CartaoTmb extends ConsumerWidget {
   const _CartaoTmb({required this.perfil});
 
   final PerfilCorporal perfil;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cores = AppColors.of(context);
     final kcal = perfil.tmbKcal;
+    final calculada = perfil.tmbCalculadaKcal;
+    final manual = perfil.tmbManual && kcal != null;
 
-    final String frase;
+    final String falado;
     final Widget corpo;
     if (kcal != null) {
-      frase = '${formatarMilhar(kcal)} kcal por dia';
+      final valor = '${formatarMilhar(kcal)} kcal por dia';
+      falado =
+          manual
+              ? [
+                'Taxa metabólica basal, $valor, informada por você',
+                if (calculada != null)
+                  'Calculada, ${formatarMilhar(calculada)}',
+              ].join('. ')
+              : 'Taxa metabólica basal, $valor';
       corpo = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(frase, style: AppText.title),
+          Text(valor, style: AppText.title),
           const SizedBox(height: AppSpacing.x4),
-          Text('Estimativa do que seu corpo gasta em repouso.',
-              style: AppText.caption.copyWith(color: cores.textSecondary)),
+          if (manual) ...[
+            const _SeloInformada(),
+            if (calculada != null) ...[
+              const SizedBox(height: AppSpacing.x6),
+              Text(
+                'Calculada: ${formatarMilhar(calculada)} kcal',
+                style: AppText.caption.copyWith(color: cores.textSecondary),
+              ),
+            ],
+          ] else
+            Text(
+              'Estimativa do que seu corpo gasta em repouso.',
+              style: AppText.caption.copyWith(color: cores.textSecondary),
+            ),
         ],
       );
-    } else if (perfil.motivoSemTmb == MotivoSemTmb.menorDeIdade) {
-      frase = 'A estimativa vale para adultos';
-      corpo = Text(frase, style: AppText.body);
     } else {
-      frase = 'Preencha sexo, nascimento, altura e peso';
+      final frase =
+          perfil.motivoSemTmb == MotivoSemTmb.menorDeIdade
+              ? 'A estimativa vale para adultos'
+              : 'Preencha sexo, nascimento, altura e peso';
+      falado = 'Taxa metabólica basal. $frase';
       corpo = Text(frase, style: AppText.body);
     }
 
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      label: 'Taxa metabólica basal. $frase',
-      excludeSemantics: true,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.all(color: cores.lineDefault),
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        padding: const EdgeInsets.all(AppSpacing.paddingCard),
-        child: Row(
-          children: [
-            Icon(LucideIcons.flame, size: AppSizes.iconeMd, color: cores.primaryText),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: cores.lineDefault),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.paddingCard),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: Icon(
+              LucideIcons.flame,
+              size: AppSizes.iconeMd,
+              color: cores.primaryText,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              label: falado,
+              excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TAXA METABÓLICA BASAL',
-                      style: AppText.overline.copyWith(color: cores.textSecondary)),
+                  Text(
+                    'TAXA METABÓLICA BASAL',
+                    style: AppText.overline.copyWith(
+                      color: cores.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.x4),
                   corpo,
                 ],
               ),
             ),
-          ],
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          TextButton.icon(
+            onPressed: () => _editar(context, ref),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(AppSizes.touchMin, AppSizes.touchMin),
+            ),
+            icon: const Icon(LucideIcons.pencil, size: AppSizes.iconeSm),
+            label: const Text('Editar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editar(BuildContext context, WidgetRef ref) async {
+    final escolha = await showDialog<_EscolhaTmb>(
+      context: context,
+      builder:
+          (_) => _DialogoTmb(
+            valorAtual: perfil.tmbKcal,
+            temManual: perfil.tmbManual,
+          ),
+    );
+    if (escolha == null || !context.mounted) return;
+
+    final comandos = ref.read(perfilCorporalComandosProvider);
+    try {
+      if (escolha.kcal != null) {
+        await comandos.definirTmbManual(escolha.kcal!);
+        if (context.mounted) mostrarAviso(context, 'TMB salva');
+      } else {
+        await comandos.usarTmbCalculada();
+        if (context.mounted) mostrarAviso(context, 'Voltou ao cálculo');
+      }
+    } on PerfilCorporalException catch (e) {
+      if (context.mounted) mostrarErro(context, e.mensagem);
+    }
+  }
+}
+
+/// Selo "Informada por você": o número não é o da fórmula.
+class _SeloInformada extends StatelessWidget {
+  const _SeloInformada();
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x8,
+        vertical: AppSpacing.x4,
+      ),
+      decoration: BoxDecoration(
+        color: cores.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.avisos),
+      ),
+      child: Text(
+        'Informada por você',
+        style: AppText.caption.copyWith(color: cores.primaryOnTint),
+      ),
+    );
+  }
+}
+
+/// O que o diálogo da TMB devolveu: um valor para gravar, ou [kcal] nulo para
+/// voltar ao cálculo. Cancelar devolve nulo (nenhuma escolha).
+class _EscolhaTmb {
+  const _EscolhaTmb.salvar(int this.kcal);
+  const _EscolhaTmb.usarCalculo() : kcal = null;
+
+  final int? kcal;
+}
+
+class _DialogoTmb extends StatefulWidget {
+  const _DialogoTmb({required this.valorAtual, required this.temManual});
+
+  final int? valorAtual;
+  final bool temManual;
+
+  @override
+  State<_DialogoTmb> createState() => _DialogoTmbState();
+}
+
+class _DialogoTmbState extends State<_DialogoTmb> {
+  static const _minimo = 800;
+  static const _maximo = 5000;
+
+  late final _texto = TextEditingController(
+    text: widget.valorAtual?.toString() ?? '',
+  );
+  String? _erro;
+
+  @override
+  void dispose() {
+    _texto.dispose();
+    super.dispose();
+  }
+
+  void _salvar() {
+    final kcal = int.tryParse(_texto.text.trim());
+    if (kcal == null || kcal < _minimo || kcal > _maximo) {
+      // O valor digitado nunca entra na mensagem.
+      setState(() => _erro = 'Use um valor entre 800 e 5.000 kcal.');
+      return;
+    }
+    Navigator.of(context).pop(_EscolhaTmb.salvar(kcal));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Taxa metabólica basal'),
+      content: TextField(
+        controller: _texto,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        textInputAction: TextInputAction.done,
+        style: AppText.inputValue,
+        onSubmitted: (_) => _salvar(),
+        onChanged: (_) {
+          if (_erro != null) setState(() => _erro = null);
+        },
+        decoration: InputDecoration(
+          labelText: 'TMB, em kcal por dia',
+          suffixText: 'kcal',
+          helperText:
+              'Use o valor que você sabe (bioimpedância, nutricionista).',
+          helperMaxLines: 2,
+          errorText: _erro,
+          errorMaxLines: 2,
         ),
       ),
+      actions: [
+        if (widget.temManual)
+          TextButton(
+            onPressed:
+                () =>
+                    Navigator.of(context).pop(const _EscolhaTmb.usarCalculo()),
+            child: const Text('Usar o cálculo'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _salvar, child: const Text('Salvar')),
+      ],
     );
   }
 }

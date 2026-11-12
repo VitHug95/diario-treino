@@ -67,8 +67,33 @@ public sealed class ServicoPerfilCorporal
     }
 
     /// <summary>
-    /// Limpa sexo, nascimento e altura. NÃO apaga o histórico de peso: ele
-    /// pertence às medidas e se apaga por lá.
+    /// Grava a TMB informada pelo atleta (PBI-98). Rota própria: não mexe em sexo,
+    /// nascimento e altura. Fora da faixa vira <see cref="ArgumentException"/> (400).
+    /// </summary>
+    public async Task<PerfilCorporalResposta> DefinirTmbManualAsync(Guid usuarioId, int kcal, CancellationToken ct)
+    {
+        if (!CalculoTmb.ManualNaFaixa(kcal))
+        {
+            throw new ArgumentException("Use um valor entre 800 e 5.000 kcal.");
+        }
+
+        var usuario = await CarregarAsync(usuarioId, ct);
+        usuario.TmbManualKcal = (short)kcal;
+        await _usuarios.SalvarAsync(ct);
+        return await MontarAsync(usuario, ct);
+    }
+
+    /// <summary>Volta à TMB calculada (PBI-98). Idempotente.</summary>
+    public async Task UsarTmbCalculadaAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var usuario = await CarregarAsync(usuarioId, ct);
+        usuario.TmbManualKcal = null;
+        await _usuarios.SalvarAsync(ct);
+    }
+
+    /// <summary>
+    /// Limpa sexo, nascimento, altura e a TMB informada (PBI-98). NÃO apaga o
+    /// histórico de peso: ele pertence às medidas e se apaga por lá.
     /// </summary>
     public async Task LimparAsync(Guid usuarioId, CancellationToken ct)
     {
@@ -76,6 +101,7 @@ public sealed class ServicoPerfilCorporal
         usuario.Sexo = null;
         usuario.DataNascimento = null;
         usuario.AlturaCm = null;
+        usuario.TmbManualKcal = null;
         await _usuarios.SalvarAsync(ct);
     }
 
@@ -91,14 +117,18 @@ public sealed class ServicoPerfilCorporal
             ? CalculoTmb.IdadeEm(nascimento, hoje)
             : null;
 
+        var (efetiva, manual) = CalculoTmb.ValorEfetivo(usuario.TmbManualKcal, tmb.Kcal);
+
         return new PerfilCorporalResposta(
             usuario.Sexo,
             usuario.DataNascimento,
             usuario.AlturaCm,
             peso,
             idade,
+            efetiva,
+            tmb.Motivo,
             tmb.Kcal,
-            tmb.Motivo);
+            manual);
     }
 
     private static DateOnly Hoje() => DateOnly.FromDateTime(DateTime.UtcNow);

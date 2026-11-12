@@ -97,7 +97,10 @@ String resumoDadosParaPerfil(PerfilCorporal p) {
     if (p.alturaCm != null) '${p.alturaCm} cm',
   ];
   if (p.tmbKcal != null) {
-    partes.add('TMB ${formatarMilhar(p.tmbKcal!)} kcal por dia');
+    // Valor efetivo (PBI-98): o mesmo número do cartão; se informado, diz.
+    partes.add(p.tmbManual
+        ? 'TMB informada ${formatarMilhar(p.tmbKcal!)} kcal por dia'
+        : 'TMB ${formatarMilhar(p.tmbKcal!)} kcal por dia');
   }
   if (partes.isEmpty) return 'Preencha para calcular sua TMB';
   if (p.tmbKcal == null) {

@@ -327,9 +327,11 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/me/medidas/{data}` | Valores do dia: `{ valores: { "CINTURA": 83.0 } }`. 404 se não houver | ✅ (PBI-91) |
 | PUT | `/me/medidas/{data}` | `{ valores: { "CINTURA": 83.0, "PEITO": 102.5 } }`. Upsert por tipo; valor nulo remove só aquele tipo; dia que ficaria vazio, 400. Data não futura, tipo na lista (12), faixa por tipo (peso 30 a 300 kg; demais 5 a 250 cm), uma casa decimal; erros em Problem Details por tipo, sem repetir o valor. Devolve o dia | ✅ (PBI-91) |
 | DELETE | `/me/medidas/{data}` | Apaga o dia inteiro. 204; 404 se não houver | ✅ (PBI-91) |
-| GET | `/me/perfil-corporal` | Dados corporais e TMB: `{ sexo, dataNascimento, alturaCm, pesoKg, idade, tmbKcal, motivoSemTmb }`. `pesoKg` é a medida PESO mais recente; `motivoSemTmb` é nulo, `DADOS_INCOMPLETOS` ou `MENOR_DE_IDADE`. Só o dono | ✅ (PBI-93) |
+| GET | `/me/perfil-corporal` | Dados corporais e TMB: `{ sexo, dataNascimento, alturaCm, pesoKg, idade, tmbKcal, motivoSemTmb, tmbCalculadaKcal, tmbManual }`. `pesoKg` é a medida PESO mais recente. `tmbKcal` é o valor **efetivo** (o informado, se houver; senão o calculado); `tmbCalculadaKcal` é o da fórmula; `motivoSemTmb` (nulo, `DADOS_INCOMPLETOS` ou `MENOR_DE_IDADE`) explica a falta do **calculado** e pode vir com `tmbKcal` informado. Só o dono | ✅ (PBI-93; TMB informada na PBI-98) |
 | PUT | `/me/perfil-corporal` | `{ sexo, dataNascimento, alturaCm, pesoKg, dataPeso }`: substitui sexo (M/F), nascimento (idade 10 a 100) e altura (100 a 250); nulo limpa. Com `pesoKg` (30 a 300, uma casa) grava a medida PESO de `dataPeso` (padrão hoje; não futura). Devolve o corpo do GET já recalculado. 400 em Problem Details, sem repetir o valor | ✅ (PBI-93) |
-| DELETE | `/me/perfil-corporal` | Limpa sexo, nascimento e altura. 204. **Não apaga** o histórico de peso | ✅ (PBI-93) |
+| DELETE | `/me/perfil-corporal` | Limpa sexo, nascimento, altura e a TMB informada. 204. **Não apaga** o histórico de peso | ✅ (PBI-93, PBI-98) |
+| PUT | `/me/perfil-corporal/tmb-manual` | `{ kcal }`: grava a TMB informada (inteiro de 800 a 5000; senão 400 sem repetir o valor). Vale sem dados completos e para menor de idade. Não mexe em sexo, nascimento e altura. Devolve o corpo do GET | ✅ (PBI-98) |
+| DELETE | `/me/perfil-corporal/tmb-manual` | Volta à TMB calculada. 204 (idempotente) | ✅ (PBI-98) |
 | GET | `/metricas` | Métricas disponíveis | ✅ |
 | GET | `/membros` | Membros e seus músculos, na ordem dos chips | ✅ (PBI-31 etapa 2) |
 | GET | `/exercicios?busca=&modalidade=&membro=` | Catálogo global + exercícios do usuário; filtra por membro e/ou modalidade | ✅ |

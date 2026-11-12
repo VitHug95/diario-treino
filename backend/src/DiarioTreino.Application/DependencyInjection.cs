@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<ConvidarAlunoRequest>, ConvidarAlunoValidator>();
         services.AddScoped<IValidator<SalvarMedidasEntrada>, SalvarMedidasValidator>();
         services.AddScoped<IValidator<SalvarPerfilCorporalRequest>, SalvarPerfilCorporalValidator>();
+        services.AddScoped<IValidator<DefinirTmbManualRequest>, DefinirTmbManualValidator>();
 
         return services;
     }

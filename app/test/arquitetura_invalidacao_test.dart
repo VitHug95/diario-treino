@@ -23,6 +23,7 @@ const _escritas = [
   'criarExercicio', // catálogo
   'salvarMedidas', 'excluirMedidas', // medidas corporais (E12)
   'salvarPerfilCorporal', 'limparPerfilCorporal', // dados corporais (E12)
+  'definirTmbManual', 'usarTmbCalculada', // TMB informada (PBI-98)
 ];
 
 Iterable<File> _arquivosDart() => Directory('lib')

@@ -46,6 +46,8 @@ class PerfilCorporal {
     this.idade,
     this.tmbKcal,
     this.motivoSemTmb,
+    this.tmbCalculadaKcal,
+    this.tmbManual = false,
   });
 
   final SexoBiologico? sexo;
@@ -53,8 +55,18 @@ class PerfilCorporal {
   final int? alturaCm;
   final double? pesoKg;
   final int? idade;
+  /// Valor que vale no app (PBI-98): o informado pelo atleta, se houver; senão o
+  /// calculado.
   final int? tmbKcal;
+
+  /// Por que não há valor CALCULADO (pode vir mesmo com [tmbKcal] informado).
   final MotivoSemTmb? motivoSemTmb;
+
+  /// O da fórmula, sempre (nulo se falta dado ou é menor de idade).
+  final int? tmbCalculadaKcal;
+
+  /// [tmbKcal] é o informado pelo atleta.
+  final bool tmbManual;
 
   /// Nada preenchido (nem o peso das medidas).
   bool get vazio =>
@@ -70,5 +82,7 @@ class PerfilCorporal {
         idade: (json['idade'] as num?)?.toInt(),
         tmbKcal: (json['tmbKcal'] as num?)?.toInt(),
         motivoSemTmb: MotivoSemTmb.doCodigo(json['motivoSemTmb'] as String?),
+        tmbCalculadaKcal: (json['tmbCalculadaKcal'] as num?)?.toInt(),
+        tmbManual: json['tmbManual'] as bool? ?? false,
       );
 }

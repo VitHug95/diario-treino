@@ -198,4 +198,67 @@ public sealed class CalculoTmbTests
         Assert.All(r.Errors, e => Assert.DoesNotContain("12,3", e.ErrorMessage));
         Assert.All(r.Errors, e => Assert.DoesNotContain("77", e.ErrorMessage));
     }
-}
+
+    // ---- TMB informada (PBI-98) ----
+
+    [Fact]
+    public void Valor_efetivo_e_o_manual_quando_ha_manual()
+    {
+        Assert.Equal((1800, true), CalculoTmb.ValorEfetivo(1800, 1755));
+    }
+
+    [Fact]
+    public void Valor_efetivo_e_o_calculado_sem_manual()
+    {
+        Assert.Equal((1755, false), CalculoTmb.ValorEfetivo(null, 1755));
+    }
+
+    [Fact]
+    public void Valor_efetivo_e_o_manual_mesmo_sem_calculo_possivel()
+    {
+        Assert.Equal((1800, true), CalculoTmb.ValorEfetivo(1800, null));
+    }
+
+    [Fact]
+    public void Sem_manual_e_sem_calculo_nao_ha_valor()
+    {
+        Assert.Equal(((int?)null, false), CalculoTmb.ValorEfetivo(null, null));
+    }
+
+    [Theory]
+    [InlineData(800, true)]
+    [InlineData(5000, true)]
+    [InlineData(1800, true)]
+    [InlineData(799, false)]
+    [InlineData(5001, false)]
+    [InlineData(0, false)]
+    public void Faixa_da_tmb_manual_e_de_800_a_5000(int kcal, bool aceita) =>
+        Assert.Equal(aceita, CalculoTmb.ManualNaFaixa(kcal));
+
+    private static Task<FluentValidation.Results.ValidationResult> ValidarManual(decimal? kcal) =>
+        new DefinirTmbManualValidator().ValidateAsync(new DefinirTmbManualRequest(kcal));
+
+    [Theory]
+    [InlineData(800)]
+    [InlineData(5000)]
+    [InlineData(1800)]
+    public async Task Validador_da_tmb_manual_aceita_inteiros_na_faixa(int kcal) =>
+        Assert.True((await ValidarManual(kcal)).IsValid);
+
+    [Fact]
+    public async Task Validador_da_tmb_manual_recusa_vazio_fora_da_faixa_e_quebrado()
+    {
+        Assert.False((await ValidarManual(null)).IsValid);
+        Assert.False((await ValidarManual(799)).IsValid);
+        Assert.False((await ValidarManual(5001)).IsValid);
+        Assert.False((await ValidarManual(1800.5m)).IsValid);
+    }
+
+    [Fact]
+    public async Task Validador_da_tmb_manual_nao_repete_o_valor()
+    {
+        var r = await ValidarManual(6123);
+
+        Assert.All(r.Errors, e => Assert.DoesNotContain("6123", e.ErrorMessage.Replace(".", string.Empty)));
+        Assert.Contains(r.Errors, e => e.ErrorMessage == "Use um valor entre 800 e 5.000 kcal.");
+    }}
