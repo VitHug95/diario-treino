@@ -2,6 +2,9 @@ import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/sessao/registrar_sessao_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_models.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
+import 'package:diario_treino/shared/campo_data.dart';
+import 'package:diario_treino/shared/formato_data.dart';
+import 'package:diario_treino/shared/seletor_data.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,6 +60,34 @@ Future<Widget> _tela() async {
 }
 
 void main() {
+  testWidgets('PBI-97: "Dia em que treinou" no registro é o CampoData e aceita digitar',
+      (tester) async {
+    reiniciarSeletorDeData();
+    await tester.pumpWidget(await _tela());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CampoData), findsOneWidget);
+    final hoje = formatarDataCompleta(DateTime.now());
+    expect(find.text(hoje), findsOneWidget);
+
+    // O campo inteiro abre o seletor: toca na borda de cima à esquerda.
+    await tester.tapAt(tester.getTopLeft(find.byType(CampoData)) + const Offset(3, 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Dia em que você treinou'), findsOneWidget);
+    await tester.tap(find.byTooltip('Digitar a data'));
+    await tester.pumpAndSettle();
+
+    final passado = DateTime.now().subtract(const Duration(days: 400));
+    final digitos = '${passado.day.toString().padLeft(2, '0')}'
+        '${passado.month.toString().padLeft(2, '0')}${passado.year}';
+    await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), digitos);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatarDataCompleta(passado)), findsOneWidget);
+    expect(find.text(hoje), findsNothing);
+  });
   testWidgets('Exercício começa desmarcado, com a série como sugestão (PBI-37)',
       (tester) async {
     await tester.pumpWidget(await _tela());

@@ -101,6 +101,9 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - **Exportar PDF (PBI-89):** botão na aba Progresso; PDF dos últimos 90 dias
   (configurável), gerado no backend.
 
+### Datas (PBI-97)
+- O campo de data é um só em todo o app (nascimento, dia da medição, dia em que treinou): o campo inteiro abre o seletor, que tem calendário e digitação com barras automáticas (`26051995` vira `26/05/1995`). O seletor é próprio, porque o do SDK lê mm/dd/aaaa (o app não tem locale pt-BR).
+
 ### Corpo (E12, PBI-92)
 - Perfil: bloco **Corpo** com a linha "Medidas corporais" e o resumo da última medição.
 - Medidas corporais: últimas medidas dos 12 tipos com variação (seta e sinal), histórico por dia; registrar só o que mediu (vírgula ou ponto), editar e excluir um dia. Dado de saúde: só o dono vê; o compartilhamento com o educador ainda não existe.

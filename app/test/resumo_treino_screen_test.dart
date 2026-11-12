@@ -9,6 +9,9 @@ import 'package:diario_treino/features/sessao/resumo_treino_screen.dart';
 import 'package:diario_treino/features/sessao/sessao_edicao.dart';
 import 'package:diario_treino/features/sessao/sessao_repository.dart';
 import 'package:diario_treino/features/sessao/treino_ao_vivo_controller.dart';
+import 'package:diario_treino/shared/campo_data.dart';
+import 'package:diario_treino/shared/formato_data.dart';
+import 'package:diario_treino/shared/seletor_data.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -183,6 +186,61 @@ void main() {
     c.dispose();
   });
 
+
+  // ---- PBI-97: campo de data compartilhado ----
+
+  testWidgets('PBI-97: "Dia em que treinou" é o CampoData e aceita digitar sem barras',
+      (tester) async {
+    reiniciarSeletorDeData();
+    final repo = _RepoSessao();
+    final c = await _comTreino(repo, [_serie(feita: true)]);
+    await _abrirResumo(tester, c);
+
+    expect(find.byType(CampoData), findsOneWidget);
+    expect(find.text('Dia em que treinou'), findsOneWidget);
+    expect(find.text('15/10/2026'), findsOneWidget);
+
+    await tester.ensureVisible(find.byType(CampoData));
+    await tester.tap(find.text('15/10/2026'));
+    await tester.pumpAndSettle();
+    expect(find.text('Dia em que você treinou'), findsOneWidget); // título do seletor
+    await tester.tap(find.byTooltip('Digitar a data'));
+    await tester.pumpAndSettle();
+
+    final passado = DateTime.now().subtract(const Duration(days: 400));
+    final digitos = '${passado.day.toString().padLeft(2, '0')}'
+        '${passado.month.toString().padLeft(2, '0')}${passado.year}';
+    await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), digitos);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatarDataCompleta(passado)), findsOneWidget);
+    c.dispose();
+  });
+
+  testWidgets('PBI-97: no resumo, treino depois de amanhã é recusado no seletor',
+      (tester) async {
+    reiniciarSeletorDeData();
+    final c = await _comTreino(_RepoSessao(), [_serie(feita: true)]);
+    await _abrirResumo(tester, c);
+
+    await tester.ensureVisible(find.byType(CampoData));
+    await tester.tap(find.text('15/10/2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Digitar a data'));
+    await tester.pumpAndSettle();
+    final futuro = DateTime.now().add(const Duration(days: 3));
+    await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
+        formatarDataCompleta(futuro));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Use uma data entre'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget); // não fechou
+    c.dispose();
+  });
   _testesManterNaFicha();
 }
 

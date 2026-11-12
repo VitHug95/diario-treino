@@ -12,6 +12,8 @@ import 'package:diario_treino/features/medidas/medidas_repository.dart';
 import 'package:diario_treino/features/medidas/perfil_corporal_comandos.dart';
 import 'package:diario_treino/features/medidas/perfil_corporal_models.dart';
 import 'package:diario_treino/features/medidas/perfil_corporal_repository.dart';
+import 'package:diario_treino/shared/campo_data.dart';
+import 'package:diario_treino/shared/seletor_data.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,6 +146,8 @@ String _texto(WidgetTester tester, String rotulo) =>
     tester.widget<TextField>(_campo(rotulo)).controller!.text;
 
 void main() {
+  setUp(reiniciarSeletorDeData);
+
   // ---- Formatação ----
 
   group('formatação', () {
@@ -259,7 +263,7 @@ void main() {
 
     expect(_texto(tester, 'Altura'), isEmpty);
     expect(_texto(tester, 'Peso'), isEmpty);
-    expect(find.text('Toque para escolher'), findsOneWidget);
+    expect(find.text('dd/mm/aaaa'), findsOneWidget); // campo vazio mostra o formato
     expect(
         tester
             .widget<SegmentedButton<SexoBiologico>>(find.byType(SegmentedButton<SexoBiologico>))
@@ -406,10 +410,17 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
-  testWidgets('A data de nascimento só aceita idade entre 10 e 100 anos', (tester) async {
+  // ---- Data de nascimento: seletor próprio (PBI-97) ----
+
+  testWidgets('A data de nascimento só aceita idade entre 10 e 100 anos (calendário)',
+      (tester) async {
     await _abrir(tester, _RepoPerfil());
 
-    await tester.tap(find.text('Toque para escolher'));
+    await tester.tap(find.text('dd/mm/aaaa')); // o campo inteiro abre o seletor
+    await tester.pumpAndSettle();
+    // Nascimento abre direto na digitação; o botão leva ao calendário.
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    await tester.tap(find.byTooltip('Escolher no calendário'));
     await tester.pumpAndSettle();
 
     final picker = tester.widget<CalendarDatePicker>(find.byType(CalendarDatePicker));
@@ -417,6 +428,100 @@ void main() {
     expect(picker.firstDate, DateTime(1926, 11, 9)); // 100 anos
   });
 
+  testWidgets('Nascimento abre direto em digitação, com o teclado de dígitos', (tester) async {
+    await _abrir(tester, _RepoPerfil());
+
+    await tester.tap(find.text('dd/mm/aaaa'));
+    await tester.pumpAndSettle();
+
+    final campoData = find.descendant(
+        of: find.byType(AlertDialog), matching: find.byType(TextField));
+    expect(campoData, findsOneWidget);
+    expect(tester.widget<TextField>(campoData).keyboardType, TextInputType.number);
+    expect(find.byTooltip('Escolher no calendário'), findsOneWidget);
+  });
+
+  testWidgets('Digitar 26051995 sem barras e Salvar grava o nascimento', (tester) async {
+    final repo = _RepoPerfil();
+    await _abrir(tester, repo);
+
+    await tester.tap(find.text('dd/mm/aaaa'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
+        '26051995');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('26/05/1995'), findsOneWidget);
+    expect(find.text('31 anos'), findsOneWidget); // 09/11/2026
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(repo.salvos.single.nascimento, DateTime(1995, 5, 26));
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('As faixas de 10 e 100 anos valem na digitação: fora delas não grava',
+      (tester) async {
+    final repo = _RepoPerfil();
+    await _abrir(tester, repo);
+    await tester.tap(find.text('dd/mm/aaaa'));
+    await tester.pumpAndSettle();
+    final digitar =
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField));
+
+    // 9 anos, 101 anos e uma data que não existe: o seletor segue aberto.
+    for (final fora in ['10112016', '08111926', '31021995']) {
+      await tester.enterText(digitar, fora);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget, reason: fora);
+    }
+    expect(find.text('Essa data não existe.'), findsOneWidget);
+
+    // Os limites exatos (10 e 100 anos hoje) passam.
+    await tester.enterText(digitar, '09112016');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('09/11/2016'), findsOneWidget);
+    expect(repo.salvos, isEmpty);
+  });
+
+  testWidgets('Cancelar o seletor mantém a data que já estava', (tester) async {
+    await _abrir(tester, _RepoPerfil(_completo()));
+
+    await tester.tap(find.text('20/05/1995'));
+    await tester.pumpAndSettle();
+    // Vem preenchida com a data atual.
+    expect(
+        tester
+            .widget<TextField>(find.descendant(
+                of: find.byType(AlertDialog), matching: find.byType(TextField)))
+            .controller!
+            .text,
+        '20/05/1995');
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('20/05/1995'), findsOneWidget);
+  });
+
+  testWidgets('O campo de nascimento inteiro é tocável (borda e rótulo)', (tester) async {
+    await _abrir(tester, _RepoPerfil(_completo()));
+
+    await tester.tapAt(tester.getTopLeft(find.byType(CampoData)) + const Offset(3, 3));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Data de nascimento'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
   // ---- Limpar ----
 
   testWidgets('Limpar pede confirmação, apaga os campos e deixa o peso', (tester) async {
@@ -440,7 +545,7 @@ void main() {
 
     expect(repo.limpezas, 1);
     expect(_texto(tester, 'Altura'), isEmpty);
-    expect(find.text('Toque para escolher'), findsOneWidget);
+    expect(find.text('dd/mm/aaaa'), findsOneWidget); // campo vazio mostra o formato
     expect(_texto(tester, 'Peso'), '78,0'); // o histórico de peso fica
     expect(find.text('Preencha sexo, nascimento, altura e peso'), findsOneWidget);
     expect(find.text('Dados corporais limpos'), findsOneWidget);

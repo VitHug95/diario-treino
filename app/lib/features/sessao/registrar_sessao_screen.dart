@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../shared/aviso_treino_salvo.dart';
+import '../../shared/campo_data.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
+import '../../shared/formato_data.dart';
+import '../../shared/seletor_data.dart';
 import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -328,13 +331,13 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
   Future<void> _escolherData() async {
     final hoje = DateTime.now();
-    final escolhida = await showDatePicker(
-      context: context,
-      initialDate: _data,
-      firstDate: DateTime(hoje.year - 2),
+    final escolhida = await escolherData(
+      context,
+      titulo: 'Dia em que você treinou',
+      primeira: DateTime(hoje.year - 2),
       // Aceita até amanhã (igual à regra do servidor), não além.
-      lastDate: DateTime(hoje.year, hoje.month, hoje.day).add(const Duration(days: 1)),
-      helpText: 'Dia em que você treinou',
+      ultima: DateTime(hoje.year, hoje.month, hoje.day).add(const Duration(days: 1)),
+      inicial: _data,
     );
     if (escolhida != null) setState(() => _data = escolhida);
   }
@@ -605,7 +608,11 @@ class _FormularioState extends ConsumerState<_Formulario> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
-              _CampoData(data: _data, aoTocar: _escolherData),
+              CampoData(
+                rotulo: 'Dia em que treinou',
+                texto: formatarDataCompleta(_data),
+                aoTocar: _escolherData,
+              ),
               const SizedBox(height: AppSpacing.x16),
               _CampoDuracao(controlador: _duracao),
               const SizedBox(height: AppSpacing.x24),
@@ -670,34 +677,6 @@ class _FormularioState extends ConsumerState<_Formulario> {
           rotulo: _editando ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR TREINO',
         ),
       ],
-      ),
-    );
-  }
-}
-
-class _CampoData extends StatelessWidget {
-  const _CampoData({required this.data, required this.aoTocar});
-
-  final DateTime data;
-  final VoidCallback aoTocar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cores = AppColors.of(context);
-    final texto =
-        '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
-    return InkWell(
-      onTap: aoTocar,
-      borderRadius: BorderRadius.circular(AppRadius.campoForm),
-      child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Dia em que treinou'),
-        child: Row(
-          children: [
-            Icon(LucideIcons.calendar, size: AppSizes.iconeSm, color: cores.iconMuted),
-            const SizedBox(width: AppSpacing.x8),
-            Text(texto, style: AppText.inputValue),
-          ],
-        ),
       ),
     );
   }

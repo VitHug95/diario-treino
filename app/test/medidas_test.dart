@@ -12,6 +12,7 @@ import 'package:diario_treino/features/medidas/medidas_repository.dart';
 import 'package:diario_treino/features/medidas/perfil_corporal_models.dart';
 import 'package:diario_treino/features/medidas/perfil_corporal_repository.dart';
 import 'package:diario_treino/features/medidas/registrar_medidas_screen.dart';
+import 'package:diario_treino/shared/seletor_data.dart';
 import 'package:diario_treino/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -172,6 +173,8 @@ class _RepoComResumo extends _RepoFake {
 }
 
 void main() {
+  setUp(reiniciarSeletorDeData);
+
   // ---- Formatação ----
 
   group('formatação pt-BR', () {
@@ -406,8 +409,43 @@ void main() {
     expect(find.text('Use um valor entre 30 e 300 kg.'), findsNothing);
   });
 
-  testWidgets('Registrar não deixa escolher dia futuro (limite é hoje)', (tester) async {
-    await _abrir(tester, _RepoFake(), const RegistrarMedidasScreen());
+  testWidgets('PBI-97: dia da medição aceita digitar sem barras e recusa o futuro', (tester) async {
+    reiniciarSeletorDeData();
+    final repo = _RepoFake();
+    await _abrir(tester, repo, const RegistrarMedidasScreen());
+
+    // Abre no calendário; o botão leva à digitação.
+    await tester.tap(find.text('09/11/2026'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsOneWidget);
+    await tester.tap(find.byTooltip('Digitar a data'));
+    await tester.pumpAndSettle();
+    final digitar =
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField));
+
+    // Amanhã: recusado e o seletor segue aberto.
+    await tester.enterText(digitar, '10112026');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Use uma data entre'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    // Um dia que passou: aceito, sem digitar barra.
+    await tester.enterText(digitar, '05112026');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('05/11/2026'), findsOneWidget);
+
+    await tester.enterText(_campo('Cintura'), '83');
+    await tester.tap(find.text('Salvar medidas'));
+    await tester.pumpAndSettle();
+    expect(repo.salvos.single.$1, DateTime(2026, 11, 5));
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Registrar não deixa escolher dia futuro (limite é hoje)', (tester) async {    await _abrir(tester, _RepoFake(), const RegistrarMedidasScreen());
 
     await tester.tap(find.text('09/11/2026'));
     await tester.pumpAndSettle();

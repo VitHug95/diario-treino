@@ -1459,6 +1459,27 @@ dependem do texto jurídico do termo de consentimento (hoje provisório).
 **Escopo:** selo "Privado"/"Compartilhado" nas telas 23, 24 e 26; tela "Compartilhar" (tela 27) com dois interruptores, lista de quem vê e aviso de que sem vínculo ativo ninguém vê; **destrancar pede confirmação, trancar não**; para o educador, linha "Corpo" na tela do aluno, tela 28 (somente leitura, dados e últimas medidas, evolução sem edição) e tela 29 (trancado, seções independentes); 403 na evolução cai no estado trancado.
 **Status:** ⏳ aguarda as perguntas 1 e 2.
 
+#### PBI-97 · Campo de data: toque no campo inteiro e digitação com barras automáticas (pedido do PO, 11/11)
+**História:** Como atleta, quero tocar em qualquer ponto do campo de data para escolher o dia, e poder digitar a data sem me preocupar com as barras, para não ficar procurando ano e mês no calendário. Só front. Pedido ao testar a "Data de nascimento" em Dados corporais (PBI-93).
+**Critérios de aceite**
+1. Tocar em qualquer ponto do campo (borda, rótulo, texto ou ícone) abre o seletor, no iPhone Safari e no Chrome.
+2. Digitar `26051995` no seletor resulta em `26/05/1995` sem digitar barra, e confirmar grava a data.
+3. Digitar `26/05/1995` com as barras continua funcionando.
+4. Apagar e corrigir no meio da data não trava a máscara.
+5. Data inexistente ou fora da faixa mostra erro e não grava.
+6. Campo vazio mostra `dd/mm/aaaa`.
+7. As quatro telas (nascimento, dia da medição, dia em que treinou no registro e no resumo) se comportam igual.
+8. 360 px e fonte 1,3x, nos dois temas; alvo de 44 px; o leitor de tela anuncia o valor e que dá para trocar.
+
+**Status:** ✅ feito (front), com uma ressalva: o item 1 foi verificado no Chrome, **não no Safari do iPhone** (não há como rodá-lo aqui) e precisa de conferência do PO depois do deploy.
+- **Causa do toque (reproduzida no Chrome com a árvore de semântica ligada):** o nó de semântica do campo cobre o campo todo (358×48 px no teste), mas **não tinha a ação "tocar"**. O `Semantics(excludeSemantics: true)` do ``CampoData`` (PBI-92) escondia o ``InkWell`` e não tinha ``onTap`` próprio. O toque por ponteiro funcionava no Chrome (7 de 7 pontos), mas um clique entregue ao nó de semântica (o caminho de leitor de tela e de navegadores que entregam o toque ao nó) **não fazia nada** (contador 0 → 0). Os campos antigos do registro e do resumo não tinham esse ``Semantics`` e por isso funcionavam. Correção: ``onTap`` no próprio nó. Depois dela, o clique de semântica passa a abrir (0 → 1) e cada toque por ponteiro continua abrindo uma vez só (sem disparo duplo). Além disso, o seletor ignora uma segunda abertura enquanto já há um aberto.
+- **Causa da digitação:** o `showDatePicker` do SDK não serve. O app não tem locale pt-BR (``DefaultMaterialLocalizations``, inglês), então o campo de digitação dele lê **mm/dd/aaaa** (``26/05/1995`` seria "mês 26") e o ``InputDatePickerFormField`` não aceita ``inputFormatters``. Por isso foi construído um **seletor próprio** (``escolherData``): diálogo com calendário (o ``CalendarDatePicker`` do SDK) e campo de texto com máscara, com botão sempre à vista para alternar. Lê dd/mm/aaaa, teclado numérico, erro sem fechar (data que não existe, incompleta, fora da faixa) e OK/Cancelar.
+- **Máscara** (``MascaraDataFormatter``): só dígitos; a barra entra sozinha ao completar dia e mês de quem digita; para no ano completo (8 dígitos, o resto é cortado); colar com ou sem barras dá o mesmo (``2605`` colado vira ``26/05``); apagar a barra leva o dígito anterior (``26/`` vira ``2``) e apagar um dígito não recoloca a barra; colar por cima de uma data inteira troca tudo.
+- **Um componente só:** ``CampoData`` (``shared/``) substitui as duas cópias privadas ``_CampoData`` (registro de treino e resumo). Vazio mostra ``dd/mm/aaaa`` em cor de dica; rótulo falado "Data de nascimento: 26/05/1995. Toque para trocar" (vazio: "sem data. Toque para escolher"); altura mínima de 44 px.
+- **Telas:** nascimento abre direto em digitação (faixa de 10 a 100 anos); dia da medição (não futuro) e dia em que treinou (até amanhã, como hoje) abrem no calendário. Faixas inalteradas.
+- **E2E:** ``fluxo_pbi26_test.dart`` não toca no campo de data; sem impacto.
+- ``flutter analyze`` 0; 491 testes verdes, 53 novos (``campo_data_test.dart`` e os das telas).
+**Fora do escopo:** mudar o formato de exibição, seletor com visual novo, internacionalização de formato de data.
 ---
 
 ## 10. Perguntas em aberto que bloqueiam PBIs

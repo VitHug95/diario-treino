@@ -9,6 +9,7 @@ import '../../shared/campo_data.dart';
 import '../../shared/dialogos_perigo.dart';
 import '../../shared/estado_erro.dart';
 import '../../shared/mostrar_aviso.dart';
+import '../../shared/seletor_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -102,21 +103,21 @@ class _FormularioState extends ConsumerState<_Formulario> {
     // escolher fora dela.
     final primeira = DateTime(hoje.year - 100, hoje.month, hoje.day);
     final ultima = DateTime(hoje.year - 10, hoje.month, hoje.day);
-    var inicial = _nascimento ?? DateTime(hoje.year - 30, hoje.month, hoje.day);
-    if (inicial.isBefore(primeira)) inicial = primeira;
-    if (inicial.isAfter(ultima)) inicial = ultima;
+    // Onde o calendário abre quando ainda não há data: 30 anos atrás.
+    final sugestao = DateTime(hoje.year - 30, hoje.month, hoje.day);
 
-    final escolhida = await showDatePicker(
-      context: context,
-      initialDate: inicial,
-      firstDate: primeira,
-      lastDate: ultima,
-      helpText: 'Data de nascimento',
+    // Abre direto na digitação (o ano fica longe no calendário); o botão do
+    // diálogo alterna para o calendário.
+    final escolhida = await escolherData(
+      context,
+      titulo: 'Data de nascimento',
+      primeira: primeira,
+      ultima: ultima,
+      inicial: _nascimento,
+      sugestao: sugestao,
+      abrirDigitando: true,
     );
-    if (escolhida != null) {
-      setState(() => _nascimento =
-          DateTime(escolhida.year, escolhida.month, escolhida.day));
-    }
+    if (escolhida != null) setState(() => _nascimento = escolhida);
   }
 
   /// Idade em anos completos, só para a ajuda do campo (a TMB usa a do back).
@@ -267,9 +268,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
         const SizedBox(height: AppSpacing.x20),
         CampoData(
           rotulo: 'Data de nascimento',
-          texto: _nascimento == null
-              ? 'Toque para escolher'
-              : dataCompleta(_nascimento!),
+          texto: _nascimento == null ? null : dataCompleta(_nascimento!),
           aoTocar: _escolherNascimento,
         ),
         if (idade != null) ...[
