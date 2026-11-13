@@ -203,7 +203,7 @@ jobs:
           fi
       - name: Rodar o E2E (integration_test)
         working-directory: app
-        timeout-minutes: 12
+        timeout-minutes: 20
         run: |
           # firebase_options.dart é gitignored (um por ambiente); usa o de E2E.
           cp lib/firebase_options.e2e.dart lib/firebase_options.dart
@@ -216,7 +216,7 @@ jobs:
           rodar_drive() {
             flutter drive \
               --driver=test_driver/integration_test.dart \
-              --target=integration_test/fluxo_pbi26_test.dart \
+              --target="$1" \
               -d web-server \
               --browser-name=chrome \
               --headless \
@@ -230,11 +230,18 @@ jobs:
           # Bloqueante com 1 retry: um flake transitório (boot do emulador/API,
           # ChromeDriver lento) não trava o merge; falha de verdade reprova nas
           # duas tentativas. O drive.log acumula as duas (tee -a) no artefato.
-          if ! rodar_drive; then
-            echo "::warning::E2E falhou na 1ª tentativa; repetindo uma vez."
-            echo "===== RETRY DO E2E =====" >> "$RUNNER_TEMP/drive.log"
-            rodar_drive
-          fi
+          # Cada alvo roda num drive próprio (o integration_test web aceita um
+          # target por vez), com o mesmo retry.
+          for alvo in \
+            integration_test/fluxo_pbi26_test.dart \
+            integration_test/alvos_ficha_pbi100_test.dart; do
+            echo "===== $alvo =====" >> "$RUNNER_TEMP/drive.log"
+            if ! rodar_drive "$alvo"; then
+              echo "::warning::E2E $alvo falhou na 1ª tentativa; repetindo uma vez."
+              echo "===== RETRY DE $alvo =====" >> "$RUNNER_TEMP/drive.log"
+              rodar_drive "$alvo"
+            fi
+          done
       - name: Logs dos serviços (diagnóstico em falha)
         if: failure()
         run: |
