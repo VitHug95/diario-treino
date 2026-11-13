@@ -9,7 +9,10 @@ public sealed record RascunhoSessao(
     Guid TreinoId,
     string TreinoNome,
     DateOnly Data,
-    IReadOnlyList<RascunhoExercicio> Exercicios);
+    IReadOnlyList<RascunhoExercicio> Exercicios,
+    /// <summary>Blocos conjugados da ficha (PBI-102), como no GET da ficha.
+    /// Vazio quando todos são avulsos.</summary>
+    IReadOnlyList<DiarioTreino.Application.Planejamento.BlocoResumo>? Blocos = null);
 
 /// <summary>Exercício do rascunho com a origem do pré-preenchimento.</summary>
 public sealed record RascunhoExercicio(
@@ -22,7 +25,9 @@ public sealed record RascunhoExercicio(
     /// último treino (27/09)" ou "Preenchido com os alvos da ficha". Nulo quando
     /// não há séries sugeridas.</summary>
     string? OrigemPreenchimento,
-    IReadOnlyList<SerieRascunho> Series);
+    IReadOnlyList<SerieRascunho> Series,
+    /// <summary>Bloco conjugado do exercício (PBI-102); nulo = avulso.</summary>
+    Guid? BlocoId = null);
 
 /// <summary>
 /// Rascunho de UM exercício avulso, para o treino livre (PBI-19, GET
@@ -113,7 +118,12 @@ public sealed record SerieRequest(
     decimal Volume,
     short? DescansoSeg,
     /// <summary>Tag da série (TV-1). Ausente/nulo vale VALIDA.</summary>
-    string? Marcador = null);
+    string? Marcador = null,
+    /// <summary>Bloco conjugado (PBI-102): número do bloco na sessão (1, 2...).
+    /// Nulo = avulso. Vai junto com <see cref="PosicaoNoBloco"/>.</summary>
+    short? Bloco = null,
+    /// <summary>Posição do exercício dentro do bloco (1 a 4).</summary>
+    short? PosicaoNoBloco = null);
 
 /// <summary>Resposta ao criar a sessão.</summary>
 public sealed record SessaoCriada(Guid Id);
@@ -181,4 +191,7 @@ public sealed record SerieDetalhe(
     decimal Volume,
     short? DescansoSeg,
     /// <summary>Tag da série (TV-1). VALIDA quando não marcada.</summary>
-    string Marcador);
+    string Marcador,
+    /// <summary>Bloco conjugado em que foi feita (PBI-102); nulo = avulso.</summary>
+    short? Bloco = null,
+    short? PosicaoNoBloco = null);

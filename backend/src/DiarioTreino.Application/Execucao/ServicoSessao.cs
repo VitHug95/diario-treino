@@ -64,14 +64,22 @@ public sealed class ServicoSessao
         var exercicios = new List<RascunhoExercicio>();
         foreach (var te in treino.Exercicios)
         {
-            exercicios.Add(await MontarExercicioAsync(atletaId, te, ct));
+            var ex = await MontarExercicioAsync(atletaId, te, ct);
+            exercicios.Add(ex with { BlocoId = te.BlocoId });
         }
+
+        // Blocos conjugados (PBI-102): o treino ao vivo marca a rodada inteira
+        // e dispara um descanso só, o do bloco.
+        var blocos = ServicoPlanejamento.MontarBlocos(
+            await _planos.ObterBlocosDaFichaAsync(treinoId, ct),
+            treino.Exercicios.ToList());
 
         return new RascunhoSessao(
             treino.Id,
             treino.Nome,
             DateOnly.FromDateTime(DateTime.UtcNow.Date),
-            exercicios);
+            exercicios,
+            blocos);
     }
 
     /// <summary>
@@ -347,6 +355,8 @@ public sealed class ServicoSessao
                     Volume = s.Volume,
                     DescansoSeg = s.DescansoSeg,
                     Marcador = s.Marcador ?? TagSerie.Valida,
+                    Bloco = s.Bloco,
+                    PosicaoNoBloco = s.PosicaoNoBloco,
                 });
             }
         }
@@ -581,7 +591,7 @@ public sealed class ServicoSessao
                 se.Rodada, se.Ordem, se.Tipo,
                 se.IntensidadeMetricaId, i.Codigo, i.Nome, se.Intensidade,
                 se.VolumeMetricaId, v.Codigo, v.Nome, se.Volume,
-                se.DescansoSeg, se.Marcador));
+                se.DescansoSeg, se.Marcador, se.Bloco, se.PosicaoNoBloco));
         }
         return lista;
     }
@@ -654,6 +664,8 @@ public sealed class ServicoSessao
                     Volume = s.Volume,
                     DescansoSeg = s.DescansoSeg,
                     Marcador = s.Marcador ?? TagSerie.Valida,
+                    Bloco = s.Bloco,
+                    PosicaoNoBloco = s.PosicaoNoBloco,
                 });
             }
         }

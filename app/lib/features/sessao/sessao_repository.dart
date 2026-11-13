@@ -144,9 +144,23 @@ class SessaoRepository {
     String? observacao,
     required List<ExercicioEdicao> exercicios,
   }) {
+    // Bloco conjugado (PBI-102): número do bloco na sessão (na ordem em que
+    // aparece) e posição do exercício nele, copiados em cada série para o
+    // histórico reconstruir o agrupamento sem depender da ficha atual.
+    final numeroDoBloco = <String, int>{};
+    final membrosVistos = <String, int>{};
     final corpoExercicios = <Map<String, dynamic>>[];
     for (final e in exercicios) {
-      final series = e.realizado ? _serializarSeries(e.series) : const [];
+      final chave = e.blocoId;
+      int? bloco;
+      int? posicao;
+      if (chave != null) {
+        bloco = numeroDoBloco.putIfAbsent(chave, () => numeroDoBloco.length + 1);
+        posicao = membrosVistos[chave] = (membrosVistos[chave] ?? 0) + 1;
+      }
+      final series = e.realizado
+          ? _serializarSeries(e.series, bloco: bloco, posicao: posicao)
+          : const [];
       corpoExercicios.add({
         'exercicioId': e.exercicioId,
         'treinoExercicioId': e.treinoExercicioId,
@@ -168,7 +182,11 @@ class SessaoRepository {
       ? e.series.where((s) => _parse(s.volumeTexto) != null).toList()
       : const [];
 
-  static List<Map<String, dynamic>> _serializarSeries(List<SerieEdicao> series) {
+  static List<Map<String, dynamic>> _serializarSeries(
+    List<SerieEdicao> series, {
+    int? bloco,
+    int? posicao,
+  }) {
     final lista = <Map<String, dynamic>>[];
     for (final s in series) {
       final volume = _parse(s.volumeTexto);
@@ -184,6 +202,10 @@ class SessaoRepository {
         'volume': volume,
         'descansoSeg': int.tryParse(s.descansoTexto.trim()),
         'marcador': s.marcador,
+        if (bloco != null && posicao != null) ...{
+          'bloco': bloco,
+          'posicaoNoBloco': posicao,
+        },
       });
     }
     return lista;

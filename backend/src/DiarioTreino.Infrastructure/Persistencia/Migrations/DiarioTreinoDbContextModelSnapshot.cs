@@ -1489,6 +1489,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<short?>("Bloco")
+                        .HasColumnType("smallint")
+                        .HasColumnName("bloco");
+
                     b.Property<short?>("DescansoSeg")
                         .HasColumnType("smallint")
                         .HasColumnName("descanso_seg");
@@ -1517,6 +1521,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.Property<short>("Ordem")
                         .HasColumnType("smallint")
                         .HasColumnName("ordem");
+
+                    b.Property<short?>("PosicaoNoBloco")
+                        .HasColumnType("smallint")
+                        .HasColumnName("posicao_no_bloco");
 
                     b.Property<short>("Rodada")
                         .HasColumnType("smallint")
@@ -1561,6 +1569,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
                     b.ToTable("serie_executada", null, t =>
                         {
+                            t.HasCheckConstraint("ck_serie_executada_bloco", "(bloco IS NULL AND posicao_no_bloco IS NULL) OR (bloco >= 1 AND posicao_no_bloco BETWEEN 1 AND 4)");
+
                             t.HasCheckConstraint("ck_serie_executada_marcador", "marcador IN ('VALIDA','AQUECIMENTO','PREPARATORIA','TOP_SET','BACK_OFF','FALHA','DROP_SET','REST_PAUSE','NEGATIVA','PARCIAIS')");
 
                             t.HasCheckConstraint("ck_serie_executada_tipo", "tipo IN ('ESFORCO','RECUPERACAO')");

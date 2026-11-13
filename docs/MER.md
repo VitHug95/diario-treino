@@ -44,7 +44,7 @@ o plano ativo com a sessão mais recente (empate: início mais novo). É idempot
 e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
 `consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
-tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000; e `BlocoConjugado` (`20261113173129`, PBI-101): cria `bloco_exercicio` e acrescenta `treino_exercicio.bloco_id` (nula, sem mexer em linha nenhuma). A `CompartilhamentoCorporal` (PBI-95) virá depois dela.
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000; e `BlocoConjugado` (`20261113173129`, PBI-101): cria `bloco_exercicio` e acrescenta `treino_exercicio.bloco_id` (nula, sem mexer em linha nenhuma); e `SerieBloco` (`20261113191412`, PBI-102): acrescenta `serie_executada.bloco` e `posicao_no_bloco` (nulas, com `CHECK`). A `CompartilhamentoCorporal` (PBI-95) virá depois dela.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -499,6 +499,10 @@ O que de fato aconteceu, série por série.
 | volume | numeric(9,2) | não | `CHECK (volume >= 0)` |
 | descanso_seg | smallint | sim | |
 | marcador | varchar(20) | não | Tag da série (TV-1). `DEFAULT 'VALIDA'`, `CHECK` com os 10 códigos. Só identificação — não entra em cálculo |
+| bloco | smallint | sim | Bloco conjugado em que a série foi feita (PBI-102): número do bloco dentro da sessão (1, 2...), copiado ao gravar. Nulo = avulso |
+| posicao_no_bloco | smallint | sim | Posição do exercício no bloco (1 a 4). `CHECK`: `bloco` e `posicao_no_bloco` são nulos juntos, ou `bloco >= 1` e posição de 1 a 4 |
+
+No bloco, cada série segue ligada ao próprio exercício (uma série por exercício por rodada) e o `descanso_seg` do bloco vai só na última série feita de cada rodada; as outras ficam nulas. Com `bloco`, `posicao_no_bloco` e `rodada`, o histórico remonta o agrupamento sem depender da ficha atual.
 
 ### 3.12 `rodada_marcador`
 

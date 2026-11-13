@@ -1,0 +1,31 @@
+[debug] [2026-11-13T20:42:12.214Z] ----------------------------------------------------------------------
+[debug] [2026-11-13T20:42:12.224Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\42690561859\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only auth --project demo-diario-treino
+[debug] [2026-11-13T20:42:12.224Z] CLI Version:   15.32.1
+[debug] [2026-11-13T20:42:12.224Z] Platform:      win32
+[debug] [2026-11-13T20:42:12.225Z] Node Version:  v20.17.0
+[debug] [2026-11-13T20:42:12.225Z] Detected Agent: unknown
+[debug] [2026-11-13T20:42:12.225Z] Time:          Fri Nov 13 2026 17:42:12 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-11-13T20:42:12.225Z] ----------------------------------------------------------------------
+[debug] 
+[info] i  emulators: Starting emulators: auth {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth"}}
+[info] i  emulators: Detected demo project ID "demo-diario-treino", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail. {"metadata":{"emulator":{"name":"hub"},"message":"Detected demo project ID \"demo-diario-treino\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail."}}
+[debug] [2026-11-13T20:42:17.055Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-11-13T20:42:17.056Z] assigned listening specs for emulators {"user":{"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-11-13T20:42:17.065Z] Write emulator hub locator at C:\Users\426905~1\AppData\Local\Temp\hub-demo-diario-treino.json
+[warn] !  emulators: The Emulator UI is not starting because none of the running emulators have a UI component. {"metadata":{"emulator":{"name":"hub"},"message":"The Emulator UI is not starting because none of the running emulators have a UI component."}}
+[debug] [2026-11-13T20:42:26.338Z] Could not find VSCode notification endpoint: TypeError: fetch failed. If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┐
+│ Emulator       │ Host:Port      │
+├────────────────┼────────────────┤
+│ Authentication │ 127.0.0.1:9099 │
+└────────────────┴────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 

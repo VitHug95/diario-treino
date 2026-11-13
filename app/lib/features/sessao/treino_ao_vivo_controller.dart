@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/relogio.dart';
+import 'bloco_ao_vivo.dart';
 import 'sessao_edicao.dart';
 import 'treino_em_andamento.dart';
 
@@ -22,7 +23,12 @@ class TreinoAoVivoEstado {
     required this.inicio,
     required this.exercicios,
     required this.versao,
+    this.descansoDosBlocos = const {},
   });
+
+  /// Descanso de cada bloco conjugado (PBI-102), por id do bloco. Nulo ou 0 =
+  /// sem descanso. Os membros são os exercícios com o mesmo locoId.
+  final Map<String, int?> descansoDosBlocos;
 
   /// Nulo = treino livre (sem ficha).
   final String? treinoId;
@@ -42,6 +48,7 @@ class TreinoAoVivoEstado {
         inicio: inicio,
         exercicios: exercicios ?? this.exercicios,
         versao: versao + 1,
+        descansoDosBlocos: descansoDosBlocos,
       );
 
   /// Total de séries de todos os exercícios.
@@ -84,6 +91,7 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
     required DateTime data,
     required List<ExercicioEdicao> exercicios,
     DateTime? inicio,
+    Map<String, int?> descansoDosBlocos = const {},
   }) {
     state = TreinoAoVivoEstado(
       treinoId: treinoId,
@@ -93,6 +101,7 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
       inicio: inicio ?? ref.read(relogioProvider).agora(),
       exercicios: exercicios,
       versao: 0,
+      descansoDosBlocos: descansoDosBlocos,
     );
     _persistir();
   }
@@ -110,6 +119,7 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
       inicio: salvo.inicio,
       exercicios: salvo.exercicios.map((e) => e.paraEdicao()).toList(),
       versao: 0,
+      descansoDosBlocos: salvo.descansoDosBlocos,
     );
     return true;
   }
@@ -138,6 +148,27 @@ class TreinoAoVivoController extends Notifier<TreinoAoVivoEstado?> {
   /// marca séries por baixo dos panos: as pendentes ficam de fora ao salvar.
   void concluirExercicio(ExercicioEdicao exercicio) {
     mudar((_) => exercicio.concluido = true);
+  }
+
+  /// "Rodada feita" (PBI-102): marca de uma vez as séries da rodada em todos
+  /// os membros do bloco que têm aquela série (rodadas desiguais).
+  void marcarRodada(List<ExercicioEdicao> membros, int rodada) {
+    mudar((_) {
+      for (final (membro, serie) in seriesDaRodada(membros, rodada)) {
+        serie.feita = true;
+        membro.realizado = true;
+      }
+    });
+  }
+
+  /// "Concluir bloco" (PBI-102): o "Concluir exercício" de cada membro. As
+  /// séries não marcadas ficam de fora ao salvar, como hoje.
+  void concluirBloco(List<ExercicioEdicao> membros) {
+    mudar((_) {
+      for (final m in membros) {
+        m.concluido = true;
+      }
+    });
   }
 
   /// Adiciona um exercício fora da ficha (PBI-17) ao treino em andamento.
@@ -170,6 +201,7 @@ TreinoEmAndamento rascunhoDoEstado(TreinoAoVivoEstado e) => TreinoEmAndamento(
       dataIso: _soDataIso(e.data),
       inicioMillis: e.inicio.millisecondsSinceEpoch,
       exercicios: e.exercicios.map(exercicioParaRascunho).toList(),
+      descansoDosBlocos: e.descansoDosBlocos,
     );
 
 String _soDataIso(DateTime d) =>

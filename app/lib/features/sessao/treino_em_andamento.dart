@@ -22,7 +22,12 @@ class TreinoEmAndamento {
     required this.dataIso,
     required this.inicioMillis,
     required this.exercicios,
+    this.descansoDosBlocos = const {},
   });
+
+  /// Descanso de cada bloco conjugado (PBI-102), por id do bloco; nulo = sem
+  /// descanso. Rascunhos antigos não têm o campo: vazio.
+  final Map<String, int?> descansoDosBlocos;
 
   /// Nulo = treino livre (sem ficha).
   final String? treinoId;
@@ -47,6 +52,7 @@ class TreinoEmAndamento {
         'dataIso': dataIso,
         'inicioMillis': inicioMillis,
         'exercicios': exercicios.map((e) => e.paraJson()).toList(),
+        if (descansoDosBlocos.isNotEmpty) 'blocos': descansoDosBlocos,
       };
 
   factory TreinoEmAndamento.doJson(Map<String, dynamic> json) =>
@@ -60,6 +66,10 @@ class TreinoEmAndamento {
             .cast<Map<String, dynamic>>()
             .map(ExercicioEmAndamento.doJson)
             .toList(),
+        descansoDosBlocos: {
+          for (final e in ((json['blocos'] as Map<String, dynamic>?) ?? const {}).entries)
+            e.key: (e.value as num?)?.toInt(),
+        },
       );
 }
 
@@ -76,7 +86,11 @@ class ExercicioEmAndamento {
     required this.realizado,
     required this.series,
     this.concluido = false,
+    this.blocoId,
   });
+
+  /// Bloco conjugado (PBI-102). Rascunhos antigos não têm o campo: avulso.
+  final String? blocoId;
 
   final String? treinoExercicioId;
   final String exercicioId;
@@ -99,6 +113,7 @@ class ExercicioEmAndamento {
         'foraDaFicha': foraDaFicha,
         'realizado': realizado,
         'concluido': concluido,
+        if (blocoId != null) 'blocoId': blocoId,
         'series': series.map((s) => s.paraJson()).toList(),
       };
 
@@ -112,6 +127,7 @@ class ExercicioEmAndamento {
         foraDaFicha: json['foraDaFicha'] as bool,
         realizado: json['realizado'] as bool,
         concluido: json['concluido'] as bool? ?? false,
+        blocoId: json['blocoId'] as String?,
         series: (json['series'] as List<dynamic>)
             .cast<Map<String, dynamic>>()
             .map(SerieEmAndamento.doJson)
@@ -246,6 +262,7 @@ extension ConversaoRascunho on ExercicioEmAndamento {
         origemPreenchimento: origemPreenchimento,
         realizado: realizado,
         foraDaFicha: foraDaFicha,
+        blocoId: blocoId,
         series: series
             .map((s) => SerieEdicao(
                   rodada: s.rodada,
@@ -278,6 +295,7 @@ ExercicioEmAndamento exercicioParaRascunho(ExercicioEdicao e) =>
       foraDaFicha: e.foraDaFicha,
       realizado: e.realizado,
       concluido: e.concluido,
+      blocoId: e.blocoId,
       series: e.series
           .map((s) => SerieEmAndamento(
                 rodada: s.rodada,

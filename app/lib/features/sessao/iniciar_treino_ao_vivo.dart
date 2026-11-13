@@ -85,6 +85,8 @@ Future<void> iniciarTreinoAoVivoDaFicha(
       data: rascunho.data,
       exercicios:
           rascunho.exercicios.map(ExercicioEdicao.doRascunho).toList(),
+      // Blocos conjugados (PBI-102): um descanso por rodada, o do bloco.
+      descansoDosBlocos: {for (final b in rascunho.blocos) b.id: b.descansoSeg},
     );
     if (context.mounted) context.push(Rotas.treinoAoVivo);
   } on SessaoException catch (e) {

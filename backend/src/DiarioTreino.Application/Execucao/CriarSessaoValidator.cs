@@ -1,4 +1,5 @@
 using DiarioTreino.Domain.Comum;
+using DiarioTreino.Domain.Planejamento;
 using FluentValidation;
 
 namespace DiarioTreino.Application.Execucao;
@@ -83,5 +84,19 @@ public sealed class SerieValidator : AbstractValidator<SerieRequest>
         RuleFor(x => x.Marcador)
             .Must(TagSerie.EhValido).When(x => x.Marcador is not null)
             .WithMessage("Tag de série inválida.");
+
+        // Bloco conjugado (PBI-102): os dois juntos, ou nenhum. Regras separadas
+        // (o When no fim de uma cadeia valeria para todas).
+        RuleFor(x => x)
+            .Must(x => x.Bloco.HasValue == x.PosicaoNoBloco.HasValue)
+            .WithName("Bloco")
+            .WithMessage("Bloco e posição no bloco vão juntos.");
+        RuleFor(x => x.Bloco)
+            .GreaterThanOrEqualTo((short)1).When(x => x.Bloco.HasValue)
+            .WithMessage("Bloco inválido.");
+        RuleFor(x => x.PosicaoNoBloco)
+            .InclusiveBetween((short)1, (short)RegrasBloco.MaximoMembros)
+            .When(x => x.PosicaoNoBloco.HasValue)
+            .WithMessage("Posição no bloco inválida.");
     }
 }

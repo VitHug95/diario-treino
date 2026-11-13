@@ -184,7 +184,7 @@ public sealed partial class ServicoPlanejamento
     }
 
     /// <summary>Blocos da ficha para o detalhe, na ordem da ficha.</summary>
-    private static List<BlocoResumo> MontarBlocos(
+    internal static List<BlocoResumo> MontarBlocos(
         IReadOnlyCollection<BlocoExercicio> blocos,
         IReadOnlyCollection<TreinoExercicio> exercicios)
     {
