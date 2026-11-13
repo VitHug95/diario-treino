@@ -19,6 +19,7 @@ const _escritas = [
   'duplicarPlano', 'excluirPlano', 'adicionarFicha', 'salvarComoFicha',
   'editarFicha', 'excluirFicha', 'adicionarExercicio', 'removerExercicio',
   'reordenarExercicios', 'definirAlvos', // fichas e planos
+  'criarBloco', 'definirDescansoBloco', 'desfazerBloco', 'definirMembrosBloco', // blocos (PBI-101)
   'criarSessao', 'editarSessao', 'excluirSessao', // sessões
   'criarExercicio', // catálogo
   'salvarMedidas', 'excluirMedidas', // medidas corporais (E12)

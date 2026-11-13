@@ -192,6 +192,12 @@ public sealed class ServicoPlanejamentoTests
         public void AdicionarMarcador(RodadaMarcador marcador) => Marcadores.Add(marcador);
         public void RemoverMarcador(RodadaMarcador marcador) => Marcadores.Remove(marcador);
 
+        public readonly List<BlocoExercicio> Blocos = [];
+        public Task<List<BlocoExercicio>> ObterBlocosDaFichaAsync(Guid treinoId, CancellationToken ct)
+            => Task.FromResult(Blocos.Where(b => b.TreinoId == treinoId).ToList());
+        public void AdicionarBloco(BlocoExercicio bloco) => Blocos.Add(bloco);
+        public void RemoverBloco(BlocoExercicio bloco) => Blocos.Remove(bloco);
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
     }
 

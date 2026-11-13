@@ -340,9 +340,17 @@ public static class PlanoEndpoints
             var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
             if (perfil is null) return TokenInvalido();
 
-            await planejamento.ReordenarExerciciosAsync(
-                perfil.Id, id, request.TreinoExercicioIds, ct);
-            return Results.NoContent();
+            try
+            {
+                await planejamento.ReordenarExerciciosAsync(
+                    perfil.Id, id, request.TreinoExercicioIds, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                // PBI-101: a ordem separaria os membros de um bloco.
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
         })
         .WithName("ReordenarExerciciosFicha").WithTags("Fichas")
         .WithSummary("Reordena os exercícios da ficha");
@@ -395,7 +403,114 @@ public static class PlanoEndpoints
         .WithName("DefinirAlvosExercicio").WithTags("Fichas")
         .WithSummary("Define séries e alvos do exercício na ficha");
 
+        MapearBlocos(grupo);
+
         return app;
+    }
+
+    /// <summary>Blocos conjugados da ficha (PBI-101).</summary>
+    private static void MapearBlocos(RouteGroupBuilder grupo)
+    {
+        // Junta 2 a 4 exercícios da ficha num bloco.
+        grupo.MapPost("/treinos/{id:guid}/blocos", async (
+            Guid id,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<CriarBlocoRequest> validator,
+            CriarBlocoRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            try
+            {
+                var blocoId = await planejamento.CriarBlocoAsync(perfil.Id, id, request, ct);
+                return Results.Created($"/api/v1/treinos/{id}/blocos/{blocoId}", new { id = blocoId });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        })
+        .WithName("CriarBloco").WithTags("Fichas")
+        .WithSummary("Junta exercícios da ficha num bloco conjugado");
+
+        // Muda o descanso do bloco.
+        grupo.MapPut("/treinos/{id:guid}/blocos/{blocoId:guid}", async (
+            Guid id,
+            Guid blocoId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<DescansoBlocoRequest> validator,
+            DescansoBlocoRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.DefinirDescansoBlocoAsync(perfil.Id, id, blocoId, request.DescansoSeg, ct);
+            return Results.NoContent();
+        })
+        .WithName("DefinirDescansoBloco").WithTags("Fichas")
+        .WithSummary("Muda o descanso do bloco conjugado");
+
+        // Desfaz o bloco: os exercícios ficam avulsos com o descanso do bloco.
+        grupo.MapDelete("/treinos/{id:guid}/blocos/{blocoId:guid}", async (
+            Guid id,
+            Guid blocoId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            await planejamento.DesfazerBlocoAsync(perfil.Id, id, blocoId, ct);
+            return Results.NoContent();
+        })
+        .WithName("DesfazerBloco").WithTags("Fichas")
+        .WithSummary("Desfaz o bloco conjugado");
+
+        // Troca os membros (e a ordem dentro do bloco). Menos de 2 desfaz.
+        grupo.MapPut("/treinos/{id:guid}/blocos/{blocoId:guid}/membros", async (
+            Guid id,
+            Guid blocoId,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoPlanejamento planejamento,
+            IValidator<MembrosBlocoRequest> validator,
+            MembrosBlocoRequest request,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(request, ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            try
+            {
+                await planejamento.DefinirMembrosBlocoAsync(
+                    perfil.Id, id, blocoId, request.TreinoExercicioIds, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        })
+        .WithName("DefinirMembrosBloco").WithTags("Fichas")
+        .WithSummary("Troca os membros do bloco conjugado");
     }
 
     private static IResult TokenInvalido() => Results.Problem(

@@ -1756,6 +1756,32 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.BlocoExercicio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<short?>("DescansoSeg")
+                        .HasColumnType("smallint")
+                        .HasColumnName("descanso_seg");
+
+                    b.Property<Guid>("TreinoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("treino_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TreinoId")
+                        .HasDatabaseName("ix_bloco_exercicio_treino");
+
+                    b.ToTable("bloco_exercicio", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_bloco_exercicio_descanso", "descanso_seg IS NULL OR descanso_seg BETWEEN 0 AND 600");
+                        });
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.EtapaPrescrita", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1970,6 +1996,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("BlocoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bloco_id");
+
                     b.Property<short?>("DescansoAlvoSeg")
                         .HasColumnType("smallint")
                         .HasColumnName("descanso_alvo_seg");
@@ -1996,6 +2026,9 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnName("treino_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BlocoId")
+                        .HasDatabaseName("ix_treino_exercicio_bloco");
 
                     b.HasIndex("ExercicioId");
 
@@ -2193,6 +2226,17 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.BlocoExercicio", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Planejamento.Treino", "Treino")
+                        .WithMany()
+                        .HasForeignKey("TreinoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Treino");
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.EtapaPrescrita", b =>
                 {
                     b.HasOne("DiarioTreino.Domain.Catalogo.Metrica", "IntensidadeMetrica")
@@ -2274,6 +2318,11 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.TreinoExercicio", b =>
                 {
+                    b.HasOne("DiarioTreino.Domain.Planejamento.BlocoExercicio", "Bloco")
+                        .WithMany("Membros")
+                        .HasForeignKey("BlocoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DiarioTreino.Domain.Catalogo.Exercicio", "Exercicio")
                         .WithMany()
                         .HasForeignKey("ExercicioId")
@@ -2285,6 +2334,8 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasForeignKey("TreinoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Bloco");
 
                     b.Navigation("Exercicio");
 
@@ -2314,6 +2365,11 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
             modelBuilder.Entity("DiarioTreino.Domain.Identidade.Usuario", b =>
                 {
                     b.Navigation("Papeis");
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Planejamento.BlocoExercicio", b =>
+                {
+                    b.Navigation("Membros");
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Planejamento.PlanoTreino", b =>

@@ -16,6 +16,7 @@ import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../inicio/inicio_logica.dart';
 import '../sessao/sessao_repository.dart';
+import 'bloco_conjugado.dart';
 import 'dialogo_ficha.dart';
 import 'editar_alvos_screen.dart';
 import 'fichas_comandos.dart';
@@ -378,19 +379,128 @@ class _ListaExerciciosFicha extends ConsumerWidget {
     );
   }
 
+  /// Reordena por item (PBI-101): o bloco se move inteiro, então a lista
+  /// enviada nunca separa os membros.
   Future<void> _reordenar(
-      WidgetRef ref, List<TreinoExercicioResumo> itens, int de, int para) async {
+      WidgetRef ref, List<ItemFicha> itens, int de, int para) async {
     final lista = [...itens];
     if (para > de) para -= 1;
     final movido = lista.removeAt(de);
     lista.insert(para, movido);
     try {
       await ref.read(fichasComandosProvider).reordenarExercicios(
-          treinoId: treinoId, treinoExercicioIds: lista.map((e) => e.id).toList());
+          treinoId: treinoId, treinoExercicioIds: _idsNaOrdem(lista));
     } on FichasException {
       // O comando recarrega mesmo com erro: a lista volta ao estado real.
     }
     await _esperarFicha(ref);
+  }
+
+  static List<String> _idsNaOrdem(List<ItemFicha> itens) => [
+        for (final item in itens)
+          ...switch (item) {
+            ItemAvulso(:final exercicio) => [exercicio.id],
+            ItemBloco(:final membros) => membros.map((m) => m.id),
+          },
+      ];
+
+  /// "Juntar com o de baixo" está disponível neste item? (PBI-101) Avulso com
+  /// avulso cria o bloco; avulso com bloco, ou bloco com avulso, entra no bloco
+  /// enquanto ele tiver menos de 4. Dois blocos não se juntam.
+  static bool podeJuntar(List<ItemFicha> itens, int i) {
+    if (i < 0 || i >= itens.length - 1) return false;
+    return switch ((itens[i], itens[i + 1])) {
+      (ItemAvulso(), ItemAvulso()) => true,
+      (ItemAvulso(), ItemBloco(:final membros)) => membros.length < BlocoFicha.maximoMembros,
+      (ItemBloco(:final membros), ItemAvulso()) => membros.length < BlocoFicha.maximoMembros,
+      _ => false,
+    };
+  }
+
+  Future<void> _juntarComOdeBaixo(
+      BuildContext context, WidgetRef ref, List<ItemFicha> itens, int i) async {
+    if (!podeJuntar(itens, i)) return;
+    final comandos = ref.read(fichasComandosProvider);
+    try {
+      switch ((itens[i], itens[i + 1])) {
+        case (ItemAvulso(exercicio: final a), ItemAvulso(exercicio: final b)):
+          final escolha = await pedirDescansoBloco(context, rotuloConfirmar: 'Juntar', novo: true);
+          if (escolha == null) return;
+          await comandos.criarBloco(
+              treinoId: treinoId,
+              treinoExercicioIds: [a.id, b.id],
+              descansoSeg: escolha.segundos);
+        case (ItemAvulso(exercicio: final a), ItemBloco(:final bloco, :final membros)):
+          await comandos.definirMembrosBloco(
+              treinoId: treinoId,
+              blocoId: bloco.id,
+              treinoExercicioIds: [a.id, ...membros.map((m) => m.id)]);
+        case (ItemBloco(:final bloco, :final membros), ItemAvulso(exercicio: final b)):
+          await comandos.definirMembrosBloco(
+              treinoId: treinoId,
+              blocoId: bloco.id,
+              treinoExercicioIds: [...membros.map((m) => m.id), b.id]);
+        default:
+          return;
+      }
+      await _esperarFicha(ref);
+    } on FichasException catch (e) {
+      if (context.mounted) _erro(context, e.mensagem);
+    }
+  }
+
+  Future<void> _mudarDescansoBloco(
+      BuildContext context, WidgetRef ref, BlocoFicha bloco) async {
+    final escolha = await pedirDescansoBloco(context,
+        rotuloConfirmar: 'Salvar', inicial: bloco.descansoSeg);
+    if (escolha == null || !context.mounted) return;
+    await _comBloco(context, ref, (c) => c.definirDescansoBloco(
+        treinoId: treinoId, blocoId: bloco.id, descansoSeg: escolha.segundos));
+  }
+
+  Future<void> _desfazerBloco(
+      BuildContext context, WidgetRef ref, BlocoFicha bloco) async {
+    if (!await confirmarDesfazerBloco(context)) return;
+    if (!context.mounted) return;
+    await _comBloco(
+        context, ref, (c) => c.desfazerBloco(treinoId: treinoId, blocoId: bloco.id));
+  }
+
+  /// Membros novos, na ordem dada (mover dentro do bloco ou tirar dele). Com
+  /// menos de 2, o servidor desfaz o bloco.
+  Future<void> _definirMembros(
+      BuildContext context, WidgetRef ref, BlocoFicha bloco, List<String> ids) =>
+      _comBloco(context, ref, (c) => c.definirMembrosBloco(
+          treinoId: treinoId, blocoId: bloco.id, treinoExercicioIds: ids));
+
+  Future<void> _comBloco(BuildContext context, WidgetRef ref,
+      Future<void> Function(FichasComandos c) acao) async {
+    try {
+      await acao(ref.read(fichasComandosProvider));
+      await _esperarFicha(ref);
+    } on FichasException catch (e) {
+      if (context.mounted) _erro(context, e.mensagem);
+    }
+  }
+
+  Future<void> _acaoDoMembro(BuildContext context, WidgetRef ref, ItemBloco item,
+      int posicao, _AcaoMembro acao) async {
+    final ids = item.membros.map((m) => m.id).toList();
+    switch (acao) {
+      case _AcaoMembro.subir when posicao > 0:
+        ids.insert(posicao - 1, ids.removeAt(posicao));
+        await _definirMembros(context, ref, item.bloco, ids);
+      case _AcaoMembro.descer when posicao < ids.length - 1:
+        ids.insert(posicao + 1, ids.removeAt(posicao));
+        await _definirMembros(context, ref, item.bloco, ids);
+      case _AcaoMembro.tirar:
+        ids.removeAt(posicao);
+        await _definirMembros(context, ref, item.bloco, ids);
+      case _AcaoMembro.remover:
+        await _remover(context, ref, item.membros[posicao]);
+      default:
+        return;
+    }
   }
 
   void _erro(BuildContext context, String msg) {
@@ -413,7 +523,8 @@ class _ListaExerciciosFicha extends ConsumerWidget {
         ),
       ),
       data: (ficha) {
-        final itens = ficha.exercicios;
+        // Um item por exercício avulso e um por bloco conjugado (PBI-101).
+        final itens = ficha.itens;
         return Column(
           children: [
             Expanded(
@@ -429,14 +540,31 @@ class _ListaExerciciosFicha extends ConsumerWidget {
                       itemCount: itens.length,
                       onReorder: (de, para) => _reordenar(ref, itens, de, para),
                       itemBuilder: (context, i) {
-                        final te = itens[i];
-                        return _CardExercicioFicha(
-                          key: ValueKey(te.id),
-                          exercicio: te,
-                          indice: i,
-                          aoEditar: () => _editarAlvos(context, ref, te),
-                          aoRemover: () => _remover(context, ref, te),
-                        );
+                        final juntar = podeJuntar(itens, i)
+                            ? () => _juntarComOdeBaixo(context, ref, itens, i)
+                            : null;
+                        return switch (itens[i]) {
+                          ItemAvulso(exercicio: final te) => _CardExercicioFicha(
+                              key: ValueKey(te.id),
+                              exercicio: te,
+                              indice: i,
+                              aoEditar: () => _editarAlvos(context, ref, te),
+                              aoRemover: () => _remover(context, ref, te),
+                              aoJuntar: juntar,
+                            ),
+                          final ItemBloco item => _CardBlocoFicha(
+                              key: ValueKey('bloco-${item.bloco.id}'),
+                              item: item,
+                              indice: i,
+                              aoEditar: (te) => _editarAlvos(context, ref, te),
+                              aoAcaoMembro: (posicao, acao) =>
+                                  _acaoDoMembro(context, ref, item, posicao, acao),
+                              aoMudarDescanso: () =>
+                                  _mudarDescansoBloco(context, ref, item.bloco),
+                              aoDesfazer: () => _desfazerBloco(context, ref, item.bloco),
+                              aoJuntar: juntar,
+                            ),
+                        };
                       },
                     ),
             ),
@@ -445,7 +573,7 @@ class _ListaExerciciosFicha extends ConsumerWidget {
               child: BotaoTracejado(
                 rotulo: 'Adicionar exercício à ficha',
                 aoTocar: () => _adicionar(context, ref, ficha.nome,
-                    {for (final te in itens) te.exercicioId}),
+                    {for (final te in ficha.exercicios) te.exercicioId}),
               ),
             ),
           ],
@@ -462,12 +590,16 @@ class _CardExercicioFicha extends StatelessWidget {
     required this.indice,
     required this.aoEditar,
     required this.aoRemover,
+    this.aoJuntar,
   });
 
   final TreinoExercicioResumo exercicio;
   final int indice;
   final VoidCallback aoEditar;
   final VoidCallback aoRemover;
+
+  /// "Juntar com o de baixo" (PBI-101). Nulo = não há com quem juntar.
+  final VoidCallback? aoJuntar;
 
   @override
   Widget build(BuildContext context) {
@@ -524,6 +656,10 @@ class _CardExercicioFicha extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x8),
+                if (aoJuntar != null) ...[
+                  _BotaoJuntar(nome: exercicio.nome, aoTocar: aoJuntar!),
+                  const SizedBox(width: AppSpacing.x4),
+                ],
                 // Remover: 44 × 44, fundo vermelho suave, só a lixeira.
                 SizedBox(
                   width: AppSizes.touchMin,
@@ -551,16 +687,265 @@ class _CardExercicioFicha extends StatelessWidget {
   }
 }
 
+/// "Juntar com o de baixo" (PBI-101): ícone de elo, 44 × 44.
+class _BotaoJuntar extends StatelessWidget {
+  const _BotaoJuntar({required this.nome, required this.aoTocar});
+
+  final String nome;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return SizedBox(
+      width: AppSizes.touchMin,
+      height: AppSizes.touchMin,
+      child: IconButton(
+        onPressed: aoTocar,
+        tooltip: 'Juntar $nome com o de baixo',
+        icon: Icon(LucideIcons.link, size: AppSizes.iconeSm, color: cores.primaryText),
+        style: IconButton.styleFrom(
+          padding: EdgeInsets.zero,
+          side: BorderSide(color: cores.lineDefault),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ações de um exercício dentro do bloco (menu de cada linha).
+enum _AcaoMembro { subir, descer, tirar, remover }
+
+/// Cartão do bloco conjugado (PBI-101): barra lateral, cabeçalho "Conjugado ·
+/// 4 rodadas · descanso 30 s" com a alça (move o bloco inteiro), "Descanso" e
+/// "Desfazer bloco", e os exercícios empilhados com o resumo dos alvos (sem o
+/// descanso, que é do bloco).
+class _CardBlocoFicha extends StatelessWidget {
+  const _CardBlocoFicha({
+    super.key,
+    required this.item,
+    required this.indice,
+    required this.aoEditar,
+    required this.aoAcaoMembro,
+    required this.aoMudarDescanso,
+    required this.aoDesfazer,
+    this.aoJuntar,
+  });
+
+  final ItemBloco item;
+  final int indice;
+  final void Function(TreinoExercicioResumo) aoEditar;
+  final void Function(int posicao, _AcaoMembro acao) aoAcaoMembro;
+  final VoidCallback aoMudarDescanso;
+  final VoidCallback aoDesfazer;
+  final VoidCallback? aoJuntar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final bloco = item.bloco;
+    final membros = item.membros;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.entreItens),
+      child: Semantics(
+        container: true,
+        label: rotuloFaladoBloco(bloco, membros.length),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(color: cores.lineDefault),
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Barra lateral: marca o que é feito junto.
+                Container(width: AppSpacing.x6, color: cores.primaryText),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.x4, AppSpacing.x8,
+                        AppSpacing.x8, AppSpacing.x8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            ReorderableDragStartListener(
+                              index: indice,
+                              child: Semantics(
+                                label: 'Arrastar para reordenar o bloco',
+                                child: SizedBox(
+                                  width: 36,
+                                  height: AppSizes.touchMin,
+                                  child: Icon(LucideIcons.gripVertical,
+                                      color: cores.iconMuted, size: AppSizes.iconeSm),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.x4),
+                            Expanded(
+                              child: ExcludeSemantics(
+                                child: Text(textoCabecalhoBloco(bloco),
+                                    style: AppText.label.copyWith(color: cores.primaryText)),
+                              ),
+                            ),
+                            if (aoJuntar != null)
+                              _BotaoJuntar(nome: 'o bloco', aoTocar: aoJuntar!),
+                          ],
+                        ),
+                        Wrap(
+                          spacing: AppSpacing.x8,
+                          children: [
+                            _AcaoCabecalhoBloco(
+                              icone: LucideIcons.timer,
+                              rotulo: 'Descanso',
+                              aoTocar: aoMudarDescanso,
+                            ),
+                            _AcaoCabecalhoBloco(
+                              icone: LucideIcons.unlink,
+                              rotulo: 'Desfazer bloco',
+                              aoTocar: aoDesfazer,
+                            ),
+                          ],
+                        ),
+                        for (var p = 0; p < membros.length; p++) ...[
+                          Divider(height: AppSpacing.x8, color: cores.lineDivider),
+                          _LinhaMembroBloco(
+                            exercicio: membros[p],
+                            primeiro: p == 0,
+                            ultimo: p == membros.length - 1,
+                            aoEditar: () => aoEditar(membros[p]),
+                            aoAcao: (acao) => aoAcaoMembro(p, acao),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AcaoCabecalhoBloco extends StatelessWidget {
+  const _AcaoCabecalhoBloco({required this.icone, required this.rotulo, required this.aoTocar});
+
+  final IconData icone;
+  final String rotulo;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return TextButton.icon(
+      onPressed: aoTocar,
+      icon: Icon(icone, size: AppSizes.iconeSm, color: cores.textStrong),
+      label: Text(rotulo, style: AppText.label.copyWith(color: cores.textStrong)),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(AppSizes.touchMin, AppSizes.touchMin),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+      ),
+    );
+  }
+}
+
+/// Um exercício dentro do bloco: toque edita os alvos; o menu move dentro do
+/// bloco, tira do bloco ou remove da ficha.
+class _LinhaMembroBloco extends StatelessWidget {
+  const _LinhaMembroBloco({
+    required this.exercicio,
+    required this.primeiro,
+    required this.ultimo,
+    required this.aoEditar,
+    required this.aoAcao,
+  });
+
+  final TreinoExercicioResumo exercicio;
+  final bool primeiro;
+  final bool ultimo;
+  final VoidCallback aoEditar;
+  final void Function(_AcaoMembro) aoAcao;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: aoEditar,
+            borderRadius: BorderRadius.circular(AppRadius.campoSerie),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.x8, vertical: AppSpacing.x4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(exercicio.nome, style: AppText.titleS),
+                    const SizedBox(height: AppSpacing.x4),
+                    _ResumoAlvo(exercicio: exercicio, cores: cores, mostrarDescanso: false),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: AppSizes.touchMin,
+          height: AppSizes.touchMin,
+          child: PopupMenuButton<_AcaoMembro>(
+            tooltip: 'Opções de ${exercicio.nome}',
+            icon: Icon(LucideIcons.moreVertical, size: AppSizes.iconeSm, color: cores.iconMuted),
+            padding: EdgeInsets.zero,
+            onSelected: aoAcao,
+            itemBuilder: (_) => [
+              if (!primeiro)
+                const PopupMenuItem(value: _AcaoMembro.subir, child: Text('Mover para cima')),
+              if (!ultimo)
+                const PopupMenuItem(value: _AcaoMembro.descer, child: Text('Mover para baixo')),
+              const PopupMenuItem(value: _AcaoMembro.tirar, child: Text('Tirar do bloco')),
+              PopupMenuItem(
+                value: _AcaoMembro.remover,
+                child: Text('Remover da ficha', style: AppText.body.copyWith(color: cores.danger)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Linha-resumo dos alvos no card. Sem alvo definido, convida a configurar.
 ///
 /// Mostra a faixa de volume (TV-2) e a unidade de cada métrica, no mesmo padrão
 /// do resumo do editor (PBI-79). A unidade vem do catálogo de métricas (por
 /// código); enquanto ele não chegou, cai no nome da métrica.
 class _ResumoAlvo extends ConsumerWidget {
-  const _ResumoAlvo({required this.exercicio, required this.cores});
+  const _ResumoAlvo({
+    required this.exercicio,
+    required this.cores,
+    this.mostrarDescanso = true,
+  });
 
   final TreinoExercicioResumo exercicio;
   final AppColors cores;
+
+  /// Falso dentro do bloco conjugado (PBI-101): o descanso é do bloco.
+  final bool mostrarDescanso;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -604,7 +989,7 @@ class _ResumoAlvo extends ConsumerWidget {
     }
 
     var texto = partes.join(' · ');
-    if (exercicio.descansoSeg != null) {
+    if (mostrarDescanso && exercicio.descansoSeg != null) {
       texto = '$texto · ${exercicio.descansoSeg} s';
     }
 

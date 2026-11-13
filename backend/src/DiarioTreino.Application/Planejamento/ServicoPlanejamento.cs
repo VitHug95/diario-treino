@@ -11,7 +11,7 @@ namespace DiarioTreino.Application.Planejamento;
 /// plano são a mesma pessoa (o usuário logado). Toda operação sobre dados de
 /// atleta passa pelo <see cref="IControleAcesso"/>.
 /// </summary>
-public sealed class ServicoPlanejamento
+public sealed partial class ServicoPlanejamento
 {
     private readonly IRepositorioPlano _repositorio;
     private readonly IControleAcesso _acesso;
@@ -491,14 +491,19 @@ public sealed class ServicoPlanejamento
                 te.DescansoAlvoSeg,
                 te.Observacao,
                 await MapearAlvoAsync(etapa, ct),
-                marcadores));
+                marcadores,
+                te.BlocoId));
         }
 
         var plano = await _repositorio.ObterPlanoAsync(treino.PlanoId, ct);
         var somenteLeitura = plano is not null && plano.AutorId != plano.AtletaId;
 
+        var blocos = MontarBlocos(
+            await _repositorio.ObterBlocosDaFichaAsync(treinoId, ct),
+            treino.Exercicios.ToList());
+
         return new TreinoDetalhe(
-            treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios, somenteLeitura);
+            treino.Id, treino.Nome, treino.Descricao, treino.Ordem, exercicios, blocos, somenteLeitura);
     }
 
     private async Task<AlvoExercicio?> MapearAlvoAsync(EtapaPrescrita? etapa, CancellationToken ct)
@@ -577,6 +582,8 @@ public sealed class ServicoPlanejamento
             ?? throw new RecursoNaoEncontradoException();
         await GarantirAcessoAoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
 
+        // PBI-101: bloco que ficaria com um só se desfaz.
+        await AjustarBlocoAoRemoverAsync(te, ct);
         _repositorio.RemoverTreinoExercicio(te);
         await _repositorio.SalvarAsync(ct);
     }
@@ -602,6 +609,9 @@ public sealed class ServicoPlanejamento
                 ordem++;
             }
         }
+
+        // PBI-101: a ordem final não pode separar os membros de um bloco.
+        GarantirBlocosContiguos(exercicios);
         await _repositorio.SalvarAsync(ct);
     }
 
@@ -626,7 +636,12 @@ public sealed class ServicoPlanejamento
         await ValidarEixoAsync(request.VolumeMetricaId, EixoMetrica.Volume, ct);
 
         te.Rodadas = request.Series;
-        te.DescansoAlvoSeg = request.DescansoSeg;
+        // Dentro de um bloco vale o descanso do bloco (PBI-101): o do membro
+        // não é editado por aqui.
+        if (te.BlocoId is null)
+        {
+            te.DescansoAlvoSeg = request.DescansoSeg;
+        }
         te.Observacao = string.IsNullOrWhiteSpace(request.Instrucao)
             ? null
             : request.Instrucao.Trim();

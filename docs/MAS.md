@@ -348,13 +348,17 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | GET | `/planos/ativo` | Plano em uso com as fichas e a `semana` planejada (que a Início segue); 204 quando nenhum plano está em uso | ✅ (semana na PBI-35) |
 | POST | `/planos/{id}/treinos` | Adiciona ficha **ao plano do id da URL** | ✅, corrigido na PBI-44 |
 | POST | `/planos/fichas-de-treino` | Cria ficha a partir dos exercícios de um treino livre (grava no plano em uso) | ✅ (PBI-19) |
-| GET | `/treinos/{id}` | Detalhe da ficha com exercícios e `somenteLeitura` (ficha de plano do professor, PBI-72) | ✅ |
+| GET | `/treinos/{id}` | Detalhe da ficha com exercícios e `somenteLeitura` (ficha de plano do professor, PBI-72). Cada exercício traz `blocoId` (nulo = avulso) e a ficha traz `blocos: [{ id, descansoSeg, treinoExercicioIds, rodadas }]`, na ordem da ficha; `rodadas` = maior número de séries entre os membros (PBI-101) | ✅ |
 | PUT | `/treinos/{id}` | Edita ficha (nome) | ✅ |
 | DELETE | `/treinos/{id}` | **Apaga** a ficha sem sessões, **arquiva** a com sessões | ✅ |
 | POST | `/treinos/{id}/exercicios` | Adiciona exercício à ficha; 409 "Este exercício já está na ficha." se ele já estiver (PBI-74) | ✅ |
-| PUT | `/treinos/{id}/exercicios/ordem` | Reordena exercícios | ✅ |
-| DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha | ✅ |
-| PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso) | ✅ |
+| PUT | `/treinos/{id}/exercicios/ordem` | Reordena exercícios. 400 se a ordem final separar os membros de um bloco (PBI-101) | ✅ |
+| DELETE | `/treinos/{id}/exercicios/{teId}` | Remove exercício da ficha. Bloco que ficaria com um só se desfaz (PBI-101) | ✅ |
+| PUT | `/treinos/{id}/exercicios/{teId}/alvos` | Define alvos (séries, carga/reps, descanso). Em membro de bloco, o descanso enviado é ignorado (vale o do bloco) | ✅ |
+| POST | `/treinos/{id}/blocos` | `{ treinoExercicioIds, descansoSeg }`: junta 2 a 4 exercícios da ficha num bloco conjugado. Não vizinhos vão para a posição do primeiro, na ordem da ficha. 400: menos de 2, mais de 4, repetido, de outra ficha, já em bloco, descanso fora de 0 a 600. 201 `{ id }` | ✅ (PBI-101) |
+| PUT | `/treinos/{id}/blocos/{blocoId}` | `{ descansoSeg }`: descanso depois de cada rodada (nulo ou 0 = sem descanso; 0 a 600). 204 | ✅ (PBI-101) |
+| DELETE | `/treinos/{id}/blocos/{blocoId}` | Desfaz o bloco: membros avulsos na mesma ordem, cada um com o descanso do bloco. 204 | ✅ (PBI-101) |
+| PUT | `/treinos/{id}/blocos/{blocoId}/membros` | `{ treinoExercicioIds }`: nova lista, que é também a ordem dentro do bloco. Quem sai fica avulso logo depois do bloco, com o descanso dele; menos de 2 desfaz. 400: mais de 4, repetido, de outra ficha ou noutro bloco. 204 | ✅ (PBI-101) |
 | GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
 | GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
 | GET | `/exercicios/{id}/historico?limite=` | Últimas sessões com o exercício (aba Histórico do treino ao vivo) | ✅ (TV-4) |

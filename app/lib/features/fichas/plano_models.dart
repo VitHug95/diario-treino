@@ -178,6 +178,7 @@ class TreinoDetalhe {
     required this.descricao,
     required this.ordem,
     required this.exercicios,
+    this.blocos = const [],
     this.somenteLeitura = false,
   });
 
@@ -187,9 +188,38 @@ class TreinoDetalhe {
   final int ordem;
   final List<TreinoExercicioResumo> exercicios;
 
+  /// Blocos conjugados (PBI-101), na ordem da ficha. Vazio = todos avulsos.
+  final List<BlocoFicha> blocos;
+
   /// Ficha de plano do professor: o atleta só lê e treina (PBI-72 não
   /// pergunta "Manter na ficha?" nela).
   final bool somenteLeitura;
+
+  /// A ficha como o editor mostra (PBI-101): cada exercício avulso é um item e
+  /// cada bloco é um item só, com os membros na ordem. Membro cujo bloco não
+  /// veio na lista é tratado como avulso.
+  List<ItemFicha> get itens {
+    final porId = {for (final b in blocos) b.id: b};
+    final porExercicio = {for (final e in exercicios) e.id: e};
+    final vistos = <String>{};
+    final resultado = <ItemFicha>[];
+    for (final e in exercicios) {
+      final bloco = e.blocoId == null ? null : porId[e.blocoId];
+      if (bloco == null) {
+        resultado.add(ItemAvulso(e));
+      } else if (vistos.add(bloco.id)) {
+        resultado.add(ItemBloco(bloco, [
+          for (final id in bloco.treinoExercicioIds)
+            if (porExercicio[id] != null) porExercicio[id]!,
+        ]));
+      }
+    }
+    return resultado;
+  }
+
+  /// Bloco do exercício, ou nulo se ele é avulso.
+  BlocoFicha? blocoDe(TreinoExercicioResumo e) =>
+      blocos.where((b) => b.id == e.blocoId).firstOrNull;
 
   factory TreinoDetalhe.doJson(Map<String, dynamic> json) => TreinoDetalhe(
         id: json['id'] as String,
@@ -200,8 +230,62 @@ class TreinoDetalhe {
             .cast<Map<String, dynamic>>()
             .map(TreinoExercicioResumo.doJson)
             .toList(),
+        blocos: ((json['blocos'] as List<dynamic>?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(BlocoFicha.doJson)
+            .toList(),
         somenteLeitura: json['somenteLeitura'] as bool? ?? false,
       );
+}
+
+/// Bloco conjugado da ficha (PBI-101): 2 a 4 exercícios feitos alternando, com
+/// um descanso só depois de cada rodada. As rodadas valem o maior número de
+/// séries entre os membros (vêm calculadas da API).
+class BlocoFicha {
+  const BlocoFicha({
+    required this.id,
+    required this.descansoSeg,
+    required this.treinoExercicioIds,
+    required this.rodadas,
+  });
+
+  /// Máximo de exercícios num bloco (trava de tela, 360 px).
+  static const maximoMembros = 4;
+
+  /// Descanso do bloco: 0 a 600 s.
+  static const descansoMaximoSeg = 600;
+
+  final String id;
+
+  /// Descanso depois de cada rodada; nulo ou 0 = sem descanso.
+  final int? descansoSeg;
+  final List<String> treinoExercicioIds;
+  final int rodadas;
+
+  bool get temDescanso => (descansoSeg ?? 0) > 0;
+
+  factory BlocoFicha.doJson(Map<String, dynamic> json) => BlocoFicha(
+        id: json['id'] as String,
+        descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
+        treinoExercicioIds: (json['treinoExercicioIds'] as List<dynamic>).cast<String>(),
+        rodadas: (json['rodadas'] as num).toInt(),
+      );
+}
+
+/// Um item do editor da ficha: exercício avulso ou bloco conjugado (PBI-101).
+sealed class ItemFicha {
+  const ItemFicha();
+}
+
+class ItemAvulso extends ItemFicha {
+  const ItemAvulso(this.exercicio);
+  final TreinoExercicioResumo exercicio;
+}
+
+class ItemBloco extends ItemFicha {
+  const ItemBloco(this.bloco, this.membros);
+  final BlocoFicha bloco;
+  final List<TreinoExercicioResumo> membros;
 }
 
 /// Exercício prescrito dentro de uma ficha, com os alvos (PBI-14).
@@ -218,7 +302,11 @@ class TreinoExercicioResumo {
     required this.instrucao,
     required this.alvo,
     this.marcadores = const [],
+    this.blocoId,
   });
+
+  /// Bloco conjugado (PBI-101); nulo = exercício avulso.
+  final String? blocoId;
 
   final String id;
   final String exercicioId;
@@ -269,6 +357,7 @@ class TreinoExercicioResumo {
             .cast<Map<String, dynamic>>()
             .map(MarcadorRodada.doJson)
             .toList(),
+        blocoId: json['blocoId'] as String?,
       );
 }
 

@@ -15,7 +15,14 @@ public class TreinoExercicio
     public short? DescansoAlvoSeg { get; set; }
     public string? Observacao { get; set; }
 
+    /// <summary>
+    /// Bloco conjugado (PBI-101); nulo = exercício sozinho. Dentro do bloco vale
+    /// o descanso do bloco, e <see cref="DescansoAlvoSeg"/> é ignorado.
+    /// </summary>
+    public Guid? BlocoId { get; set; }
+
     public Treino? Treino { get; set; }
+    public BlocoExercicio? Bloco { get; set; }
     public Exercicio? Exercicio { get; set; }
     public ICollection<EtapaPrescrita> Etapas { get; set; } = [];
 

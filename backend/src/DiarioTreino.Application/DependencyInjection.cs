@@ -33,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<IValidator<DefinirSemanaRequest>, DefinirSemanaValidator>();
         services.AddScoped<IValidator<CriarFichaDeTreinoRequest>, CriarFichaDeTreinoValidator>();
         services.AddScoped<IValidator<DefinirAlvosRequest>, DefinirAlvosValidator>();
+        services.AddScoped<IValidator<CriarBlocoRequest>, CriarBlocoValidator>();
+        services.AddScoped<IValidator<DescansoBlocoRequest>, DescansoBlocoValidator>();
+        services.AddScoped<IValidator<MembrosBlocoRequest>, MembrosBlocoValidator>();
         services.AddScoped<IValidator<CriarSessaoRequest>, CriarSessaoValidator>();
         services.AddScoped<IValidator<ConvidarAlunoRequest>, ConvidarAlunoValidator>();
         services.AddScoped<IValidator<SalvarMedidasEntrada>, SalvarMedidasValidator>();
