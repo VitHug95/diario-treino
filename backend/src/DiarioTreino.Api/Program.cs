@@ -95,6 +95,8 @@ try
 
     // Correlação por requisição, antes do log de requisições do Serilog.
     app.UseMiddleware<CorrelationIdMiddleware>();
+    // PBI-100: nenhuma resposta vai para cache (dado pessoal que muda a cada gravação).
+    app.UseMiddleware<SemCacheMiddleware>();
     app.UseSerilogRequestLogging();
 
     // CORS antes da autenticação, para o preflight (OPTIONS) passar.

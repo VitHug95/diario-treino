@@ -194,6 +194,7 @@ fechados sem merge.
 |---|---|---|
 | (PR da PBI-97) | PBI-97 | Front: `CampoData` compartilhado (campo inteiro tocável; o nó de semântica ganhou o `onTap` que faltava, causa do toque perdido na web) e seletor próprio `escolherData` (calendário + digitação com máscara dd/mm/aaaa, barras automáticas, teclado numérico). Substitui as duas cópias privadas do registro e do resumo e o `showDatePicker` nas quatro telas. |
 | (PR da PBI-98) | PBI-98 | Back: migration `TmbManual` (`usuario.tmb_manual_kcal`), `tmbKcal` efetivo + `tmbCalculadaKcal` + `tmbManual` no `GET /me/perfil-corporal`, `PUT\|DELETE /me/perfil-corporal/tmb-manual`; limpar os dados corporais limpa a TMB informada. Front: botão "Editar" no cartão da TMB, diálogo com "Usar o cálculo", selo "Informada por você" e linha "Calculada". |
+| (PR da PBI-100) | PBI-100 | Bug da ficha com valor antigo depois de salvar os alvos: **não reproduzido** (widget, app inteiro e Chrome real contra a stack real). Back: `SemCacheMiddleware` (`Cache-Control: no-store` e `Pragma: no-cache` em toda resposta) e `SemCacheEndpointTests`; `PostgresFixture` aceita `TESTES_POSTGRES` para rodar a integração sem Docker. Front: testes de regressão da ficha e do fluxo inteiro; E2E `alvos_ficha_pbi100_test.dart` no job `e2e`. Falta conferir no Safari do iPhone. |
 
 ---
 

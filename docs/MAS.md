@@ -314,6 +314,7 @@ PodeAcessarAtleta(usuarioLogado, atletaId) =
 ## 12. Contrato da API (v1)
 
 Prefixo `/api/v1`, JSON, datas em ISO 8601, ids em UUID. Erros no formato Problem Details (RFC 9457).
+Toda resposta sai com `Cache-Control: no-store` e `Pragma: no-cache` (PBI-100): os dados são pessoais e de saúde, e uma leitura logo depois de uma gravação nunca pode vir de cache do navegador ou de intermediário.
 
 Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 incremento 2 · 🟣 reservado.
 

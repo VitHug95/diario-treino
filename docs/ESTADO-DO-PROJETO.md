@@ -189,8 +189,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 363 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 62 unitários), incluindo o fluxo de registro com o app inteiro,
+- **Front (widget):** 513 testes em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas; backend: 129 unitários e 232 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
@@ -198,6 +198,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   treino livre → ver no progresso. Roda com `flutter drive` + ChromeDriver (Chrome
   headless). Migrou de Robot/Playwright, inviável no CanvasKit (campos de texto não
   aceitam entrada via DOM). Ver PBI-26 no [BACKLOG](BACKLOG.md).
+  O mesmo job roda `alvos_ficha_pbi100_test.dart` (PBI-100): salvar os alvos e
+  voltar à ficha mostra o valor novo na hora.
 - **Back:** unitários (acesso, catálogo, planejamento, "manter na ficha") e
   integração com Testcontainers (Postgres real) para controle de acesso, esquema,
   catálogo, fichas, planos, sessões, progresso e "manter na ficha".
@@ -205,8 +207,10 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   de integração, `flutter analyze`, `flutter test --dart-define=TREINO_AO_VIVO=false`,
   build web e o job `e2e` (integration_test). Deploy da API e do front depois do CI
   verde na `main`.
-- **Localmente no Windows:** os testes de integração (back) e o E2E precisam de
-  Docker/emulador (sem eles, só rodam no CI). Com a flag `TREINO_AO_VIVO` ligada,
+- **Localmente no Windows:** sem Docker, os testes de integração (back) rodam
+  contra um Postgres local com `TESTES_POSTGRES` (connection string de um usuário
+  que pode criar banco; cada execução cria e apaga um banco próprio). O E2E
+  precisa do emulador, da API e do ChromeDriver. Com a flag `TREINO_AO_VIVO` ligada,
   2 testes do plano falham porque esperam o caminho com a flag desligada.
 
 ---
