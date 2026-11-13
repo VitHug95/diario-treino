@@ -204,6 +204,10 @@ _Servidor _fichaDoPo() => _Servidor([
       'i5': null,
     });
 
+/// Texto dentro do sheet aberto (o mesmo nome também aparece na ficha atrás).
+Finder _noSheet(String texto) =>
+    find.descendant(of: find.byType(BottomSheet), matching: find.text(texto));
+
 Widget _app(_Servidor repo, {bool escuro = false}) => ProviderScope(
       overrides: [
         fichasRepositoryProvider.overrideWithValue(repo),
@@ -267,37 +271,56 @@ void main() {
     semantica.dispose();
   });
 
-  testWidgets('juntar com o de baixo pede o descanso e o bloco aparece sem recarregar',
+  testWidgets('"Juntar com…" escolhe o exercício, pede o descanso e o bloco aparece sem recarregar',
       (tester) async {
-    final repo = _Servidor([_Ex('a', 'Adução com a bola', 3), _Ex('b', 'Agachamento livre', 3)]);
+    final repo = _Servidor([
+      _Ex('a', 'Adução com a bola', 3),
+      _Ex('c', 'Afundo', 3),
+      _Ex('b', 'Agachamento livre', 3),
+    ]);
     await _abrir(tester, repo);
     expect(find.textContaining('Conjugado'), findsNothing);
 
-    await tester.tap(find.byTooltip('Juntar Adução com a bola com o de baixo'));
+    await tester.tap(find.byTooltip('Juntar Adução com a bola com outro exercício'));
     await tester.pumpAndSettle();
-    expect(find.text('Descanso depois de cada rodada'), findsOneWidget);
+    expect(find.text('Juntar Adução com a bola com…'), findsOneWidget);
+    // Sem escolha, o botão fica desabilitado.
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'JUNTAR')).onPressed,
+        isNull);
+
+    // Escolhe o agachamento, que não é o vizinho de baixo.
+    await tester.tap(_noSheet('Agachamento livre'));
+    await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Segundos'), '30');
     await tester.tap(find.text('JUNTAR'));
     await tester.pumpAndSettle();
 
     expect(repo.chamadas, ['criar [a, b] 30']);
     expect(find.text('Conjugado · 3 rodadas · descanso 30 s'), findsOneWidget);
-    // O último não tem com quem juntar; dentro do bloco não há "juntar".
-    expect(find.byTooltip('Juntar Agachamento livre com o de baixo'), findsNothing);
+    // Os dois ficaram juntos, no lugar do primeiro; o afundo foi para depois.
+    expect(repo.exercicios.map((e) => e.id), ['a', 'b', 'c']);
   });
 
-  testWidgets('juntar com "Sem descanso" cria o bloco sem descanso', (tester) async {
-    final repo = _Servidor([_Ex('a', 'Prancha lateral', 2), _Ex('b', 'Elevação pélvica', 4)]);
+  testWidgets('juntar três de uma vez, com "Sem descanso"', (tester) async {
+    final repo = _Servidor([
+      _Ex('a', 'Prancha lateral', 2),
+      _Ex('b', 'Elevação pélvica', 4),
+      _Ex('c', 'Ponte', 3),
+    ]);
     await _abrir(tester, repo);
 
-    await tester.tap(find.byTooltip('Juntar Prancha lateral com o de baixo'));
+    await tester.tap(find.byTooltip('Juntar Elevação pélvica com outro exercício'));
     await tester.pumpAndSettle();
+    await tester.tap(_noSheet('Ponte'));
+    await tester.tap(_noSheet('Prancha lateral'));
+    await tester.pump();
     await tester.tap(find.text('Sem descanso'));
     await tester.pump();
     await tester.tap(find.text('JUNTAR'));
     await tester.pumpAndSettle();
 
-    expect(repo.chamadas, ['criar [a, b] null']);
+    // A origem vem primeiro; os escolhidos seguem a ordem da ficha.
+    expect(repo.chamadas, ['criar [b, a, c] null']);
     expect(find.text('Conjugado · 4 rodadas · sem descanso'), findsOneWidget);
   });
 
@@ -305,8 +328,10 @@ void main() {
     final repo = _Servidor([_Ex('a', 'A', 2), _Ex('b', 'B', 2)]);
     await _abrir(tester, repo);
 
-    await tester.tap(find.byTooltip('Juntar A com o de baixo'));
+    await tester.tap(find.byTooltip('Juntar A com outro exercício'));
     await tester.pumpAndSettle();
+    await tester.tap(_noSheet('B'));
+    await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Segundos'), '900');
     await tester.tap(find.text('JUNTAR'));
     await tester.pumpAndSettle();
@@ -315,7 +340,67 @@ void main() {
     expect(repo.chamadas, isEmpty);
   });
 
-  testWidgets('avulso acima de um bloco entra no bloco', (tester) async {
+  testWidgets('escolher um bloco existente põe o exercício nele, sem pedir descanso',
+      (tester) async {
+    final repo = _Servidor([
+      _Ex('a', 'Adução com a bola', 3, bloco: 'b1'),
+      _Ex('b', 'Agachamento livre', 3, bloco: 'b1'),
+      _Ex('y', 'Subida no caixote', 3),
+      _Ex('x', 'Afundo', 3),
+    ], {'b1': 30});
+    await _abrir(tester, repo);
+
+    await tester.tap(find.byTooltip('Juntar Afundo com outro exercício'));
+    await tester.pumpAndSettle();
+    await tester.tap(_noSheet('Bloco: Adução com a bola + Agachamento livre'));
+    await tester.pump();
+    expect(find.text('Descanso depois de cada rodada'), findsNothing);
+    await tester.tap(find.text('JUNTAR'));
+    await tester.pumpAndSettle();
+
+    expect(repo.chamadas, ['membros b1 [a, b, x]']);
+    expect(find.text('Conjugado · 3 rodadas · descanso 30 s'), findsOneWidget);
+    expect(find.byTooltip('Juntar Afundo com outro exercício'), findsNothing);
+  });
+
+  testWidgets('exercício de outro bloco aparece desabilitado; limite de 4 por bloco',
+      (tester) async {
+    final repo = _Servidor([
+      _Ex('a', 'A', 2, bloco: 'b1'),
+      _Ex('b', 'B', 2, bloco: 'b1'),
+      for (final id in ['c', 'd', 'e', 'f', 'g']) _Ex(id, id.toUpperCase(), 2),
+    ], {'b1': null});
+    await _abrir(tester, repo);
+
+    await tester.tap(find.byTooltip('Juntar C com outro exercício'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('Já está num bloco')),
+        findsNWidgets(2));
+
+    for (final n in ['D', 'E', 'F']) {
+      await tester.tap(_noSheet(n));
+      await tester.pump();
+    }
+    // Com 3 escolhidos (4 com a origem), o G não entra mais.
+    expect(find.text('Máximo de 4 por bloco'), findsOneWidget);
+    await tester.tap(_noSheet('G'));
+    await tester.pump();
+    await tester.tap(find.text('JUNTAR'));
+    await tester.pumpAndSettle();
+
+    // O G ficou de fora; sem segundos digitados nem "Sem descanso", o sheet
+    // pede o descanso antes de juntar.
+    expect(repo.chamadas, isEmpty);
+    expect(find.text('Informe os segundos ou marque "Sem descanso".'), findsOneWidget);
+    await tester.tap(find.text('Sem descanso'));
+    await tester.pump();
+    await tester.tap(find.text('JUNTAR'));
+    await tester.pumpAndSettle();
+    expect(repo.chamadas, ['criar [c, d, e, f] null']);
+  });
+
+  testWidgets('"Adicionar exercício" no bloco traz os escolhidos para o fim do bloco',
+      (tester) async {
     final repo = _Servidor([
       _Ex('x', 'Afundo', 3),
       _Ex('a', 'Adução com a bola', 3, bloco: 'b1'),
@@ -323,23 +408,28 @@ void main() {
     ], {'b1': 30});
     await _abrir(tester, repo);
 
-    await tester.tap(find.byTooltip('Juntar Afundo com o de baixo'));
+    await tester.tap(find.text('Adicionar exercício'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adicionar ao bloco'), findsOneWidget);
+    await tester.tap(_noSheet('Afundo'));
+    await tester.pump();
+    await tester.tap(find.text('ADICIONAR'));
     await tester.pumpAndSettle();
 
-    expect(repo.chamadas, ['membros b1 [x, a, b]']);
+    expect(repo.chamadas, ['membros b1 [a, b, x]']);
     expect(find.text('Conjugado · 3 rodadas · descanso 30 s'), findsOneWidget);
-    expect(find.byTooltip('Juntar Afundo com o de baixo'), findsNothing);
   });
 
-  testWidgets('bloco cheio (4) não oferece juntar', (tester) async {
+  testWidgets('bloco cheio (4) não oferece "Adicionar exercício"', (tester) async {
     final repo = _Servidor([
       for (final id in ['a', 'b', 'c', 'd']) _Ex(id, 'Ex $id', 2, bloco: 'b1'),
       _Ex('e', 'Ex e', 2),
     ], {'b1': null});
     await _abrir(tester, repo);
 
-    expect(find.byTooltip('Juntar o bloco com o de baixo'), findsNothing);
-    expect(find.byTooltip('Juntar Ex d com o de baixo'), findsNothing);
+    expect(find.text('Adicionar exercício'), findsNothing);
+    // O avulso só teria o bloco cheio: sem com quem juntar.
+    expect(find.byTooltip('Juntar Ex e com outro exercício'), findsNothing);
   });
 
   testWidgets('tirar do bloco de dois desfaz e os dois ficam com o descanso do bloco',
@@ -450,6 +540,31 @@ void main() {
     expect(find.text('Conjugado · 4 rodadas · sem descanso'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final escuro in [false, true]) {
+    testWidgets('sheet "Juntar com…" em 360 px com fonte 1,3x '
+        '(${escuro ? 'escuro' : 'claro'})', (tester) async {
+      tester.view.physicalSize = const Size(360, 3600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(_app(_fichaDoPo(), escuro: escuro));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Juntar Afundo com outro exercício'));
+      await tester.pumpAndSettle();
+      expect(find.text('Juntar Afundo com…'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      // Linhas do sheet com alvo de toque de 44 px.
+      expect(
+          tester
+              .getSize(find.ancestor(
+                  of: _noSheet('Subida no caixote unilateral'), matching: find.byType(ListTile)))
+              .height,
+          greaterThanOrEqualTo(44));
+    });
+  }
 
   test('textos do bloco', () {
     const comDescanso =
