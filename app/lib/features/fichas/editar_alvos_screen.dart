@@ -53,6 +53,9 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
 
   bool _salvando = false;
 
+  /// Membro de bloco conjugado (PBI-101): sem campo de descanso.
+  bool get _noBloco => widget.exercicio.blocoId != null;
+
   @override
   void initState() {
     super.initState();
@@ -151,7 +154,8 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
             volumeMetricaId: _volumeId!,
             volumeAlvo: volAlvo,
             volumeAlvoMax: volMax,
-            descansoSeg: int.tryParse(_descanso.text.trim()),
+            // No bloco, o descanso do membro não é editado (o servidor ignora).
+            descansoSeg: _noBloco ? null : int.tryParse(_descanso.text.trim()),
             instrucao: _instrucao.text.trim().isEmpty ? null : _instrucao.text.trim(),
             marcadores: [
               for (final e in _marcadores.entries)
@@ -285,13 +289,17 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.x20),
-              _CampoAlvo(
-                controlador: _descanso,
-                rotulo: 'Descanso entre séries (opcional)',
-                sufixo: 's',
-                somenteInteiro: true,
-                aoMudar: () => setState(() {}),
-              ),
+              // PBI-101: no bloco conjugado, o descanso é do bloco.
+              if (_noBloco)
+                const _AvisoDescansoDoBloco()
+              else
+                _CampoAlvo(
+                  controlador: _descanso,
+                  rotulo: 'Descanso entre séries (opcional)',
+                  sufixo: 's',
+                  somenteInteiro: true,
+                  aoMudar: () => setState(() {}),
+                ),
               const SizedBox(height: AppSpacing.x20),
               TextField(
                 controller: _instrucao,
@@ -311,7 +319,7 @@ class _EditarAlvosScreenState extends ConsumerState<EditarAlvosScreen> {
                 volume: mVolume,
                 volumeAlvo: _parse(_volumeAlvo.text),
                 volumeAlvoMax: _parse(_volumeAlvoMax.text),
-                descansoSeg: int.tryParse(_descanso.text.trim()),
+                descansoSeg: _noBloco ? null : int.tryParse(_descanso.text.trim()),
               ),
               const SizedBox(height: AppSpacing.x24),
               SizedBox(
@@ -561,6 +569,34 @@ class _CampoAlvo extends StatelessWidget {
       decoration: InputDecoration(
         labelText: rotulo,
         suffixText: sufixo,
+      ),
+    );
+  }
+}
+
+/// No lugar do campo de descanso, para membro de bloco (PBI-101).
+class _AvisoDescansoDoBloco extends StatelessWidget {
+  const _AvisoDescansoDoBloco();
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.paddingCardCompacto),
+      decoration: BoxDecoration(
+        border: Border.all(color: cores.lineDefault),
+        borderRadius: BorderRadius.circular(AppRadius.avisos),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.link, size: AppSizes.iconeSm, color: cores.iconMuted),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text('O descanso é definido no bloco.',
+                style: AppText.bodyS.copyWith(color: cores.textSecondary)),
+          ),
+        ],
       ),
     );
   }

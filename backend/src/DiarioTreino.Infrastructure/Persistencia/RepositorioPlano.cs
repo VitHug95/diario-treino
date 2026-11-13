@@ -214,6 +214,16 @@ public sealed class RepositorioPlano : IRepositorioPlano
         var semana = await _db.PlanoDiasSemana
             .Where(d => d.PlanoId == planoId)
             .ToListAsync(ct);
+        var blocos = await _db.BlocosExercicio
+            .Where(b => fichaIds.Contains(b.TreinoId))
+            .ToListAsync(ct);
+
+        // Bloco original → bloco copiado (PBI-101): mesmos membros, ordem e descanso.
+        var blocoCopiado = new Dictionary<Guid, Guid>();
+        foreach (var b in blocos)
+        {
+            blocoCopiado[b.Id] = Guid.NewGuid();
+        }
 
         // Ficha original → ficha copiada, para levar a semana junto (PBI-35).
         var fichaCopiada = new Dictionary<Guid, Guid>();
@@ -244,6 +254,16 @@ public sealed class RepositorioPlano : IRepositorioPlano
             _db.Treinos.Add(novaFicha);
             fichaCopiada[ficha.Id] = novaFicha.Id;
 
+            foreach (var b in blocos.Where(x => x.TreinoId == ficha.Id))
+            {
+                _db.BlocosExercicio.Add(new BlocoExercicio
+                {
+                    Id = blocoCopiado[b.Id],
+                    TreinoId = novaFicha.Id,
+                    DescansoSeg = b.DescansoSeg,
+                });
+            }
+
             foreach (var te in exercicios.Where(e => e.TreinoId == ficha.Id))
             {
                 var novoTe = new TreinoExercicio
@@ -255,6 +275,7 @@ public sealed class RepositorioPlano : IRepositorioPlano
                     Rodadas = te.Rodadas,
                     DescansoAlvoSeg = te.DescansoAlvoSeg,
                     Observacao = te.Observacao,
+                    BlocoId = te.BlocoId is { } blocoId ? blocoCopiado[blocoId] : null,
                 };
                 _db.TreinoExercicios.Add(novoTe);
 
@@ -462,6 +483,15 @@ public sealed class RepositorioPlano : IRepositorioPlano
             .ToListAsync(ct);
         return ordens.Count == 0 ? (short)0 : ordens.Max()!.Value;
     }
+
+    public Task<List<BlocoExercicio>> ObterBlocosDaFichaAsync(Guid treinoId, CancellationToken ct) =>
+        _db.BlocosExercicio
+            .Where(b => b.TreinoId == treinoId)
+            .ToListAsync(ct);
+
+    public void AdicionarBloco(BlocoExercicio bloco) => _db.BlocosExercicio.Add(bloco);
+
+    public void RemoverBloco(BlocoExercicio bloco) => _db.BlocosExercicio.Remove(bloco);
 
     public void AdicionarEtapa(EtapaPrescrita etapa) => _db.EtapasPrescritas.Add(etapa);
 

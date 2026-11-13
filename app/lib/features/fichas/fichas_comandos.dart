@@ -139,6 +139,37 @@ class FichasComandos {
             instrucao: instrucao,
             marcadores: marcadores,
           ));
+
+  // ---- Blocos conjugados (PBI-101) ----
+
+  Future<String> criarBloco({
+    required String treinoId,
+    required List<String> treinoExercicioIds,
+    int? descansoSeg,
+  }) =>
+      _mudar((r) => r.criarBloco(
+          treinoId: treinoId,
+          treinoExercicioIds: treinoExercicioIds,
+          descansoSeg: descansoSeg));
+
+  Future<void> definirDescansoBloco({
+    required String treinoId,
+    required String blocoId,
+    int? descansoSeg,
+  }) =>
+      _mudar((r) => r.definirDescansoBloco(
+          treinoId: treinoId, blocoId: blocoId, descansoSeg: descansoSeg));
+
+  Future<void> desfazerBloco({required String treinoId, required String blocoId}) =>
+      _mudar((r) => r.desfazerBloco(treinoId: treinoId, blocoId: blocoId));
+
+  Future<void> definirMembrosBloco({
+    required String treinoId,
+    required String blocoId,
+    required List<String> treinoExercicioIds,
+  }) =>
+      _mudar((r) => r.definirMembrosBloco(
+          treinoId: treinoId, blocoId: blocoId, treinoExercicioIds: treinoExercicioIds));
 }
 
 /// Sem `watch`: o objeto vive o app todo e o `Ref` nunca é descartado no meio

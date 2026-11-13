@@ -273,12 +273,81 @@ class FichasRepository {
             },
           ));
 
-  Future<void> _executar(Future<void> Function() acao) async {
+  // ---- Blocos conjugados (PBI-101) ----
+
+  /// Junta 2 a 4 exercícios da ficha num bloco. Devolve o id do bloco.
+  Future<String> criarBloco({
+    required String treinoId,
+    required List<String> treinoExercicioIds,
+    int? descansoSeg,
+  }) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>(
+        '/treinos/$treinoId/blocos',
+        data: {'treinoExercicioIds': treinoExercicioIds, 'descansoSeg': descansoSeg},
+      );
+      return resposta.data!['id'] as String;
+    } on DioException catch (e) {
+      throw FichasException(_traduzirBloco(e));
+    }
+  }
+
+  /// Muda o descanso do bloco (nulo ou 0 = sem descanso).
+  Future<void> definirDescansoBloco({
+    required String treinoId,
+    required String blocoId,
+    int? descansoSeg,
+  }) =>
+      _executar(
+        () => _dio.put<void>('/treinos/$treinoId/blocos/$blocoId',
+            data: {'descansoSeg': descansoSeg}),
+        traduzir: _traduzirBloco,
+      );
+
+  /// Desfaz o bloco: os exercícios ficam avulsos com o descanso do bloco.
+  Future<void> desfazerBloco({required String treinoId, required String blocoId}) =>
+      _executar(
+        () => _dio.delete<void>('/treinos/$treinoId/blocos/$blocoId'),
+        traduzir: _traduzirBloco,
+      );
+
+  /// Troca os membros (a lista é a ordem dentro do bloco). Menos de 2 desfaz.
+  Future<void> definirMembrosBloco({
+    required String treinoId,
+    required String blocoId,
+    required List<String> treinoExercicioIds,
+  }) =>
+      _executar(
+        () => _dio.put<void>('/treinos/$treinoId/blocos/$blocoId/membros',
+            data: {'treinoExercicioIds': treinoExercicioIds}),
+        traduzir: _traduzirBloco,
+      );
+
+  Future<void> _executar(
+    Future<void> Function() acao, {
+    String Function(DioException) traduzir = _traduzir,
+  }) async {
     try {
       await acao();
     } on DioException catch (e) {
-      throw FichasException(_traduzir(e));
+      throw FichasException(traduzir(e));
     }
+  }
+
+  /// Nas regras do bloco o servidor explica o motivo (ex.: "Um dos exercícios
+  /// já está num bloco."); usa a mensagem dele quando vier.
+  static String _traduzirBloco(DioException e) {
+    final dados = e.response?.data;
+    if (e.response?.statusCode == 400 && dados is Map) {
+      final erros = dados['errors'];
+      if (erros is Map && erros.isNotEmpty) {
+        final primeiro = erros.values.first;
+        if (primeiro is List && primeiro.isNotEmpty) return primeiro.first.toString();
+      }
+      final titulo = dados['title'];
+      if (titulo is String && titulo.isNotEmpty) return titulo;
+    }
+    return _traduzir(e);
   }
 
   static String _traduzir(DioException e) {

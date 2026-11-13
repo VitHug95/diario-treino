@@ -129,5 +129,14 @@ public interface IRepositorioPlano
     /// <summary>Maior ordem entre os exercícios da ficha (0 se não houver).</summary>
     public Task<short> ObterMaiorOrdemExercicioAsync(Guid treinoId, CancellationToken ct);
 
+    // ---- Blocos conjugados (PBI-101) ----
+
+    /// <summary>Blocos da ficha (rastreados, sem os membros).</summary>
+    public Task<List<BlocoExercicio>> ObterBlocosDaFichaAsync(Guid treinoId, CancellationToken ct);
+
+    public void AdicionarBloco(BlocoExercicio bloco);
+
+    public void RemoverBloco(BlocoExercicio bloco);
+
     public Task SalvarAsync(CancellationToken ct);
 }

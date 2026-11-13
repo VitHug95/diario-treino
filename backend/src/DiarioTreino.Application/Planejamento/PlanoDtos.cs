@@ -92,11 +92,37 @@ public sealed record TreinoDetalhe(
     string? Descricao,
     short Ordem,
     IReadOnlyList<TreinoExercicioResumo> Exercicios,
+    /// <summary>Blocos conjugados da ficha (PBI-101), na ordem da ficha. Vazio
+    /// quando todos os exercícios são avulsos.</summary>
+    IReadOnlyList<BlocoResumo> Blocos,
     /// <summary>
     /// Ficha de plano do professor (autor ≠ atleta): o atleta só lê e treina.
     /// O app usa para não perguntar "Manter na ficha?" (PBI-72).
     /// </summary>
     bool SomenteLeitura = false);
+
+/// <summary>
+/// Bloco conjugado (PBI-101): os membros (ids de <c>treino_exercicio</c>) na
+/// ordem da ficha, o descanso depois de cada rodada (nulo ou 0 = sem descanso)
+/// e as rodadas, que valem o maior número de séries entre os membros.
+/// </summary>
+public sealed record BlocoResumo(
+    Guid Id,
+    short? DescansoSeg,
+    IReadOnlyList<Guid> TreinoExercicioIds,
+    short Rodadas);
+
+/// <summary>Junta exercícios da ficha num bloco (POST /treinos/{id}/blocos).</summary>
+public sealed record CriarBlocoRequest(IReadOnlyList<Guid> TreinoExercicioIds, short? DescansoSeg);
+
+/// <summary>Muda o descanso do bloco (PUT /treinos/{id}/blocos/{blocoId}).</summary>
+public sealed record DescansoBlocoRequest(short? DescansoSeg);
+
+/// <summary>
+/// Nova lista de membros, na ordem desejada dentro do bloco
+/// (PUT /treinos/{id}/blocos/{blocoId}/membros). Menos de 2 desfaz o bloco.
+/// </summary>
+public sealed record MembrosBlocoRequest(IReadOnlyList<Guid> TreinoExercicioIds);
 
 /// <summary>
 /// Exercício prescrito dentro de uma ficha, com os alvos (PBI-14).
@@ -113,7 +139,9 @@ public sealed record TreinoExercicioResumo(
     short? DescansoSeg,
     string? Instrucao,
     AlvoExercicio? Alvo,
-    IReadOnlyList<MarcadorRodada> Marcadores);
+    IReadOnlyList<MarcadorRodada> Marcadores,
+    /// <summary>Bloco conjugado do exercício (PBI-101); nulo = avulso.</summary>
+    Guid? BlocoId = null);
 
 /// <summary>
 /// Tag prescrita para uma rodada de um exercício da ficha (TV-1). Só trafega o

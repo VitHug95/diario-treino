@@ -44,7 +44,7 @@ o plano ativo com a sessão mais recente (empate: início mais novo). É idempot
 e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
 `consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
-tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000. A `CompartilhamentoCorporal` (PBI-95) virá depois dela.
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000; e `BlocoConjugado` (`20261113173129`, PBI-101): cria `bloco_exercicio` e acrescenta `treino_exercicio.bloco_id` (nula, sem mexer em linha nenhuma). A `CompartilhamentoCorporal` (PBI-95) virá depois dela.
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -89,6 +89,8 @@ erDiagram
     treino ||--o{ plano_dia_semana : "é a ficha do dia"
     usuario ||--o{ medida_corporal : "mede o corpo (PBI-91)"
     treino ||--|{ treino_exercicio : "contém"
+    treino ||--o{ bloco_exercicio : "agrupa (PBI-101)"
+    bloco_exercicio |o--o{ treino_exercicio : "conjuga 2 a 4"
     exercicio ||--o{ treino_exercicio : "é prescrito em"
     treino_exercicio ||--|{ etapa_prescrita : "define"
 
@@ -169,10 +171,16 @@ erDiagram
         uuid id PK
         uuid treino_id FK
         uuid exercicio_id FK
+        uuid bloco_id FK "null = avulso"
         smallint ordem
         smallint rodadas
         smallint descanso_alvo_seg
         varchar observacao
+    }
+    bloco_exercicio {
+        uuid id PK
+        uuid treino_id FK
+        smallint descanso_seg "null ou 0 = sem descanso"
     }
     etapa_prescrita {
         uuid id PK
@@ -423,8 +431,20 @@ Exercício prescrito numa ficha.
 | exercicio_id | uuid | não | FK `exercicio` |
 | ordem | smallint | não | |
 | rodadas | smallint | não | Séries na musculação, repetições do bloco no intervalado. `CHECK (rodadas > 0)` |
-| descanso_alvo_seg | smallint | sim | Descanso entre rodadas |
+| descanso_alvo_seg | smallint | sim | Descanso entre rodadas. Ignorado enquanto o exercício estiver num bloco |
 | observacao | varchar(200) | sim | Instrução livre do prescritor |
+| bloco_id | uuid | sim | FK `bloco_exercicio`, `ON DELETE SET NULL` (PBI-101). Nulo = exercício avulso |
+
+### 3.8a `bloco_exercicio`
+Bloco conjugado (PBI-101): 2 a 4 exercícios da mesma ficha feitos alternando, com um descanso só depois de cada rodada.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | uuid | não | PK |
+| treino_id | uuid | não | FK `treino`, `ON DELETE CASCADE` |
+| descanso_seg | smallint | sim | Descanso depois de cada rodada. `CHECK (descanso_seg IS NULL OR descanso_seg BETWEEN 0 AND 600)`; nulo ou 0 = sem descanso |
+
+Regras (na aplicação): os membros têm `ordem` contígua (nenhum avulso no meio); um exercício está em no máximo um bloco; as rodadas **não** são coluna, valem o maior `rodadas` entre os membros; bloco que ficaria com menos de 2 se desfaz e os membros voltam a avulsos com o descanso do bloco em `descanso_alvo_seg`. O `SET NULL` de `bloco_id` é só a rede de segurança: quem desfaz é sempre a aplicação. Duplicar o plano copia os blocos.
 
 ### 3.9 `etapa_prescrita`
 Etapas de cada rodada. Musculação tem uma etapa; intervalado tem esforço e recuperação.

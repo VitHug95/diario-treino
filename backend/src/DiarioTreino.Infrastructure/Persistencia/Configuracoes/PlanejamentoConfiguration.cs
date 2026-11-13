@@ -103,6 +103,38 @@ public sealed class TreinoExercicioConfiguration : IEntityTypeConfiguration<Trei
             .WithOne(m => m.TreinoExercicio!)
             .HasForeignKey(m => m.TreinoExercicioId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Bloco conjugado (PBI-101). Desfazer o bloco é sempre feito pela
+        // aplicação (que passa o descanso do bloco aos membros); o SET NULL é
+        // só a rede de segurança e não briga com a cascata da ficha.
+        builder.Property(te => te.BlocoId).HasColumnName("bloco_id");
+        builder.HasOne(te => te.Bloco)
+            .WithMany(b => b.Membros)
+            .HasForeignKey(te => te.BlocoId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(te => te.BlocoId).HasDatabaseName("ix_treino_exercicio_bloco");
+    }
+}
+
+public sealed class BlocoExercicioConfiguration : IEntityTypeConfiguration<BlocoExercicio>
+{
+    public void Configure(EntityTypeBuilder<BlocoExercicio> builder)
+    {
+        builder.ToTable("bloco_exercicio", t => t.HasCheckConstraint(
+            "ck_bloco_exercicio_descanso",
+            $"descanso_seg IS NULL OR descanso_seg BETWEEN 0 AND {RegrasBloco.DescansoMaximoSeg}"));
+
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Id).HasColumnName("id");
+        builder.Property(b => b.TreinoId).HasColumnName("treino_id").IsRequired();
+        builder.Property(b => b.DescansoSeg).HasColumnName("descanso_seg");
+
+        // Bloco é filho da ficha: apagar a ficha apaga os blocos.
+        builder.HasOne(b => b.Treino)
+            .WithMany()
+            .HasForeignKey(b => b.TreinoId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(b => b.TreinoId).HasDatabaseName("ix_bloco_exercicio_treino");
     }
 }
 
