@@ -25,6 +25,7 @@ import '../../features/planos/plano_detalhe_screen.dart';
 import '../../features/planos/planos_screen.dart';
 import '../../features/progresso/progresso_screen.dart';
 import '../../features/sessao/detalhe_sessao_screen.dart';
+import '../../features/sessao/bloco_ao_vivo_screen.dart';
 import '../../features/sessao/registrar_sessao_screen.dart';
 import '../../features/sessao/resumo_treino_screen.dart';
 import '../../features/sessao/treino_ao_vivo_screen.dart';
@@ -59,6 +60,9 @@ abstract final class Rotas {
 
   /// Tela de um exercício no treino ao vivo (TV-4), série por série.
   static const exercicioAoVivo = '/fichas/ao-vivo/exercicio';
+
+  /// Tela do bloco conjugado no treino ao vivo (PBI-102), rodada a rodada.
+  static const blocoAoVivo = '/fichas/ao-vivo/bloco';
 
   /// Resumo do treino ao vivo antes de salvar (TV-6).
   static const resumoTreino = '/fichas/ao-vivo/resumo';
@@ -398,6 +402,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                         name: 'exercicioAoVivo',
                         builder: (context, state) => ExercicioAoVivoScreen(
                           indice: (state.extra as int?) ?? 0,
+                        ),
+                      ),
+                      // Bloco conjugado (PBI-102): rodada a rodada.
+                      GoRoute(
+                        parentNavigatorKey: _rootNavigatorKey,
+                        path: 'bloco',
+                        name: 'blocoAoVivo',
+                        builder: (context, state) => BlocoAoVivoScreen(
+                          blocoId: (state.extra as String?) ?? '',
                         ),
                       ),
                       GoRoute(

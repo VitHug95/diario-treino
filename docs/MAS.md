@@ -359,10 +359,10 @@ Legenda do status: ✅ implementado e na `main` · ⏳ planejado · 🔵 increme
 | PUT | `/treinos/{id}/blocos/{blocoId}` | `{ descansoSeg }`: descanso depois de cada rodada (nulo ou 0 = sem descanso; 0 a 600). 204 | ✅ (PBI-101) |
 | DELETE | `/treinos/{id}/blocos/{blocoId}` | Desfaz o bloco: membros avulsos na mesma ordem, cada um com o descanso do bloco. 204 | ✅ (PBI-101) |
 | PUT | `/treinos/{id}/blocos/{blocoId}/membros` | `{ treinoExercicioIds }`: nova lista, que é também a ordem dentro do bloco. Quem sai fica avulso logo depois do bloco, com o descanso dele; menos de 2 desfaz. 400: mais de 4, repetido, de outra ficha ou noutro bloco. 204 | ✅ (PBI-101) |
-| GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução | ✅ |
+| GET | `/treinos/{id}/rascunho-sessao` | Sessão pré-preenchida com a última execução. Cada exercício traz `blocoId` e o rascunho traz `blocos` (como no `GET /treinos/{id}`, PBI-102) | ✅ |
 | GET | `/exercicios/{id}/ultima-execucao` | Última execução do exercício para o treino livre | ✅ (PBI-19) |
 | GET | `/exercicios/{id}/historico?limite=` | Últimas sessões com o exercício (aba Histórico do treino ao vivo) | ✅ (TV-4) |
-| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor; 400 "Este exercício já está no treino." se dois blocos trazem o mesmo exercício (PBI-74) | ✅ |
+| POST | `/sessoes` | Salva sessão com séries (`treinoId` nulo = treino livre). `manterNaFicha` (ids de exercícios fora da ficha com séries) acrescenta-os no fim da ficha na mesma transação, com o nº de séries salvas e o alvo da última (PBI-72); 400 se o id não for fora da ficha nesta sessão ou se for treino livre, 403 em ficha do professor; 400 "Este exercício já está no treino." se dois blocos trazem o mesmo exercício (PBI-74). Cada série aceita `bloco` e `posicaoNoBloco` (bloco conjugado, PBI-102; os dois juntos, posição de 1 a 4, senão 400); o detalhe e o `PUT` devolvem e mantêm os dois | ✅ |
 | GET | `/sessoes/{id}` | Detalhe da sessão | ✅ |
 | PUT | `/sessoes/{id}` | Edita sessão (com `manterNaFicha` responde 400: editar não mexe na ficha) | ✅ |
 | DELETE | `/sessoes/{id}` | Exclui sessão | ✅ |

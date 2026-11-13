@@ -1,3 +1,5 @@
+import '../fichas/plano_models.dart';
+
 /// Rascunho de sessão vindo de GET /api/v1/treinos/{id}/rascunho-sessao.
 /// Espelha o RascunhoSessao da API (PBI-15).
 class RascunhoSessao {
@@ -6,12 +8,16 @@ class RascunhoSessao {
     required this.treinoNome,
     required this.data,
     required this.exercicios,
+    this.blocos = const [],
   });
 
   final String treinoId;
   final String treinoNome;
   final DateTime data;
   final List<RascunhoExercicio> exercicios;
+
+  /// Blocos conjugados da ficha (PBI-102). Vazio = todos avulsos.
+  final List<BlocoFicha> blocos;
 
   factory RascunhoSessao.doJson(Map<String, dynamic> json) => RascunhoSessao(
         treinoId: json['treinoId'] as String,
@@ -20,6 +26,10 @@ class RascunhoSessao {
         exercicios: (json['exercicios'] as List<dynamic>)
             .cast<Map<String, dynamic>>()
             .map(RascunhoExercicio.doJson)
+            .toList(),
+        blocos: ((json['blocos'] as List<dynamic>?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(BlocoFicha.doJson)
             .toList(),
       );
 }
@@ -35,7 +45,11 @@ class RascunhoExercicio {
     required this.ordem,
     required this.origemPreenchimento,
     required this.series,
+    this.blocoId,
   });
+
+  /// Bloco conjugado do exercício (PBI-102); nulo = avulso.
+  final String? blocoId;
 
   final String treinoExercicioId;
   final String exercicioId;
@@ -63,6 +77,7 @@ class RascunhoExercicio {
             .cast<Map<String, dynamic>>()
             .map(SerieRascunho.doJson)
             .toList(),
+        blocoId: json['blocoId'] as String?,
       );
 }
 
@@ -250,6 +265,8 @@ class SerieDetalhe {
     required this.volume,
     required this.descansoSeg,
     this.marcador = 'VALIDA',
+    this.bloco,
+    this.posicaoNoBloco,
   });
 
   final int rodada;
@@ -268,6 +285,11 @@ class SerieDetalhe {
   /// Tag da série (TV-1). 'VALIDA' quando não marcada.
   final String marcador;
 
+  /// Bloco conjugado em que a série foi feita (PBI-102): número do bloco na
+  /// sessão e posição do exercício nele. Nulos = avulso.
+  final int? bloco;
+  final int? posicaoNoBloco;
+
   bool get intensidadePorPesoCorporal =>
       intensidadeMetricaCodigo == 'PESO_CORPORAL';
 
@@ -285,6 +307,8 @@ class SerieDetalhe {
         volume: (json['volume'] as num).toDouble(),
         descansoSeg: (json['descansoSeg'] as num?)?.toInt(),
         marcador: json['marcador'] as String? ?? 'VALIDA',
+        bloco: (json['bloco'] as num?)?.toInt(),
+        posicaoNoBloco: (json['posicaoNoBloco'] as num?)?.toInt(),
       );
 }
 

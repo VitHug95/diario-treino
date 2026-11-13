@@ -196,6 +196,7 @@ fechados sem merge.
 | (PR da PBI-98) | PBI-98 | Back: migration `TmbManual` (`usuario.tmb_manual_kcal`), `tmbKcal` efetivo + `tmbCalculadaKcal` + `tmbManual` no `GET /me/perfil-corporal`, `PUT\|DELETE /me/perfil-corporal/tmb-manual`; limpar os dados corporais limpa a TMB informada. Front: botão "Editar" no cartão da TMB, diálogo com "Usar o cálculo", selo "Informada por você" e linha "Calculada". |
 | (PR da PBI-100) | PBI-100 | Bug da ficha com valor antigo depois de salvar os alvos: **não reproduzido** (widget, app inteiro e Chrome real contra a stack real). Back: `SemCacheMiddleware` (`Cache-Control: no-store` e `Pragma: no-cache` em toda resposta) e `SemCacheEndpointTests`; `PostgresFixture` aceita `TESTES_POSTGRES` para rodar a integração sem Docker. Front: testes de regressão da ficha e do fluxo inteiro; E2E `alvos_ficha_pbi100_test.dart` no job `e2e`. Falta conferir no Safari do iPhone. |
 | (PR da PBI-101) | PBI-101 | Bloco conjugado na ficha. Back: migration `BlocoConjugado` (`bloco_exercicio` + `treino_exercicio.bloco_id`), `RegrasBloco` no domínio (rodadas = maior número de séries, 2 a 4 membros, contiguidade), `POST|PUT|DELETE /treinos/{id}/blocos[/{blocoId}]` e `PUT .../membros`; reordenar recusa separar um bloco; remover membro desfaz o bloco de dois; duplicar o plano copia os blocos. Front: cartão do bloco na ficha, "Juntar com o de baixo" com o sheet do descanso, "Descanso", "Desfazer bloco", menu do membro (mover, tirar do bloco, remover); editor de alvos sem descanso no bloco. |
+| (PR da PBI-102) | PBI-102 | Treino ao vivo com bloco conjugado. Back: migration `SerieBloco` (`serie_executada.bloco` e `posicao_no_bloco`), `POST|PUT /sessoes` gravam os dois, rascunho da ficha com `blocoId` e `blocos`. Front: cartão "CONJUGADO" na tela 14, tela do bloco ("Rodada 2 de 4", "RODADA FEITA", check por série, "Concluir bloco"), um descanso por rodada (só se > 0; desmarcar cancela), rascunho local com o bloco e compatível com o antigo, descanso do bloco só na última série de cada rodada ao salvar. E2E `bloco_ao_vivo_pbi102_test.dart` no job `e2e` com `TREINO_AO_VIVO=true`. |
 
 ---
 
@@ -218,6 +219,7 @@ fechados sem merge.
 | `20261111144536_PerfilCorporal` | PBI-93 | Colunas `sexo`, `data_nascimento` e `altura_cm` em `usuario`, com CHECK de sexo e de altura. |
 | `20261112202209_TmbManual` | PBI-98 | Coluna `tmb_manual_kcal` em `usuario` (TMB informada), com CHECK de 800 a 5000. |
 | `20261113173129_BlocoConjugado` | PBI-101 | Tabela `bloco_exercicio` (descanso do bloco, CHECK de 0 a 600) e coluna `treino_exercicio.bloco_id` (nula, ON DELETE SET NULL). Não mexe nas linhas existentes. |
+| `20261113191412_SerieBloco` | PBI-102 | Colunas `serie_executada.bloco` e `posicao_no_bloco` (nulas), com CHECK "os dois juntos, posição 1 a 4". Não mexe nas séries existentes. |
 
 ## Infraestrutura
 

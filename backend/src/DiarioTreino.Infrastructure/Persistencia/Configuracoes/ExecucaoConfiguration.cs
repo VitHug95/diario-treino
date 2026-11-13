@@ -1,5 +1,6 @@
 using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Execucao;
+using DiarioTreino.Domain.Planejamento;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -67,6 +68,11 @@ public sealed class SerieExecutadaConfiguration : IEntityTypeConfiguration<Serie
             t.HasCheckConstraint(
                 "ck_serie_executada_marcador",
                 $"marcador IN ({string.Join(",", TagSerie.Todos.Select(m => $"'{m}'"))})");
+            // Bloco conjugado (PBI-102): os dois juntos ou nenhum.
+            t.HasCheckConstraint(
+                "ck_serie_executada_bloco",
+                "(bloco IS NULL AND posicao_no_bloco IS NULL) OR " +
+                $"(bloco >= 1 AND posicao_no_bloco BETWEEN 1 AND {RegrasBloco.MaximoMembros})");
         });
 
         builder.HasKey(se => se.Id);
@@ -87,6 +93,9 @@ public sealed class SerieExecutadaConfiguration : IEntityTypeConfiguration<Serie
             .HasMaxLength(20)
             .HasDefaultValue(TagSerie.Valida)
             .IsRequired();
+        // Bloco conjugado (PBI-102): número do bloco na sessão e posição nele.
+        builder.Property(se => se.Bloco).HasColumnName("bloco");
+        builder.Property(se => se.PosicaoNoBloco).HasColumnName("posicao_no_bloco");
 
         // Detalhe da sessão (MER 4).
         builder.HasIndex(se => se.SessaoId).HasDatabaseName("ix_serie_executada_sessao");

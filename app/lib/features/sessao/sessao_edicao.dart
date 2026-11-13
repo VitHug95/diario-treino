@@ -114,6 +114,25 @@ class SerieEdicao {
         marcador: marcador,
       );
 
+  /// Cópia fiel (mesma rodada, valores, tag e check) com outro descanso. Usada
+  /// ao salvar o bloco (PBI-102), sem mexer no treino em andamento.
+  SerieEdicao copiaComDescanso(String descansoTexto) => SerieEdicao(
+        rodada: rodada,
+        ordem: ordem,
+        tipo: tipo,
+        intensidadeMetricaId: intensidadeMetricaId,
+        intensidadeMetricaCodigo: intensidadeMetricaCodigo,
+        intensidadeMetricaNome: intensidadeMetricaNome,
+        intensidadeTexto: intensidade.text,
+        volumeMetricaId: volumeMetricaId,
+        volumeMetricaCodigo: volumeMetricaCodigo,
+        volumeMetricaNome: volumeMetricaNome,
+        volumeTexto: volume.text,
+        descansoTexto: descansoTexto,
+        marcador: marcador,
+        feita: feita,
+      );
+
   /// Formata um número para exibição (inteiro sem casas, decimal com vírgula).
   static String fmt(double? v) {
     if (v == null) return '';
@@ -134,7 +153,13 @@ class ExercicioEdicao {
     required this.series,
     required this.realizado,
     this.foraDaFicha = false,
+    this.blocoId,
   });
+
+  /// Bloco conjugado (PBI-102): chave do bloco (o id do bloco da ficha, ou
+  /// "sessao-N" para uma sessão gravada). Membros do mesmo bloco têm a mesma
+  /// chave e ficam vizinhos na lista. Nulo = avulso.
+  final String? blocoId;
 
   /// Nulo quando o exercício foi adicionado fora da ficha (PBI-17): a série é
   /// gravada sem vínculo com o prescrito.
@@ -172,6 +197,7 @@ class ExercicioEdicao {
         // como sugestão (tom secundário), mas o exercício começa desmarcado;
         // o atleta marca o que fez tocando no check ou num campo.
         realizado: false,
+        blocoId: e.blocoId,
       );
 
   /// Monta um exercício para edição a partir do detalhe da sessão (PBI-18).
@@ -186,6 +212,11 @@ class ExercicioEdicao {
         series: e.series.map(SerieEdicao.doDetalhe).toList(),
         realizado: !e.naoRealizado,
         foraDaFicha: e.foraDaFicha,
+        // Editar a sessão mantém o bloco gravado (PBI-102).
+        blocoId: e.series
+            .where((s) => s.bloco != null)
+            .map((s) => 'sessao-${s.bloco}')
+            .firstOrNull,
       );
 
   /// Monta um exercício para o treino livre (PBI-19) a partir do rascunho

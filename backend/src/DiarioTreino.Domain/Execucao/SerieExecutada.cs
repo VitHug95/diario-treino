@@ -30,6 +30,16 @@ public class SerieExecutada
     /// </summary>
     public string Marcador { get; set; } = TagSerie.Valida;
 
+    /// <summary>
+    /// Bloco conjugado em que a série foi feita (PBI-102): número do bloco
+    /// dentro da sessão (1, 2...), copiado na hora de gravar, para o histórico
+    /// reconstruir o agrupamento sem depender da ficha atual. Nulo = avulso.
+    /// </summary>
+    public short? Bloco { get; set; }
+
+    /// <summary>Posição do exercício dentro do bloco (1 a 4). Nula junto com <see cref="Bloco"/>.</summary>
+    public short? PosicaoNoBloco { get; set; }
+
     public Sessao? Sessao { get; set; }
     public Exercicio? Exercicio { get; set; }
     public TreinoExercicio? TreinoExercicio { get; set; }

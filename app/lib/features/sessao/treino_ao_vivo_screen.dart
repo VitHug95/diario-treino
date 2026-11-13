@@ -14,6 +14,8 @@ import '../../theme/theme_tokens.dart';
 import '../catalogo/exercicio_resumo.dart';
 import '../catalogo/selecionar_exercicio_screen.dart';
 import '../progresso/progresso_repository.dart';
+import 'bloco_ao_vivo.dart';
+import 'bloco_ao_vivo_screen.dart';
 import 'descanso_controller.dart';
 import 'sessao_edicao.dart';
 import 'sessao_models.dart';
@@ -65,16 +67,25 @@ class TreinoAoVivoScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.margemTela),
                 children: [
-                  for (var i = 0; i < estado.exercicios.length; i++) ...[
-                    _CardExercicioVivo(
-                      exercicio: estado.exercicios[i],
-                      aoTocar: () {
-                        // Aberto pela tela do treino: começa sempre em Séries
-                        // (PBI-66). As setas dentro do exercício mantêm a aba.
-                        ref.read(abaExercicioAoVivoProvider.notifier).definir(0);
-                        context.push(Rotas.exercicioAoVivo, extra: i);
-                      },
-                    ),
+                  // Um cartão por exercício avulso e um por bloco (PBI-102).
+                  for (final (g, grupo) in gruposDoTreino(estado.exercicios).indexed) ...[
+                    switch (grupo) {
+                      GrupoAvulso(:final indice) => _CardExercicioVivo(
+                          exercicio: estado.exercicios[indice],
+                          aoTocar: () {
+                            // Aberto pela tela do treino: começa sempre em
+                            // Séries (PBI-66). As setas mantêm a aba.
+                            ref.read(abaExercicioAoVivoProvider.notifier).definir(0);
+                            abrirGrupoAoVivo(
+                                context, gruposDoTreino(estado.exercicios), g);
+                          },
+                        ),
+                      GrupoBloco(:final indices) => _CardBlocoVivo(
+                          membros: [for (final i in indices) estado.exercicios[i]],
+                          aoTocar: () => abrirGrupoAoVivo(
+                              context, gruposDoTreino(estado.exercicios), g),
+                        ),
+                    },
                     const SizedBox(height: AppSpacing.entreCards),
                   ],
                   BotaoTracejado(
@@ -367,6 +378,83 @@ class _CardExercicioVivo extends StatelessWidget {
   }
 }
 
+/// Cartão do bloco conjugado na tela 14 (PBI-102): barra lateral, os nomes dos
+/// exercícios, a barra por rodada e "2 de 4 rodadas". Abre a tela do bloco.
+class _CardBlocoVivo extends StatelessWidget {
+  const _CardBlocoVivo({required this.membros, required this.aoTocar});
+
+  final List<ExercicioEdicao> membros;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = AppColors.of(context);
+    final total = rodadasDoBloco(membros);
+    final feitas = rodadasFeitas(membros);
+    final status = total == 0
+        ? 'sem séries'
+        : feitas == total
+            ? 'Concluído'
+            : feitas == 0
+                ? '0 de $total rodadas · ainda não começou'
+                : '$feitas de $total rodadas';
+    final nomes = membros.map((m) => m.nome).join(' + ');
+
+    return Semantics(
+      button: true,
+      label: 'Bloco conjugado: ${membros.map((m) => m.nome).join(' e ')}, $status',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: aoTocar,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: AppSpacing.x6, color: cores.primaryText),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.paddingCard),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('CONJUGADO',
+                              style: AppText.overline.copyWith(color: cores.primaryText)),
+                          const SizedBox(height: AppSpacing.x4),
+                          Row(
+                            children: [
+                              Expanded(child: Text(nomes, style: AppText.title)),
+                              Icon(LucideIcons.chevronRight,
+                                  size: AppSizes.iconeSm, color: cores.iconMuted),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.x8),
+                          BarraSeries(total: total, feitas: feitas),
+                          const SizedBox(height: AppSpacing.x8),
+                          Text(status,
+                              style: AppText.caption.copyWith(color: cores.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Tela do exercício no treino ao vivo (TV-4), série por série. Recebe o índice
 /// do exercício na lista do treino ao vivo. Cabeçalho com posição ("Exercício N
 /// de M"), nome, alvo e cronômetro pequeno; navegação anterior/próximo; e três
@@ -514,13 +602,14 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
 
   /// "Concluir exercício" (PBI-65): marca como concluído e abre o próximo
   /// sempre na aba Séries (exceção à PBI-66). No último, vai ao Resumo.
-  void _concluir(ExercicioEdicao exercicio, int indice, int total) {
+  /// Posições contam por grupo (PBI-102): um bloco é um item só da lista.
+  void _concluir(ExercicioEdicao exercicio, List<GrupoAoVivo> grupos, int posicao) {
     ref.read(treinoAoVivoControllerProvider.notifier).concluirExercicio(exercicio);
     ref.read(abaExercicioAoVivoProvider.notifier).definir(0);
-    if (indice == total - 1) {
+    if (posicao >= grupos.length - 1) {
       context.pushReplacement(Rotas.resumoTreino);
     } else {
-      context.pushReplacement(Rotas.exercicioAoVivo, extra: indice + 1);
+      abrirGrupoAoVivo(context, grupos, posicao + 1, substituir: true);
     }
   }
 
@@ -537,7 +626,10 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
     }
 
     final exercicio = estado.exercicios[indice];
-    final total = estado.exercicios.length;
+    // Navegação por grupo (PBI-102): o bloco conta como um item só.
+    final grupos = gruposDoTreino(estado.exercicios);
+    final posicao = grupoDoExercicio(grupos, indice);
+    final total = grupos.length;
 
     return DefaultTabController(
       length: 3,
@@ -557,10 +649,11 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
           child: Column(
             children: [
               _CabecalhoExercicio(
-                posicao: indice,
+                posicao: posicao,
                 total: total,
                 exercicio: exercicio,
                 inicio: estado.inicio,
+                aoIrPara: (p) => abrirGrupoAoVivo(context, grupos, p, substituir: true),
               ),
               Expanded(
                 child: TabBarView(
@@ -568,10 +661,10 @@ class _ExercicioAoVivoScreenState extends ConsumerState<ExercicioAoVivoScreen>
                   children: [
                     // "Concluir exercício" mora no fim da aba Séries (PBI-90).
                     _AbaSeries(
-                      indice: indice,
+                      indice: posicao,
                       exercicio: exercicio,
-                      ultimo: indice == total - 1,
-                      aoConcluir: () => _concluir(exercicio, indice, total),
+                      ultimo: posicao == total - 1,
+                      aoConcluir: () => _concluir(exercicio, grupos, posicao),
                     ),
                     _AbaHistorico(exercicioId: exercicio.exercicioId),
                     _AbaEvolucao(exercicioId: exercicio.exercicioId),
@@ -597,12 +690,16 @@ class _CabecalhoExercicio extends StatelessWidget {
     required this.total,
     required this.exercicio,
     required this.inicio,
+    required this.aoIrPara,
   });
 
   final int posicao;
   final int total;
   final ExercicioEdicao exercicio;
   final DateTime inicio;
+
+  /// Abre o item [posicao] do treino (exercício ou bloco, PBI-102).
+  final void Function(int posicao) aoIrPara;
 
   @override
   Widget build(BuildContext context) {
@@ -639,20 +736,14 @@ class _CabecalhoExercicio extends StatelessWidget {
               _BotaoNavega(
                 icone: LucideIcons.chevronLeft,
                 rotulo: 'Exercício anterior',
-                aoTocar: temAnterior
-                    ? () => context.pushReplacement(Rotas.exercicioAoVivo,
-                        extra: posicao - 1)
-                    : null,
+                aoTocar: temAnterior ? () => aoIrPara(posicao - 1) : null,
                 cores: cores,
               ),
               Expanded(child: _PontosPosicao(total: total, atual: posicao)),
               _BotaoNavega(
                 icone: LucideIcons.chevronRight,
                 rotulo: 'Próximo exercício',
-                aoTocar: temProximo
-                    ? () => context.pushReplacement(Rotas.exercicioAoVivo,
-                        extra: posicao + 1)
-                    : null,
+                aoTocar: temProximo ? () => aoIrPara(posicao + 1) : null,
                 cores: cores,
               ),
             ],

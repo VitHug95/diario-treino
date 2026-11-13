@@ -13,6 +13,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../catalogo/metrica.dart';
+import 'bloco_ao_vivo.dart';
 import 'descanso_controller.dart';
 import 'manter_na_ficha.dart';
 import 'sessao_edicao.dart';
@@ -150,7 +151,12 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
 
     // Monta a lista a gravar com SÓ as séries feitas; exercício sem série feita
     // não é realizado (não vira série no POST, igual à regra do repositório).
-    final paraSalvar = estado.exercicios.map(_somenteFeitas).toList();
+    // Bloco conjugado (PBI-102): o descanso do bloco vai só na última série
+    // de cada rodada. Vai em cópias, sem mexer no treino em andamento.
+    final descansos =
+        descansosParaSalvar(estado.exercicios, estado.descansoDosBlocos);
+    final paraSalvar =
+        estado.exercicios.map((e) => _somenteFeitas(e, descansos)).toList();
     // Treino vazio (PBI-63, rodada 2): o aviso mora aqui, no único passo de
     // salvar. Salvar vazio só com a confirmação explícita (a trava silenciosa
     // da PBI-33 virou este diálogo).
@@ -265,9 +271,15 @@ class _ResumoTreinoScreenState extends ConsumerState<ResumoTreinoScreen> {
   }
 
   /// Cópia do exercício contendo só as séries feitas, com `realizado` conforme.
-  static ExercicioEdicao _somenteFeitas(ExercicioEdicao e) {
-    final feitas = e.series.where((s) => s.feita).toList();
+  static ExercicioEdicao _somenteFeitas(
+      ExercicioEdicao e, Map<SerieEdicao, String> descansos) {
+    final feitas = [
+      for (final s in e.series)
+        if (s.feita)
+          descansos.containsKey(s) ? s.copiaComDescanso(descansos[s]!) : s,
+    ];
     return ExercicioEdicao(
+      blocoId: e.blocoId,
       treinoExercicioId: e.treinoExercicioId,
       exercicioId: e.exercicioId,
       nome: e.nome,
