@@ -373,9 +373,10 @@ class _CartaoSemana extends StatelessWidget {
 /// (anel e letra azuis) e futuro (tracejado, sem toque).
 ///
 /// Com semana planejada (PBI-35), cada dia mostra embaixo o rótulo curto da
-/// ficha (A, B…); o "X" fica só para o dia planejado que passou sem treino
-/// ("faltou") e o dia sem ficha que passou vira descanso (círculo vazio). Sem
-/// semana, nada disso aparece e a faixa é a de antes.
+/// ficha (A, B…). Todo dia que passou sem treino mostra o "X", tenha ficha
+/// planejada ou não (pedido do PO, 11/2026); o rótulo falado diz "faltou" no
+/// dia planejado e "descanso, sem treino" no dia sem ficha. Sem semana, a
+/// faixa é a de antes.
 class _FaixaSemana extends StatelessWidget {
   const _FaixaSemana({
     required this.dias,
@@ -423,7 +424,6 @@ class _FaixaSemana extends StatelessWidget {
                           treinou: dia.treinou,
                           ehHoje: dia.ehHoje,
                           futuro: dia.futuro,
-                          descanso: dia.descanso,
                         ),
                         // Ficha planejada (PBI-35). Dia livre ganha um texto
                         // vazio da mesma altura, para os 7 dias alinharem.
@@ -465,6 +465,7 @@ class _FaixaSemana extends StatelessWidget {
     if (dia.treinou) return 'Dia $dd, $plano, treino registrado';
     if (dia.futuro) return 'Dia $dd, $plano, ainda não chegou';
     if (dia.faltou) return 'Dia $dd, $plano, faltou. Toque para registrar';
+    if (dia.descanso) return 'Dia $dd, $plano, sem treino. Toque para registrar';
     return 'Dia $dd, $plano. Toque para registrar';
   }
 }

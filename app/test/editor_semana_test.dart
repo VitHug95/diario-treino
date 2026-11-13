@@ -189,16 +189,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('MarcaDia: descanso não tem o "X" da falta; sem o parâmetro, igual a antes',
-      (tester) async {
+  testWidgets('MarcaDia: passado sem treino tem o "X"; hoje e futuro não', (tester) async {
     Future<void> montar(Widget w) => tester.pumpWidget(
         MaterialApp(theme: AppTheme.claro, home: Scaffold(body: Center(child: w))));
 
     await montar(const MarcaDia(treinou: false, ehHoje: false, futuro: false));
-    expect(find.byIcon(LucideIcons.x), findsOneWidget); // falta (e o calendário)
+    expect(find.byIcon(LucideIcons.x), findsOneWidget);
 
-    await montar(const MarcaDia(treinou: false, ehHoje: false, futuro: false, descanso: true));
-    expect(find.byIcon(LucideIcons.x), findsNothing); // descanso
+    await montar(const MarcaDia(treinou: false, ehHoje: true, futuro: false));
+    expect(find.byIcon(LucideIcons.x), findsNothing);
+
+    await montar(const MarcaDia(treinou: false, ehHoje: false, futuro: true));
+    expect(find.byIcon(LucideIcons.x), findsNothing);
   });
 
   group('modelos (PBI-35)', () {

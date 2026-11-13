@@ -141,13 +141,13 @@ button-secondary 48, button-primary 56, nav-bottom 78, icon 24/20.
 - Marca do dia (faixa "Esta semana" e calendário do mês): treinou = círculo
   `primary` com check; hoje = anel `primary-text`; futuro = círculo tracejado
   `line-dashed`; passado sem treino = círculo fino com "X" (`line-dashed`).
-  Com **semana planejada** (PBI-35), só na faixa da Início: o "X" fica só para o
-  dia planejado que passou sem treino ("faltou"); dia sem ficha que passou é
-  **descanso** (círculo fino `line-dashed`, vazio: a diferença para a falta é a
-  forma, sem o "X"); embaixo de cada
-  dia vai o rótulo curto da ficha (A, B ou a posição) em `caption` 700
-  `text-strong`. O estado nunca depende só da cor (forma + texto) e o rótulo
-  falado diz "planejado A, faltou" / "descanso". Sem semana, a faixa é a de antes.
+  Com **semana planejada** (PBI-35), na faixa da Início, todo dia que passou
+  sem treino também mostra o "X", tenha ficha planejada ou não (pedido do PO,
+  11/2026; antes o dia sem ficha ficava com o círculo vazio de "descanso").
+  Embaixo de cada dia vai o rótulo curto da ficha (A, B ou a posição) em
+  `caption` 700 `text-strong`. O estado nunca depende só da cor (forma + texto)
+  e o rótulo falado diz "planejado A, faltou" ou "descanso, sem treino". Sem
+  semana, a faixa é a de antes.
 - Semana do plano (PBI-35): seção "SEMANA" no detalhe do plano, um card
   (`bg-surface`, borda `line-default`, raio 16) com os 7 dias separados por
   `line-divider`, linha de 44 no mínimo. A ficha do dia aparece com um selo

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:lucide_icons/lucide_icons.dart';
+
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/auth_service.dart';
@@ -598,17 +600,21 @@ void main() {
           findsOneWidget);
     });
 
-    testWidgets('dia passado sem ficha numa semana planejada é descanso, não falta',
+    testWidgets('dia passado sem ficha numa semana planejada mostra o "X" (não é falta)',
         (tester) async {
       if (_hoje.weekday == DateTime.monday) return; // precisa de um dia passado
 
-      // Só o domingo planejado: a segunda (passada) é descanso.
+      // Só o domingo planejado: a segunda (passada, sem ficha) não é falta,
+      // mas mostra o "X" de dia sem treino.
       await tester.pumpWidget(await _tela(comSemana({7: 'A'})));
       await tester.pumpAndSettle();
 
-      expect(find.bySemanticsLabel('Dia ${_dd(diaIso(1))}, descanso. Toque para registrar'),
+      expect(
+          find.bySemanticsLabel(
+              'Dia ${_dd(diaIso(1))}, descanso, sem treino. Toque para registrar'),
           findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('faltou')), findsNothing);
+      expect(find.byIcon(LucideIcons.x), findsWidgets);
     });
 
     testWidgets('com semana, os 7 dias continuam com alvo de 44 px em 360 de largura',
