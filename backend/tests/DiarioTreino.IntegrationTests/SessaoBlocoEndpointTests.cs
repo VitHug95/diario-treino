@@ -237,6 +237,83 @@ public sealed class SessaoBlocoEndpointTests
         Assert.Equal((short)2, agacha.PosicaoNoBloco);
     }
 
+    private sealed record SerieHistResp(short Rodada, decimal? Intensidade, decimal Volume);
+    private sealed record SessaoHistResp(List<SerieHistResp> Series);
+    private sealed record HistoricoResp(List<SessaoHistResp> Sessoes);
+    private sealed record PontoResp(DateOnly Data, decimal Valor, decimal? Repeticoes);
+    private sealed record ProgressoResp(List<PontoResp> Pontos);
+
+    /// <summary>
+    /// PBI-103: o histórico e o gráfico do exercício são os mesmos com e sem
+    /// bloco: mesma sessão gravada por dois atletas, um com o agachamento no
+    /// bloco e outro com ele avulso.
+    /// </summary>
+    [Fact]
+    public async Task Historico_e_grafico_do_exercicio_sao_iguais_com_e_sem_bloco()
+    {
+        var exs = await ExerciciosDoSeed(2);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        object SerieCarga(short rodada, decimal carga, short? descanso, short? bloco, short? pos) => new
+        {
+            rodada,
+            ordem = (short)1,
+            tipo = "ESFORCO",
+            intensidadeMetricaId = CargaKg,
+            intensidade = carga,
+            volumeMetricaId = Repeticoes,
+            volume = 12m,
+            descansoSeg = descanso,
+            bloco,
+            posicaoNoBloco = pos,
+        };
+
+        async Task<(HistoricoResp, ProgressoResp)> Gravar(bool comBloco)
+        {
+            var (api, c) = Autenticar(_postgres);
+            await using var _a = api;
+            short? b = comBloco ? 1 : null;
+            short? p1 = comBloco ? 1 : null;
+            short? p2 = comBloco ? 2 : null;
+            var r = await c.PostAsJsonAsync("/api/v1/sessoes", new
+            {
+                treinoId = (Guid?)null,
+                data = hoje,
+                exercicios = new object[]
+                {
+                    new
+                    {
+                        exercicioId = exs[0],
+                        treinoExercicioId = (Guid?)null,
+                        series = new[] { SerieCarga(1, 10, comBloco ? null : 30, b, p1), SerieCarga(2, 10, comBloco ? null : 30, b, p1) },
+                    },
+                    new
+                    {
+                        exercicioId = exs[1],
+                        treinoExercicioId = (Guid?)null,
+                        series = new[] { SerieCarga(1, 20, 30, b, p2), SerieCarga(2, 25, 30, b, p2), SerieCarga(3, 22.5m, 30, b, p2) },
+                    },
+                },
+            });
+            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+            var hist = await c.GetFromJsonAsync<HistoricoResp>($"/api/v1/exercicios/{exs[1]}/historico");
+            var prog = await c.GetFromJsonAsync<ProgressoResp>($"/api/v1/progresso/exercicios/{exs[1]}");
+            return (hist!, prog!);
+        }
+
+        var (histBloco, progBloco) = await Gravar(comBloco: true);
+        var (histAvulso, progAvulso) = await Gravar(comBloco: false);
+
+        // Nem soma nem duplica: as 3 séries do agachamento, uma sessão, um ponto.
+        var seriesBloco = Assert.Single(histBloco.Sessoes).Series;
+        var seriesAvulso = Assert.Single(histAvulso.Sessoes).Series;
+        Assert.Equal(3, seriesBloco.Count);
+        Assert.Equal(seriesAvulso, seriesBloco);
+
+        var pontoBloco = Assert.Single(progBloco.Pontos);
+        Assert.Equal(Assert.Single(progAvulso.Pontos), pontoBloco);
+        Assert.Equal(25m, pontoBloco.Valor);
+    }
+
     [Theory]
     [InlineData((short)1, null)]
     [InlineData(null, (short)1)]

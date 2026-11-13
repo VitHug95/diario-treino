@@ -10,6 +10,7 @@ import '../../shared/tags/seletor_tag_serie.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'bloco_sessao.dart';
 import 'registrar_sessao_screen.dart';
 import 'sessao_comandos.dart';
 import 'sessao_models.dart';
@@ -135,8 +136,13 @@ class _Conteudo extends StatelessWidget {
         Text('EXERCÍCIOS',
             style: AppText.overline.copyWith(color: cores.textSecondary)),
         const SizedBox(height: AppSpacing.x8),
-        for (final ex in detalhe.exercicios)
-          _CardExercicio(exercicio: ex, cores: cores),
+        // Bloco conjugado agrupado rodada a rodada (PBI-103).
+        for (final item in itensDaSessao(detalhe.exercicios))
+          switch (item) {
+            ItemSessaoAvulso(:final exercicio) =>
+              _CardExercicio(exercicio: exercicio, cores: cores),
+            final ItemSessaoBloco bloco => _CardBlocoSessao(bloco: bloco, cores: cores),
+          },
       ],
     );
   }
@@ -236,19 +242,120 @@ class _CardExercicio extends StatelessWidget {
   }
 }
 
+/// Bloco conjugado no detalhe da sessão (PBI-103): barra lateral, "Conjugado ·
+/// 3 rodadas", e cada rodada com os exercícios feitos nela e o descanso dela
+/// mostrado uma vez.
+class _CardBlocoSessao extends StatelessWidget {
+  const _CardBlocoSessao({required this.bloco, required this.cores});
+  final ItemSessaoBloco bloco;
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = bloco.rodadas;
+    final nomes = bloco.membros.map((m) => m.nome).join(' e ');
+    return Semantics(
+      container: true,
+      label: 'Bloco conjugado, $r ${r == 1 ? 'rodada' : 'rodadas'}: $nomes',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.entreCards),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(color: cores.lineDefault),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: AppSpacing.x6, color: cores.primaryText),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.paddingCard),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Conjugado · $r ${r == 1 ? 'rodada' : 'rodadas'}',
+                          style: AppText.label.copyWith(color: cores.primaryText)),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(bloco.membros.map((m) => m.nome).join(' + '),
+                          style: AppText.title),
+                      for (var rodada = 1; rodada <= r; rodada++) ...[
+                        const SizedBox(height: AppSpacing.x12),
+                        _RodadaDoBloco(bloco: bloco, rodada: rodada, cores: cores),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RodadaDoBloco extends StatelessWidget {
+  const _RodadaDoBloco({required this.bloco, required this.rodada, required this.cores});
+  final ItemSessaoBloco bloco;
+  final int rodada;
+  final AppColors cores;
+
+  @override
+  Widget build(BuildContext context) {
+    final descanso = bloco.descansoDaRodada(rodada);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          descanso == null ? 'RODADA $rodada' : 'RODADA $rodada · DESCANSO $descanso S',
+          style: AppText.overline.copyWith(color: cores.textSecondary),
+        ),
+        const SizedBox(height: AppSpacing.x6),
+        for (final (membro, serie) in bloco.daRodada(rodada))
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(membro.nome,
+                      style: AppText.bodyS.copyWith(color: cores.textStrong)),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                // Em tela estreita com fonte grande, o valor quebra linha em
+                // vez de estourar a linha.
+                Flexible(
+                  child: Text(_LinhaSerie.textoDe(serie),
+                      style: AppText.body, textAlign: TextAlign.end),
+                ),
+                ChipTagSerie(marcador: serie.marcador, rodada: serie.rodada),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _LinhaSerie extends StatelessWidget {
   const _LinhaSerie({required this.serie, required this.cores});
   final SerieDetalhe serie;
   final AppColors cores;
 
-  @override
-  Widget build(BuildContext context) {
-    // Monta "30 kg × 10" ou, no peso corporal, só o volume ("45 s").
+  /// "30 Carga × 10 Repetições" ou, no peso corporal, só o volume.
+  static String textoDe(SerieDetalhe serie) {
     final vol = _fmt(serie.volume);
     final volComUnidade = '$vol ${serie.volumeMetricaNome}'.trimRight();
-    final texto = serie.intensidadePorPesoCorporal
+    return serie.intensidadePorPesoCorporal
         ? volComUnidade
         : '${_fmt(serie.intensidade)} ${serie.intensidadeMetricaNome} × $volComUnidade';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = textoDe(serie);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.entreItens),
