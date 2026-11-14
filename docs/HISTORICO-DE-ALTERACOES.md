@@ -194,12 +194,16 @@ fechados sem merge.
 |---|---|---|
 | #141 | PBI-97 | Front: `CampoData` compartilhado (campo inteiro tocável; o nó de semântica ganhou o `onTap` que faltava, causa do toque perdido na web) e seletor próprio `escolherData` (calendário + digitação com máscara dd/mm/aaaa, barras automáticas, teclado numérico). Substitui as duas cópias privadas do registro e do resumo e o `showDatePicker` nas quatro telas. |
 | #142 | PBI-98 | Back: migration `TmbManual` (`usuario.tmb_manual_kcal`), `tmbKcal` efetivo + `tmbCalculadaKcal` + `tmbManual` no `GET /me/perfil-corporal`, `PUT\|DELETE /me/perfil-corporal/tmb-manual`; limpar os dados corporais limpa a TMB informada. Front: botão "Editar" no cartão da TMB, diálogo com "Usar o cálculo", selo "Informada por você" e linha "Calculada". |
+## Ficha sem cache e exercícios conjugados (E13) · 13/11
+
+| PR | PBI | O que mudou |
+|---|---|---|
 | #143 | PBI-100 | Bug da ficha com valor antigo depois de salvar os alvos: **não reproduzido** (widget, app inteiro e Chrome real contra a stack real). Back: `SemCacheMiddleware` (`Cache-Control: no-store` e `Pragma: no-cache` em toda resposta) e `SemCacheEndpointTests`; `PostgresFixture` aceita `TESTES_POSTGRES` para rodar a integração sem Docker. Front: testes de regressão da ficha e do fluxo inteiro; E2E `alvos_ficha_pbi100_test.dart` no job `e2e`. Falta conferir no Safari do iPhone. |
 | #144 | PBI-101 | Bloco conjugado na ficha. Back: migration `BlocoConjugado` (`bloco_exercicio` + `treino_exercicio.bloco_id`), `RegrasBloco` no domínio (rodadas = maior número de séries, 2 a 4 membros, contiguidade), `POST|PUT|DELETE /treinos/{id}/blocos[/{blocoId}]` e `PUT .../membros`; reordenar recusa separar um bloco; remover membro desfaz o bloco de dois; duplicar o plano copia os blocos. Front: cartão do bloco na ficha, "Juntar com o de baixo" com o sheet do descanso, "Descanso", "Desfazer bloco", menu do membro (mover, tirar do bloco, remover); editor de alvos sem descanso no bloco. |
 | #145 | PBI-102 | Treino ao vivo com bloco conjugado. Back: migration `SerieBloco` (`serie_executada.bloco` e `posicao_no_bloco`), `POST|PUT /sessoes` gravam os dois, rascunho da ficha com `blocoId` e `blocos`. Front: cartão "CONJUGADO" na tela 14, tela do bloco ("Rodada 2 de 4", "RODADA FEITA", check por série, "Concluir bloco"), um descanso por rodada (só se > 0; desmarcar cancela), rascunho local com o bloco e compatível com o antigo, descanso do bloco só na última série de cada rodada ao salvar. E2E `bloco_ao_vivo_pbi102_test.dart` no job `e2e` com `TREINO_AO_VIVO=true`. |
 | #146 | PBI-103 | Bloco no histórico: o detalhe da sessão (do atleta e do educador) agrupa os membros do bloco rodada a rodada, com o descanso uma vez por rodada, só pelo que a sessão gravou; sessões antigas como antes. Teste de integração confirma histórico e gráfico do exercício iguais com e sem bloco. |
 | #147 | PBI-101 (ajuste) | Editor da ficha: "Juntar com o de baixo" virou "Juntar com…", um sheet para escolher de 1 a 3 exercícios (até 4 no bloco) ou um bloco existente, com o descanso no mesmo sheet; membros de outros blocos desabilitados. "Adicionar exercício" no cabeçalho do bloco. Só front: a API já juntava não vizinhos. |
-| (PR do X da semana) | PBI-35 (ajuste) | Faixa da semana na Início: todo dia que passou sem treino mostra o "X", também o dia sem ficha planejada (antes ficava com o círculo vazio de "descanso"). O rótulo falado desse dia passou a "descanso, sem treino". Pedido do PO. |
+| #148 | PBI-35 (ajuste) | Faixa da semana na Início: todo dia que passou sem treino mostra o "X", também o dia sem ficha planejada (antes ficava com o círculo vazio de "descanso"). O rótulo falado desse dia passou a "descanso, sem treino". Pedido do PO. |
 
 ---
 
@@ -237,7 +241,12 @@ O resumo do que existe hoje e do que falta está em [ESTADO-DO-PROJETO.md](ESTAD
 
 ## O que ainda falta
 
-- E12 · Corpo e medidas: PBI-95 e 96, o compartilhamento com o educador (a 91 a 94 estão prontas).
+Os próximos passos, em ordem, estão em [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJETO.md), seção 9. Em resumo:
+
+- E13 · Exercícios conjugados: entregue (PBI-101 a 103, mais os ajustes #147 e #148); falta o PO conferir as telas e as interpretações do épico.
+- PBI-100: conferir no Safari do iPhone.
+- PBI-99: o documento não chegou.
+- E12 · Corpo e medidas: PBI-95 e 96, o compartilhamento com o educador (a 91 a 94, 97 e 98 estão prontas).
 - PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
 - Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).

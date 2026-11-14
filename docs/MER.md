@@ -2,7 +2,7 @@
 
 **Projeto:** Diário de Treino (nome provisório)
 **Versão:** 1.0 (MVP de registro publicado; progresso e tela inicial no ar)
-**Última atualização:** 05/11/2026 (semana planejada do plano, PBI-35)
+**Última atualização:** 13/11/2026 (exercícios conjugados, E13: PBI-101 a 103)
 **Banco:** PostgreSQL
 **Documentos relacionados:** [MAS.md](MAS.md), [BACKLOG.md](BACKLOG.md)
 
@@ -19,7 +19,10 @@ pronto.
   `metrica` (seed dos 6 registros), `exercicio`, `plano_treino`, `treino`,
   `treino_exercicio`, `etapa_prescrita`, `rodada_marcador`, `sessao`,
   `serie_executada`, `consentimento` (PBI-87, ver 3.13), `plano_dia_semana`
-  (PBI-35, ver 3.14), `medida_corporal` (PBI-91, ver 3.15).
+  (PBI-35, ver 3.14), `medida_corporal` (PBI-91, ver 3.15), `bloco_exercicio`
+  (PBI-101, ver 3.8a).
+- Colunas do E13: `treino_exercicio.bloco_id` (PBI-101) e
+  `serie_executada.bloco` + `posicao_no_bloco` (PBI-102), todas nulas.
 - `vinculo` deixou de ser "estrutura sem uso": o modo educador usa o vínculo a
   partir da PBI-85 (convite/aceite) e PBI-86 (leitura dos dados do aluno).
 - `exercicio` é classificado por **`membro_id`** (FK `membro`, obrigatório ao
@@ -444,7 +447,7 @@ Bloco conjugado (PBI-101): 2 a 4 exercícios da mesma ficha feitos alternando, c
 | treino_id | uuid | não | FK `treino`, `ON DELETE CASCADE` |
 | descanso_seg | smallint | sim | Descanso depois de cada rodada. `CHECK (descanso_seg IS NULL OR descanso_seg BETWEEN 0 AND 600)`; nulo ou 0 = sem descanso |
 
-Regras (na aplicação): os membros têm `ordem` contígua (nenhum avulso no meio); um exercício está em no máximo um bloco; as rodadas **não** são coluna, valem o maior `rodadas` entre os membros; bloco que ficaria com menos de 2 se desfaz e os membros voltam a avulsos com o descanso do bloco em `descanso_alvo_seg`. O `SET NULL` de `bloco_id` é só a rede de segurança: quem desfaz é sempre a aplicação. Duplicar o plano copia os blocos.
+Regras (na aplicação): os membros têm `ordem` contígua (nenhum avulso no meio); um exercício está em no máximo um bloco; as rodadas **não** são coluna, valem o maior `rodadas` entre os membros; bloco que ficaria com menos de 2 se desfaz e os membros voltam a avulsos com o descanso do bloco em `descanso_alvo_seg`. O `SET NULL` de `bloco_id` é só a rede de segurança: quem desfaz é sempre a aplicação. Duplicar o plano copia os blocos. Regras completas em 5.18 e 5.19; decisão de modelo no ADR-12 do MAS.
 
 ### 3.9 `etapa_prescrita`
 Etapas de cada rodada. Musculação tem uma etapa; intervalado tem esforço e recuperação.
@@ -588,6 +591,8 @@ só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro 
 | `vinculo (aluno_id) WHERE status = 'ATIVO'` | Regra de acesso do educador |
 | `plano_dia_semana (treino_id)` | Liberar os dias de uma ficha ao excluí-la ou arquivá-la (PBI-35) |
 | `medida_corporal (usuario_id, tipo, data DESC)` | Última medida, variação e evolução por tipo (PBI-91) |
+| `bloco_exercicio (treino_id)` | Blocos da ficha, no detalhe e no rascunho (PBI-101) |
+| `treino_exercicio (bloco_id)` | Membros do bloco (PBI-101) |
 
 ## 5. Regras de negócio que dependem do modelo
 
@@ -601,13 +606,15 @@ só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro 
 8. **Tag de série (TV-1):** `serie_executada.marcador` e `rodada_marcador` só identificam "como" a série foi feita. **Não** entram em nenhum cálculo — o gráfico de progresso (regras 2 e 3) continua por `tipo = ESFORCO` e maior carga/tempo, independente da tag. Pré-preenchimento da tag no registro: tag da ficha para a rodada; sem ficha, tag da última sessão daquele exercício; sem nenhuma, `VALIDA`.
 9. **Plano em uso (PBI-44):** só um por atleta, trocado numa transação. Um plano novo nasce em uso quando o atleta não tem nenhum plano em uso (PBI-77); planos escondidos (`ativo = false`) não contam. Com um plano já em uso, o novo nasce fora de uso. A sequência A, B, C da Início, o "próximo da sequência" e a lista de fichas olham o plano em uso. Iniciar ficha de plano fora de uso é permitido e a sessão fica ligada à ficha (`sessao.treino_id`).
 10. **Excluir plano (PBI-44):** se nenhuma ficha do plano tem sessão, apaga de verdade (cascata para ficha, exercício e etapa). Se alguma tem, marca `ativo = false` e `em_uso = false`, porque `sessao.treino_id` é `Restrict`. Se era o em uso, o uso passa para o plano com a sessão mais recente; sem outro plano, a Início mostra o Primeiro acesso.
-11. **Somente leitura (PBI-44, ajustada na PBI-88d):** só o **autor** do plano (`autor_id = usuário logado`) cria, edita, exclui ou reordena ficha e exercício e define a semana (regra 14). Para o atleta, um plano montado pelo professor é somente leitura (403 `plano-somente-leitura`, depois de passar pelo controle de acesso; outro usuário continua 404); o educador autor edita o plano que montou para o aluno. Leitura, iniciar e registrar sessão continuam liberados. Copiar cria um plano novo com autor = atleta.
+11. **Somente leitura (PBI-44, ajustada na PBI-88d):** só o **autor** do plano (`autor_id = usuário logado`) cria, edita, exclui ou reordena ficha e exercício e define a semana (regra 14). Para o atleta, um plano montado pelo professor é somente leitura (403 `plano-somente-leitura`, depois de passar pelo controle de acesso; outro usuário continua 404); o educador autor edita o plano que montou para o aluno. Leitura, iniciar e registrar sessão continuam liberados. Copiar cria um plano novo com autor = atleta. **Situação do código (13/11):** o 403 é aplicado nas rotas do plano (renomear, semana, excluir) e em adicionar ficha; editar e excluir ficha, os exercícios da ficha (adicionar, remover, reordenar, alvos) e os blocos (PBI-101) só passam pelo controle de acesso (404). O app esconde essas ações no plano do professor, mas a API não as barra. Ver MAS 18.
 12. **Excluir conta:** apaga sessões e depois todos os planos do atleta, inclusive os escondidos (comportamento atual de `ExcluirContaAsync`).
 13. **Exercício único (PBI-74):** cada exercício aparece uma vez por ficha (`treino_exercicio`) e uma vez por sessão (`serie_executada` agrupada por `exercicio_id`). A regra é da aplicação (409 ao adicionar à ficha, 400 ao salvar a sessão), sem constraint única no banco. Dados anteriores à regra podem ter repetição.
 14. **Semana planejada (PBI-35):** a semana é do plano e opcional. `PUT /planos/{id}/semana` substitui a semana inteira (lista vazia limpa); só o autor define (regra 11). Cada ficha precisa ser ficha **ativa do mesmo plano** (senão 400); no máximo uma por dia (PK), mesma ficha em vários dias permitida. Excluir a ficha libera os dias dela: apagar de verdade cai por cascata; arquivar (ficha com sessões) remove as linhas na aplicação. Duplicar o plano copia a semana para as fichas copiadas. Mudar a semana nunca mexe em sessões já registradas. A leitura (detalhe e plano em uso) só devolve dias de fichas ativas.
 15. **Medidas corporais (PBI-91):** a variação de cada tipo compara com a medição anterior **daquele mesmo tipo**, mesmo que as outras medidas tenham sido feitas em outras datas; com um registro só, não há variação. `PUT /me/medidas/{data}` faz upsert por tipo, valor nulo remove só aquele tipo e um dia que ficaria sem nenhum valor é recusado (400); para apagar o dia existe o `DELETE`. Só o dono acessa (rotas sob `/me`).
 16. **TMB (PBI-93):** Mifflin-St Jeor, calculada no backend a cada leitura (nunca guardada): `10 × peso(kg) + 6,25 × altura(cm) − 5 × idade + s`, `s = +5` para M e `−161` para F, arredondada ao inteiro (meio para cima). O peso é a medida `PESO` de data mais recente. Sem número se faltar sexo, nascimento, altura ou peso (`DADOS_INCOMPLETOS`) ou com menos de 18 anos (`MENOR_DE_IDADE`); o dado faltando vem antes. Idade em anos completos; quem nasceu em 29/02 faz anos em 28/02 nos anos não bissextos. O `PUT /me/perfil-corporal` com `pesoKg` grava a medida `PESO` do dia (`dataPeso` do app, ou hoje no servidor) no mesmo `SaveChanges` dos dados; sem `pesoKg` o histórico de peso não é tocado, e o `DELETE` limpa só os três campos de `usuario`.
 17. **TMB informada (PBI-98):** o valor que vale no app (`tmbKcal`) é o informado (`tmb_manual_kcal`), se houver; senão o calculado (regra 16). O informado vale mesmo sem dados completos e para menor de idade, e **não é apagado** quando sexo, nascimento, altura ou peso mudam (só a linha "Calculada" acompanha). Grava-se e apaga-se por rota própria (`PUT|DELETE /me/perfil-corporal/tmb-manual`), para não sobrescrever os outros dados; "Limpar dados corporais" apaga junto.
+18. **Bloco conjugado na ficha (PBI-101):** 2 a 4 exercícios da mesma ficha, sempre vizinhos na ordem (nenhum avulso no meio); um exercício está em no máximo um bloco. As rodadas do bloco são o maior `rodadas` entre os membros, e cada membro participa até a sua última série. O descanso é o do bloco (0 a 600 s; nulo ou 0 = sem descanso), e o `descanso_alvo_seg` do membro é ignorado enquanto ele está no bloco (o `PUT .../alvos` não o altera). Juntar exercícios que não estão vizinhos leva todos para a posição do primeiro, na ordem da ficha. Quem sai do bloco fica avulso logo depois dele, com o descanso do bloco; bloco que ficaria com menos de 2 se desfaz (inclusive ao remover um membro da ficha). Reordenar que separe os membros é recusado (400). Apagar a ficha apaga os blocos; duplicar o plano copia os blocos com os mesmos membros, ordem e descanso.
+19. **Bloco na sessão (PBI-102 e 103):** cada série continua sendo de um exercício, ligada ao exercício e ao `treino_exercicio` dele; por isso histórico, pré-preenchimento e gráfico por exercício não mudam. A série de bloco grava `bloco` (número do bloco na sessão, na ordem em que aparece) e `posicao_no_bloco` (1 a 4), os dois juntos ou nenhum. O descanso do bloco vai só na última série feita de cada rodada; as outras séries do bloco ficam com `descanso_seg` nulo. O detalhe da sessão agrupa pelos dois campos, não pela ficha atual; sessão antiga (sem os campos) aparece por exercício, como antes.
 
 ## 6. Exemplo de dados
 
@@ -619,6 +626,16 @@ Uma sessão do Treino A com supino em 2 séries e uma prancha:
 | serie_executada | supino, rodada 1, ESFORCO, CARGA_KG 30, REPETICOES 10, descanso 90 |
 | serie_executada | supino, rodada 2, ESFORCO, CARGA_KG 35, REPETICOES 8, descanso 90 |
 | serie_executada | prancha, rodada 1, ESFORCO, PESO_CORPORAL nulo, TEMPO_SEG 45 |
+
+Uma rodada de bloco conjugado (item 2 da ficha do PO: adução + agachamento, 30 s de descanso):
+
+| tabela | valores |
+|---|---|
+| bloco_exercicio | ficha "Mobilidade de ombro", descanso_seg 30 |
+| treino_exercicio | adução, ordem 3, rodadas 3, bloco_id = o bloco acima |
+| treino_exercicio | agachamento, ordem 4, rodadas 3, bloco_id = o bloco acima |
+| serie_executada | adução, rodada 1, PESO_CORPORAL nulo, TEMPO_SEG 20, descanso nulo, bloco 1, posição 1 |
+| serie_executada | agachamento, rodada 1, CARGA_KG 10, REPETICOES 15, descanso 30, bloco 1, posição 2 |
 
 ## 7. Previsto para incrementos futuros
 
