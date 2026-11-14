@@ -404,49 +404,49 @@ class _ListaExerciciosFicha extends ConsumerWidget {
           },
       ];
 
-  /// "Juntar com o de baixo" está disponível neste item? (PBI-101) Avulso com
-  /// avulso cria o bloco; avulso com bloco, ou bloco com avulso, entra no bloco
-  /// enquanto ele tiver menos de 4. Dois blocos não se juntam.
-  static bool podeJuntar(List<ItemFicha> itens, int i) {
-    if (i < 0 || i >= itens.length - 1) return false;
-    return switch ((itens[i], itens[i + 1])) {
-      (ItemAvulso(), ItemAvulso()) => true,
-      (ItemAvulso(), ItemBloco(:final membros)) => membros.length < BlocoFicha.maximoMembros,
-      (ItemBloco(:final membros), ItemAvulso()) => membros.length < BlocoFicha.maximoMembros,
-      _ => false,
-    };
-  }
+  /// "Juntar com…" no exercício avulso: há outro avulso, ou um bloco com vaga?
+  static bool podeJuntar(List<ItemFicha> itens, TreinoExercicioResumo origem) =>
+      itens.any((item) => switch (item) {
+            ItemAvulso(:final exercicio) => exercicio.id != origem.id,
+            ItemBloco(:final membros) => membros.length < BlocoFicha.maximoMembros,
+          });
 
-  Future<void> _juntarComOdeBaixo(
-      BuildContext context, WidgetRef ref, List<ItemFicha> itens, int i) async {
-    if (!podeJuntar(itens, i)) return;
-    final comandos = ref.read(fichasComandosProvider);
-    try {
-      switch ((itens[i], itens[i + 1])) {
-        case (ItemAvulso(exercicio: final a), ItemAvulso(exercicio: final b)):
-          final escolha = await pedirDescansoBloco(context, rotuloConfirmar: 'Juntar', novo: true);
-          if (escolha == null) return;
-          await comandos.criarBloco(
+  /// "Adicionar exercício" no bloco: tem vaga e há algum avulso para entrar?
+  static bool podeAdicionar(List<ItemFicha> itens, ItemBloco bloco) =>
+      bloco.membros.length < BlocoFicha.maximoMembros && itens.any((i) => i is ItemAvulso);
+
+  /// "Juntar {exercício} com…": escolhe os outros (bloco novo, que a API junta
+  /// na posição do primeiro, na ordem da ficha) ou um bloco existente.
+  Future<void> _juntarCom(BuildContext context, WidgetRef ref, List<ItemFicha> itens,
+      TreinoExercicioResumo origem) async {
+    final escolha = await escolherJuntar(context, origem: origem, itens: itens);
+    if (escolha == null || !context.mounted) return;
+    await _comBloco(context, ref, (c) async {
+      switch (escolha) {
+        case JuntarEmBlocoNovo(:final treinoExercicioIds, :final descansoSeg):
+          await c.criarBloco(
               treinoId: treinoId,
-              treinoExercicioIds: [a.id, b.id],
-              descansoSeg: escolha.segundos);
-        case (ItemAvulso(exercicio: final a), ItemBloco(:final bloco, :final membros)):
-          await comandos.definirMembrosBloco(
+              treinoExercicioIds: treinoExercicioIds,
+              descansoSeg: descansoSeg);
+        case EntrarNoBloco(:final bloco):
+          await c.definirMembrosBloco(
               treinoId: treinoId,
               blocoId: bloco.id,
-              treinoExercicioIds: [a.id, ...membros.map((m) => m.id)]);
-        case (ItemBloco(:final bloco, :final membros), ItemAvulso(exercicio: final b)):
-          await comandos.definirMembrosBloco(
-              treinoId: treinoId,
-              blocoId: bloco.id,
-              treinoExercicioIds: [...membros.map((m) => m.id), b.id]);
-        default:
+              treinoExercicioIds: [...bloco.treinoExercicioIds, origem.id]);
+        case AdicionarAoBloco():
           return;
       }
-      await _esperarFicha(ref);
-    } on FichasException catch (e) {
-      if (context.mounted) _erro(context, e.mensagem);
-    }
+    });
+  }
+
+  /// "Adicionar exercício" no cabeçalho do bloco: os escolhidos entram no fim.
+  Future<void> _adicionarAoBloco(
+      BuildContext context, WidgetRef ref, List<ItemFicha> itens, ItemBloco item) async {
+    final escolha = await escolherAdicionarAoBloco(context, bloco: item, itens: itens);
+    if (escolha is! AdicionarAoBloco || escolha.treinoExercicioIds.isEmpty) return;
+    if (!context.mounted) return;
+    await _definirMembros(context, ref, item.bloco,
+        [...item.membros.map((m) => m.id), ...escolha.treinoExercicioIds]);
   }
 
   Future<void> _mudarDescansoBloco(
@@ -540,9 +540,6 @@ class _ListaExerciciosFicha extends ConsumerWidget {
                       itemCount: itens.length,
                       onReorder: (de, para) => _reordenar(ref, itens, de, para),
                       itemBuilder: (context, i) {
-                        final juntar = podeJuntar(itens, i)
-                            ? () => _juntarComOdeBaixo(context, ref, itens, i)
-                            : null;
                         return switch (itens[i]) {
                           ItemAvulso(exercicio: final te) => _CardExercicioFicha(
                               key: ValueKey(te.id),
@@ -550,7 +547,9 @@ class _ListaExerciciosFicha extends ConsumerWidget {
                               indice: i,
                               aoEditar: () => _editarAlvos(context, ref, te),
                               aoRemover: () => _remover(context, ref, te),
-                              aoJuntar: juntar,
+                              aoJuntar: podeJuntar(itens, te)
+                                  ? () => _juntarCom(context, ref, itens, te)
+                                  : null,
                             ),
                           final ItemBloco item => _CardBlocoFicha(
                               key: ValueKey('bloco-${item.bloco.id}'),
@@ -562,7 +561,9 @@ class _ListaExerciciosFicha extends ConsumerWidget {
                               aoMudarDescanso: () =>
                                   _mudarDescansoBloco(context, ref, item.bloco),
                               aoDesfazer: () => _desfazerBloco(context, ref, item.bloco),
-                              aoJuntar: juntar,
+                              aoAdicionar: podeAdicionar(itens, item)
+                                  ? () => _adicionarAoBloco(context, ref, itens, item)
+                                  : null,
                             ),
                         };
                       },
@@ -598,7 +599,7 @@ class _CardExercicioFicha extends StatelessWidget {
   final VoidCallback aoEditar;
   final VoidCallback aoRemover;
 
-  /// "Juntar com o de baixo" (PBI-101). Nulo = não há com quem juntar.
+  /// "Juntar com…" (PBI-101). Nulo = não há com quem juntar.
   final VoidCallback? aoJuntar;
 
   @override
@@ -687,7 +688,8 @@ class _CardExercicioFicha extends StatelessWidget {
   }
 }
 
-/// "Juntar com o de baixo" (PBI-101): ícone de elo, 44 × 44.
+/// "Juntar com…" (PBI-101): ícone de elo, 44 × 44. Abre a escolha de com quais
+/// exercícios (ou em qual bloco) juntar.
 class _BotaoJuntar extends StatelessWidget {
   const _BotaoJuntar({required this.nome, required this.aoTocar});
 
@@ -702,7 +704,7 @@ class _BotaoJuntar extends StatelessWidget {
       height: AppSizes.touchMin,
       child: IconButton(
         onPressed: aoTocar,
-        tooltip: 'Juntar $nome com o de baixo',
+        tooltip: 'Juntar $nome com outro exercício',
         icon: Icon(LucideIcons.link, size: AppSizes.iconeSm, color: cores.primaryText),
         style: IconButton.styleFrom(
           padding: EdgeInsets.zero,
@@ -732,7 +734,7 @@ class _CardBlocoFicha extends StatelessWidget {
     required this.aoAcaoMembro,
     required this.aoMudarDescanso,
     required this.aoDesfazer,
-    this.aoJuntar,
+    this.aoAdicionar,
   });
 
   final ItemBloco item;
@@ -741,7 +743,9 @@ class _CardBlocoFicha extends StatelessWidget {
   final void Function(int posicao, _AcaoMembro acao) aoAcaoMembro;
   final VoidCallback aoMudarDescanso;
   final VoidCallback aoDesfazer;
-  final VoidCallback? aoJuntar;
+
+  /// "Adicionar exercício" ao bloco. Nulo = bloco cheio ou sem avulso livre.
+  final VoidCallback? aoAdicionar;
 
   @override
   Widget build(BuildContext context) {
@@ -795,13 +799,17 @@ class _CardBlocoFicha extends StatelessWidget {
                                     style: AppText.label.copyWith(color: cores.primaryText)),
                               ),
                             ),
-                            if (aoJuntar != null)
-                              _BotaoJuntar(nome: 'o bloco', aoTocar: aoJuntar!),
                           ],
                         ),
                         Wrap(
                           spacing: AppSpacing.x8,
                           children: [
+                            if (aoAdicionar != null)
+                              _AcaoCabecalhoBloco(
+                                icone: LucideIcons.plus,
+                                rotulo: 'Adicionar exercício',
+                                aoTocar: aoAdicionar!,
+                              ),
                             _AcaoCabecalhoBloco(
                               icone: LucideIcons.timer,
                               rotulo: 'Descanso',

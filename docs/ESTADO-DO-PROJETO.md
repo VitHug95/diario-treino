@@ -78,8 +78,9 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - Ficha (tela 22): só edição. Adicionar vários exercícios de uma vez (seletor com
   filtro de músculo), reordenar, remover, alvos por exercício (séries, carga, faixa
   de repetições, descanso, tags de série).
-- **Bloco conjugado (PBI-101):** "Juntar com o de baixo" (ícone de elo) junta 2 a 4
-  exercícios num cartão só, "Conjugado · 4 rodadas · descanso 30 s", com um descanso
+- **Bloco conjugado (PBI-101):** "Juntar com…" (ícone de elo) abre a lista da ficha
+  para escolher com quais exercícios juntar (ou em qual bloco entrar); "Adicionar
+  exercício" no cabeçalho do bloco traz mais um. Junta 2 a 4 exercícios num cartão só, "Conjugado · 4 rodadas · descanso 30 s", com um descanso
   por rodada; "Descanso" e "Desfazer bloco" no cabeçalho; cada exercício tem "Mover
   para cima/baixo", "Tirar do bloco" e "Remover da ficha". O bloco se arrasta
   inteiro. Dentro do bloco, o editor de alvos não tem descanso. Vale para o
