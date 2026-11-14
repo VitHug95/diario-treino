@@ -30,6 +30,9 @@ try
     // Traduz AcaoNaoPermitidaException em 403 (ex.: convidar sem papel EDUCADOR; PBI-85).
     builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.AcaoNaoPermitidaHandler>();
 
+    // Traduz CorpoNaoCompartilhadoException em 403 (cadeado do corpo; PBI-95).
+    builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.CorpoNaoCompartilhadoHandler>();
+
     // Problem Details (RFC 9457) como formato padrão de erro da API.
     builder.Services.AddProblemDetails(options =>
     {
@@ -117,6 +120,7 @@ try
     app.MapSessaoEndpoints();
     app.MapMedidaEndpoints();
     app.MapPerfilCorporalEndpoints();
+    app.MapCompartilhamentoCorporalEndpoints();
     app.MapProgressoEndpoints();
     app.MapVinculoEndpoints();
 

@@ -14,6 +14,7 @@ import '../../theme/theme_tokens.dart';
 import '../progresso/exportar_pdf.dart';
 import '../sessao/sessao_models.dart';
 import 'aluno_planos_screen.dart';
+import 'corpo_do_aluno.dart';
 import 'educador_repository.dart';
 
 /// Argumentos para abrir o detalhe de um aluno (PBI-88c).
@@ -57,6 +58,9 @@ class AlunoDetalheScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.margemTela),
             children: [
               _BotaoPlanosDoAluno(atletaId: atletaId, alunoNome: alunoNome),
+              const SizedBox(height: AppSpacing.entreCards),
+              // Corpo do aluno (PBI-96): só o que ele compartilhou.
+              _BotaoCorpoDoAluno(atletaId: atletaId, alunoNome: alunoNome),
               const SizedBox(height: AppSpacing.x24),
               Text('EVOLUÇÃO',
                   style: AppText.overline.copyWith(color: cores.textSecondary)),
@@ -305,6 +309,73 @@ class _CardSessaoAluno extends StatelessWidget {
   static String _dataLonga(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/'
       '${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+/// Linha "Corpo" (PBI-96): abre os dados corporais e as medidas do aluno, só o
+/// que ele compartilhou. O subtítulo já diz o que está liberado.
+class _BotaoCorpoDoAluno extends ConsumerWidget {
+  const _BotaoCorpoDoAluno({required this.atletaId, required this.alunoNome});
+
+  final String atletaId;
+  final String alunoNome;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cores = AppColors.of(context);
+    final corpo = ref.watch(corpoDoAlunoProvider(atletaId));
+    final subtitulo = corpo.when(
+      loading: () => 'Carregando…',
+      error: (_, __) => 'Toque para ver',
+      data: (c) => switch ((c.dadosCorporaisCompartilhados, c.medidasCompartilhadas)) {
+        (true, true) => 'Dados corporais e medidas compartilhados',
+        (true, false) => 'Dados corporais compartilhados',
+        (false, true) => 'Medidas compartilhadas',
+        (false, false) => 'O aluno ainda não compartilhou',
+      },
+    );
+    return Semantics(
+      button: true,
+      label: 'Corpo de $alunoNome. $subtitulo',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => context.push(
+            Rotas.alunoCorpo,
+            extra: AlunoDetalheArgs(atletaId: atletaId, alunoNome: alunoNome),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+            decoration: BoxDecoration(
+              border: Border.all(color: cores.lineDefault),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.paddingCard),
+            child: Row(
+              children: [
+                Icon(LucideIcons.ruler, color: cores.primaryText, size: AppSizes.iconeMd),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Corpo', style: AppText.title),
+                      const SizedBox(height: AppSpacing.x4),
+                      Text(subtitulo,
+                          style: AppText.caption.copyWith(color: cores.textSecondary)),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight, color: cores.iconMuted, size: AppSizes.iconeMd),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Botão de destaque para montar o plano/fichas do aluno (PBI-88d). Abre a

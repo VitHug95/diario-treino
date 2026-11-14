@@ -242,6 +242,10 @@ public sealed class ServicoPlanejamentoTests
             Guid educadorId, CancellationToken ct)
             => Task.FromResult(new List<DiarioTreino.Domain.Vinculos.Vinculo>());
 
+        public Task<List<DiarioTreino.Domain.Vinculos.Vinculo>> ListarAtivosDoAlunoAsync(
+            Guid alunoId, CancellationToken ct)
+            => Task.FromResult(new List<DiarioTreino.Domain.Vinculos.Vinculo>());
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
 
         public Task<bool> TentarCriarAsync(DiarioTreino.Domain.Vinculos.Vinculo vinculo, CancellationToken ct)

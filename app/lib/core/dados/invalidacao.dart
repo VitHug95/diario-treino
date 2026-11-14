@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import '../../features/auth/perfil_api.dart';
 import '../../features/catalogo/catalogo_repository.dart';
+import '../../features/educador/corpo_do_aluno.dart';
 import '../../features/educador/educador_repository.dart';
 import '../../features/fichas/fichas_repository.dart';
+import '../../features/medidas/compartilhamento_repository.dart';
 import '../../features/medidas/medidas_repository.dart';
 import '../../features/medidas/perfil_corporal_repository.dart';
 import '../../features/progresso/progresso_repository.dart';
@@ -37,6 +39,9 @@ enum Mudanca {
   /// Dados corporais (sexo, nascimento, altura, peso) salvos ou limpos. O peso
   /// salvo vira uma medida PESO, então as medidas também mudam (E12 / PBI-93).
   perfilCorporal,
+
+  /// Cadeados do corpo trancados ou destrancados (E12 / PBI-96).
+  compartilhamentoCorporal,
 }
 
 /// Mapa único de invalidação (PBI-70): cada mudança invalida tudo o que é
@@ -73,7 +78,11 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         // O perfil muda ao virar educador (ganha o papel EDUCADOR).
         ..invalidate(perfilProvider)
         ..invalidate(convitesPendentesProvider)
-        ..invalidate(alunosProvider);
+        ..invalidate(alunosProvider)
+        // Quem vê o corpo depende dos vínculos ativos (PBI-96).
+        ..invalidate(compartilhamentoCorporalProvider)
+        ..invalidate(corpoDoAlunoProvider)
+        ..invalidate(evolucaoMedidaDoAlunoProvider);
     case Mudanca.medidas:
       // Lista, histórico, resumo do Perfil, o dia aberto para edição e o gráfico.
       ref
@@ -89,6 +98,8 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         ..invalidate(diaMedidasProvider)
         // O peso salvo vira um ponto novo no gráfico do peso.
         ..invalidate(evolucaoMedidaProvider);
+    case Mudanca.compartilhamentoCorporal:
+      ref.invalidate(compartilhamentoCorporalProvider);
   }
 }
 

@@ -31,6 +31,9 @@ public sealed class ControleAcessoTests
         public Task<List<Vinculo>> ListarAtivosDoEducadorAsync(Guid educadorId, CancellationToken ct)
             => Task.FromResult(new List<Vinculo>());
 
+        public Task<List<Vinculo>> ListarAtivosDoAlunoAsync(Guid alunoId, CancellationToken ct)
+            => Task.FromResult(new List<Vinculo>());
+
         public Task SalvarAsync(CancellationToken ct) => Task.CompletedTask;
 
         public Task<bool> TentarCriarAsync(Vinculo vinculo, CancellationToken ct)

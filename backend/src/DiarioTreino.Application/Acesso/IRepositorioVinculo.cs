@@ -32,6 +32,9 @@ public interface IRepositorioVinculo
     /// <summary>Vínculos ATIVOS em que o usuário é o educador (lista de alunos).</summary>
     public Task<List<Vinculo>> ListarAtivosDoEducadorAsync(Guid educadorId, CancellationToken ct);
 
+    /// <summary>Vínculos ATIVOS em que o usuário é o aluno (quem vê o corpo dele, PBI-95).</summary>
+    public Task<List<Vinculo>> ListarAtivosDoAlunoAsync(Guid alunoId, CancellationToken ct);
+
     public Task SalvarAsync(CancellationToken ct);
 
     /// <summary>

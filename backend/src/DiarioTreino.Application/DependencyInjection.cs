@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<ServicoRelatorio>();
         services.AddScoped<ServicoMedidas>();
         services.AddScoped<ServicoPerfilCorporal>();
+        services.AddScoped<ServicoCompartilhamentoCorporal>();
+        services.AddScoped<IValidator<DefinirCompartilhamentoRequest>, DefinirCompartilhamentoValidator>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
         services.AddScoped<IValidator<SalvarTreinoRequest>, SalvarTreinoValidator>();

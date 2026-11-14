@@ -205,6 +205,12 @@ fechados sem merge.
 | #147 | PBI-101 (ajuste) | Editor da ficha: "Juntar com o de baixo" virou "Juntar com…", um sheet para escolher de 1 a 3 exercícios (até 4 no bloco) ou um bloco existente, com o descanso no mesmo sheet; membros de outros blocos desabilitados. "Adicionar exercício" no cabeçalho do bloco. Só front: a API já juntava não vizinhos. |
 | #148 | PBI-35 (ajuste) | Faixa da semana na Início: todo dia que passou sem treino mostra o "X", também o dia sem ficha planejada (antes ficava com o círculo vazio de "descanso"). O rótulo falado desse dia passou a "descanso, sem treino". Pedido do PO. |
 
+## Compartilhar o corpo com o educador (fecha o E12) · 14/11
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| (PR das PBIs 95 e 96) | PBI-95, PBI-96 | Back: migration `CompartilhamentoCorporal` (`usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em`, nulo = trancado), `GET\|PUT /me/compartilhamento-corporal` e, para o educador, `GET /alunos/{atletaId}/corpo` e `GET /alunos/{atletaId}/medidas/{tipo}/evolucao`: sem vínculo ativo 404, depois o cadeado (seção nula no corpo, 403 `corpo-nao-compartilhado` na evolução). Front: tela "Compartilhar com o educador" (dois interruptores, destrancar com confirmação), selo "Privado"/"Compartilhado" nos dados e nas medidas, cartão "Corpo" e tela só leitura do corpo do aluno para o educador. Perguntas 1 e 2 do PO **assumidas** (todos os educadores com vínculo ativo; dois cadeados), a confirmar. A PBI-99 foi descartada pelo PO. |
+
 ---
 
 ## Migrations do banco
@@ -227,6 +233,7 @@ fechados sem merge.
 | `20261112202209_TmbManual` | PBI-98 | Coluna `tmb_manual_kcal` em `usuario` (TMB informada), com CHECK de 800 a 5000. |
 | `20261113173129_BlocoConjugado` | PBI-101 | Tabela `bloco_exercicio` (descanso do bloco, CHECK de 0 a 600) e coluna `treino_exercicio.bloco_id` (nula, ON DELETE SET NULL). Não mexe nas linhas existentes. |
 | `20261113191412_SerieBloco` | PBI-102 | Colunas `serie_executada.bloco` e `posicao_no_bloco` (nulas), com CHECK "os dois juntos, posição 1 a 4". Não mexe nas séries existentes. |
+| `20261114042934_CompartilhamentoCorporal` | PBI-95 | Colunas `dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` em `usuario` (`timestamptz` nulas; nulo = trancado). Só `AddColumn`: todo mundo começa trancado. |
 
 ## Infraestrutura
 
@@ -245,8 +252,7 @@ Os próximos passos, em ordem, estão em [ESTADO-DO-PROJETO.md](ESTADO-DO-PROJET
 
 - E13 · Exercícios conjugados: entregue (PBI-101 a 103, mais os ajustes #147 e #148); falta o PO conferir as telas e as interpretações do épico.
 - PBI-100: conferir no Safari do iPhone.
-- PBI-99: o documento não chegou.
-- E12 · Corpo e medidas: PBI-95 e 96, o compartilhamento com o educador (a 91 a 94, 97 e 98 estão prontas).
+- E12 · Corpo e medidas: completo; falta o PO confirmar as respostas assumidas nas PBIs 95 e 96 (todos os educadores com vínculo ativo; dois cadeados).
 - PBI-34 (trocar a métrica no registro), bloqueada pela escolha (a) × (b).
 - Cardio (PBI-27 a 30) e os épicos E8 a E11 (inclui a publicação na Google Play).
 - Pendências e decisões em aberto com o PO em [PENDENCIAS-PUBLICACAO.md](PENDENCIAS-PUBLICACAO.md).

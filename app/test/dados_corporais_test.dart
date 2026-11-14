@@ -4,6 +4,7 @@ import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/perfil_api.dart';
 import 'package:diario_treino/features/auth/perfil_screen.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
+import 'package:diario_treino/features/medidas/compartilhamento_repository.dart';
 import 'package:diario_treino/features/medidas/dados_corporais_screen.dart';
 import 'package:diario_treino/features/medidas/medidas_comandos.dart';
 import 'package:diario_treino/features/medidas/medidas_formato.dart';
@@ -156,6 +157,9 @@ Future<ProviderScope> _escopo(_RepoPerfil repo, Widget filho) async {
       convitesPendentesProvider.overrideWith((ref) async => []),
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
+      // Cadeados do corpo (PBI-96): tudo privado, sem rede.
+      compartilhamentoCorporalProvider.overrideWith((ref) async =>
+          const CompartilhamentoCorporal(dadosCorporais: false, medidas: false, educadores: [])),
     ],
     child: filho,
   );
@@ -283,7 +287,7 @@ void main() {
       (tester) async {
     await _abrir(tester, _RepoPerfil(_completo()));
 
-    expect(find.text('Só você vê estes dados.'), findsOneWidget);
+    expect(find.text('Privado: só você vê'), findsOneWidget);
     expect(find.text('20/05/1995'), findsOneWidget);
     expect(find.text('31 anos'), findsOneWidget);
     expect(_texto(tester, 'Altura'), '180');
