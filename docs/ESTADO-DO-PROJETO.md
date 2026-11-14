@@ -5,8 +5,9 @@ que falta. O detalhe de cada entrega, PR por PR, está em
 [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md); o contrato da API, no
 [MAS](MAS.md) (seção 12); as PBIs, no [BACKLOG](BACKLOG.md).
 
-Data do levantamento: 05/11/2026, depois do PR #135 (PBI-35, semana planejada no
-front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
+Data do levantamento: 13/11/2026, depois do PR #148 (ajuste do "X" na faixa da
+semana). Incrementos 1 (atleta), o épico do educador (E7), quase todo o E12 (corpo
+e medidas) e o E13 (exercícios conjugados) estão entregues.
 
 ---
 
@@ -55,8 +56,9 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - **Conta nova** (sem sessão e sem ficha): Bem-vindo (tela 29) com "Criar meu
   plano" (ou "Montar a primeira ficha", se já há plano vazio) e "Registrar treino".
 - **Uso normal:** treino em andamento no topo ("Continuar treino"), semana com
-  estados treinou / faltou / planejado / descanso (PBI-35; toque no dia abre a folha
-  do dia, que mostra "Planejado: X"), calendário do mês (PBI-82), "Registrar treino"
+  estados treinou / faltou / planejado / descanso (PBI-35; todo dia que passou sem
+  treino mostra o "X", com ou sem ficha planejada, desde o #148; toque no dia abre
+  a folha do dia, que mostra "Planejado: X"), calendário do mês (PBI-82), "Registrar treino"
   fixo, último treino e dica do acesso.
 - **Sem plano, com histórico:** a Início normal com o card "Bem-vindo de volta · Crie
   seu plano".
@@ -237,11 +239,22 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   produto (opção a × b — ver "Perguntas ainda abertas"). Em espera.
 - **Incremento 2 — cardio (PBI-27 a 30):** depende da resposta do Vinicius sobre
   como a zona é definida (FC, pace ou percepção).
-- **E12 · Corpo e medidas (PBI-91 a 96):** em andamento. Prontas: a PBI-91 (back, `/me/medidas`, #137), a PBI-92 (app das medidas, #138), a PBI-93 (dados corporais e TMB) e a PBI-94 (gráfico de evolução). Falta o compartilhamento com o educador (95 e 96, aguardam respostas do PO).
+- **E12 · Corpo e medidas (PBI-91 a 96):** em andamento. Prontas: a PBI-91 (back, `/me/medidas`, #137), a PBI-92 (app das medidas, #138), a PBI-93 (dados corporais e TMB, #139), a PBI-94 (gráfico de evolução, #140) e a PBI-98 (TMB informada, #142). Falta o compartilhamento com o educador (95 e 96, aguardam respostas do PO).
+- **E13 · Exercícios conjugados (PBI-101 a 103):** entregue (#144 a #147). Falta o PO conferir as telas (não houve protótipo) e as interpretações registradas no BACKLOG.
+- **PBI-100** (ficha com o valor antigo): não reproduzida; endurecida com `no-store` (#143). Falta conferir no Safari do iPhone.
+- **PBI-99:** o número está livre; o documento dela (ajustes de nome do exercício e toque do "Nova ficha") não chegou.
 - **Épicos futuros:** E8 a E11 (ver [BACKLOG](BACKLOG.md), seção 9), incluindo
   publicação na Google Play (E10).
 
 ### Entregue recentemente (PR)
+- **E13 — exercícios conjugados:** PBI-101 bloco na ficha (#144), PBI-102 treino
+  ao vivo com bloco (#145), PBI-103 bloco no detalhe da sessão (#146) e o ajuste
+  "Juntar com…" para escolher os exercícios do bloco (#147).
+- **Ajuste da PBI-35:** "X" em todo dia passado sem treino na faixa da semana
+  (#148).
+- **PBI-100:** API sem cache, testes de regressão da ficha e E2E dos alvos (#143).
+- **E12:** PBI-91 a 94 (#137 a #140), PBI-97 campo de data (#141), PBI-98 TMB
+  informada (#142); docs até o #135 (#136).
 - **E7 — modo educador completo:** PBI-85 vínculo (#120), PBI-86 leitura do aluno
   (#122), PBI-87 observação privada + consentimento (#124), PBI-88a a 88d telas
   do educador e planos do aluno (#125 a #129, fecha a PBI-48), PBI-89 PDF
@@ -279,6 +292,14 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - (05/11, PBI-35) Semana pertence ao plano; semana fixa; no máximo 1 ficha por
   dia; "fez" = treinou no dia com qualquer ficha; sem atalho novo na Início;
   calendário do mês, rotação e notificações ficam fora; semana opcional.
+- (12/11, PBI-98) A TMB calculada é a padrão; o atleta pode informar outra
+  (800 a 5.000 kcal), que vale até ele voltar ao cálculo.
+- (12/11, E13) Exercícios conjugados em bloco de 2 a 4, com um descanso só por
+  rodada; rodadas = maior número de séries; exercício sozinho continua igual.
+- (13/11, PBI-101) Juntar escolhendo os exercícios ("Juntar com…"), e não só o
+  de baixo.
+- (13/11, PBI-35) Todo dia passado sem treino mostra o "X", também o dia sem ficha
+  planejada (antes ficava como descanso, sem "X").
 
 ### Perguntas ainda abertas com o PO
 - **PBI-34** (trocar a métrica de intensidade no registro): (a) por série no
@@ -289,6 +310,18 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - **PBI-73:** melhor série × total de repetições no gráfico só de repetições.
 - **Termo de consentimento:** o texto atual é provisório; falta o texto jurídico.
 - **Cardio:** como a zona é definida (FC, pace ou percepção) — resposta do Vinicius.
+- **E12 (PBI-95 e 96):** compartilhar com todos os educadores ou escolher por
+  educador; o educador vê os dados corporais ou só as medidas.
+- **E13 (interpretações a confirmar):** o item 5 da ficha não tem descanso; a
+  panturrilha acompanha as 2 séries da isometria; o descanso vale também depois da
+  última rodada; "Rodada feita" marca com os valores pré-preenchidos.
+- **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
+  modo educador.
+- **PBI-99:** enviar o documento.
+- **Educador e CREF:** proposta de verificação do educador conversada, ainda sem
+  PBI registrada.
+- **Ficha do professor:** a API não aplica o 403 nas rotas de ficha, exercício e
+  bloco (o app esconde as ações). Alinhar com a regra do plano?
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -300,11 +333,38 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 9. Ponto de retomada
 
-Incremento 1 (atleta), E7 (educador), PBI-90, PBI-75 e PBI-35 estão na `main`
-(último PR: #135). Próximos passos, a escolher com o PO:
+Incremento 1 (atleta), E7 (educador), E12 até a PBI-98 e E13 (exercícios
+conjugados) estão na `main` (último PR: #148). Próximos passos:
 
-1. **E12 · Corpo e medidas:** as PBIs 95 e 96 (compartilhamento do corpo com o educador) dependem das respostas do PO (ver BACKLOG, seção 10); a 95 e a 96 esperam as perguntas ao PO (ver BACKLOG, seção 10).
-2. **PBI-34:** decidir (a) × (b) e implementar.
-3. **Cardio (PBI-27 a 30):** destravar a definição de zona com o Vinicius.
-4. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.
-5. Texto jurídico do termo (também cobre os textos de privacidade do E12) de consentimento antes de abrir ao público.
+**Com o PO (conferir o que foi entregue)**
+1. **E13:** o PO usar o bloco na ficha real dele (montar, treinar ao vivo, ver o
+   histórico) e confirmar as interpretações do épico (seção 8). As telas foram
+   feitas sem protótipo, seguindo o design system.
+2. **Ajuste do "X" (#148):** avisar o PO de que a regra da PBI-35 mudou.
+3. **PBI-100:** conferir no Safari do iPhone. Se o valor antigo continuar,
+   reler a ficha à força ao voltar da tela de alvos.
+
+**Esperando o PO para começar**
+4. **PBI-99:** receber o documento.
+5. **E12 · PBIs 95 e 96** (compartilhar o corpo com o educador): perguntas 1 e 2
+   do BACKLOG, seção 10. A migration `CompartilhamentoCorporal` vem depois da
+   `SerieBloco`.
+6. **PBI-34:** decidir (a) × (b) e implementar.
+7. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
+8. **CREF / verificação do educador:** decidir se vira PBI.
+
+**Técnico (sem bloqueio)**
+9. Aplicar a regra do autor (403) nas rotas de ficha, exercício e bloco, se o PO
+   confirmar que a regra do plano vale para elas.
+10. Versão no JSON do rascunho local do treino, para mudanças de formato não
+    apagarem um treino em andamento.
+11. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
+    retry do CI roda no mesmo banco).
+12. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
+    depois de ver se há dado acima de 600 em produção.
+
+**Depois**
+13. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.
+14. Texto jurídico do termo de consentimento (também cobre a privacidade do E12)
+    antes de abrir ao público.
+15. Pendências de infraestrutura (seção 8).

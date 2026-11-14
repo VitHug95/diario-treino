@@ -11,15 +11,15 @@
 
 Registrar as decisões de arquitetura do aplicativo, para que qualquer pessoa (ou o Kiro) consiga implementar uma PBI sem reabrir discussões já fechadas. Toda decisão nova ou alterada deve ser refletida aqui.
 
-### 1.1 Estado de implementação (05/11/2026)
+### 1.1 Estado de implementação (13/11/2026)
 
-O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com deploy automático da API e do front a cada merge na `main` (ADR-09). A última entrega é a PBI-35 (semana planejada, PR #135).
+O MVP de registro está **publicado e em uso** (Fly + Cloudflare + Neon), com deploy automático da API e do front a cada merge na `main` (ADR-09). A última entrega é o ajuste do "X" na faixa da semana (PR #148), depois do épico E13 (exercícios conjugados, PRs #144 a #147).
 
 **Concluído e na `main`:** fundação back/front (PBI-01 a 03), publicação (PBI-04), autenticação Firebase, `/me` e controle de acesso centralizado (PBI-06 a 08), catálogo com 89 exercícios globais, busca, criação e filtro por membro e músculo (PBI-10, 11, 31, 32, 54), fichas (PBI-12 a 14, 36), registro de sessão com edição, exercício fora da ficha e treino livre (PBI-15 a 19), primeiro acesso (PBI-09), tela inicial com semana, último treino e dicas (PBI-23, 59, 60), progresso com gráfico, observação no ponto e lista de sessões (PBI-20 a 22), perfil, tema e exclusão de conta (PBI-25 e 24), **backup semanal do banco (PBI-05)**, treino em andamento (PBI-37), épico **Treino ao vivo, série por série** (TV-1 a TV-6 = PBI-38 a 43), épico **Planos** com vários planos e um em uso (PBI-44 a 47, 49), ajustes de layout (PBI-50 a 55 e 57 a 67), correções e fluxos de entrada (PBI-68 a 72: sem plano, criar plano, Registrar treino, "Manter na ficha?", atualização das telas pela origem da mudança), as correções de uso real de 16 a 19/10 (**PBI-73, 74, 76, 77, 78, 79 e 80**) e o **calendário do mês (PBI-82)**.
 
-Também na `main`: o **modo educador (épico E7, PBI-85 a 89 e PBI-48)** — vínculo com consentimento, telas do educador, plano montado para o aluno e PDF do progresso —, o aviso curto em pílula em todo o app (PBI-75), os ajustes do treino ao vivo (PBI-90) e a **semana planejada do plano (PBI-35)**. No épico E12 (corpo e medidas), as **medidas corporais** (PBI-91 no back e PBI-92 no app) os **dados corporais com a TMB** (PBI-93) e o **gráfico de evolução da medida** (PBI-94).
+Também na `main`: o **modo educador (épico E7, PBI-85 a 89 e PBI-48)** — vínculo com consentimento, telas do educador, plano montado para o aluno e PDF do progresso —, o aviso curto em pílula em todo o app (PBI-75), os ajustes do treino ao vivo (PBI-90) e a **semana planejada do plano (PBI-35)**. No épico E12 (corpo e medidas), as **medidas corporais** (PBI-91 no back e PBI-92 no app) os **dados corporais com a TMB** (PBI-93), o **gráfico de evolução da medida** (PBI-94) e a **TMB informada pelo atleta** (PBI-98). O **campo de data** compartilhado com digitação (PBI-97). A API responde **sem cache** (`Cache-Control: no-store`, PBI-100). E o épico **E13 · Exercícios conjugados**: o bloco na ficha (PBI-101, ADR-12), o treino ao vivo com um "feito" e um descanso por rodada (PBI-102) e o bloco agrupado no detalhe da sessão (PBI-103).
 
-**Pendente:** trocar a métrica no registro (PBI-34, aguarda decisão do PO), e todo o incremento 2 de cardio (PBI-27 a 30). (Backup PBI-05, contraste PBI-24 e E2E PBI-26 concluídos.)
+**Pendente:** o compartilhamento do corpo com o educador (PBI-95 e 96, aguardam o PO), trocar a métrica no registro (PBI-34, aguarda decisão do PO), e todo o incremento 2 de cardio (PBI-27 a 30). (Backup PBI-05, contraste PBI-24 e E2E PBI-26 concluídos.)
 
 ## 2. Visão do produto em uma frase
 
@@ -131,6 +131,13 @@ Cada decisão segue o formato curto de ADR: contexto, decisão e consequência.
 - **Decisão:** o `onDestinationSelected` da barra inferior chama `goBranch(i, initialLocation: true)` sempre. As telas de tela cheia (registro e treino ao vivo) ficam no navigator raiz, acima da barra, então trocar de aba nunca as descarta.
 - **Consequência:** a aba sempre abre previsível e não há estado de navegação escondido. O custo é perder a posição dentro da aba (formulário aberto em outra aba fecha). Se o PO preferir que a aba lembre onde parou, reverter é voltar a condição `i == navigationShell.currentIndex`. Testes de E2E que abriam uma ficha, trocavam de aba e voltavam esperando a tela anterior precisam abrir a raiz.
 
+### ADR-12: Bloco conjugado em tabela própria
+- **Status:** implementado (PBI-101 a 103, PRs #144 a #147).
+- **Contexto:** o PO monta fichas com exercícios feitos juntos, alternando, com um descanso só depois de cada rodada (ficha "Mobilidade de ombro", 12/11/2026). Os exercícios do bloco podem ter números de séries e unidades diferentes (prancha 2x25" com elevação pélvica 4x15).
+- **Decisão:** tabela `bloco_exercicio` (ficha e descanso de 0 a 600 s) e `treino_exercicio.bloco_id` nulo apontando para ela. As rodadas não são coluna: valem o maior número de séries entre os membros, e cada exercício participa até a sua última série. As regras (2 a 4 membros, sempre vizinhos na ficha, desfazer ao sobrar um, quem sai leva o descanso do bloco) ficam no domínio, em `RegrasBloco`; quem desfaz é sempre a aplicação, e o `ON DELETE SET NULL` é só a rede de segurança. Dentro do bloco, o descanso de cada membro é ignorado. Na sessão, cada série guarda o número do bloco na sessão e a posição nele (`serie_executada.bloco`, `posicao_no_bloco`), copiados ao gravar; o descanso do bloco vai só na última série feita de cada rodada.
+- **Alternativa recusada:** uma coluna `grupo` repetida em cada membro, com o descanso copiado em todos. O descanso ficaria duplicado e poderia divergir entre os membros.
+- **Consequência:** o descanso fica num lugar só; mexer na ficha depois não desmancha o histórico, porque o detalhe da sessão agrupa pelo que a série gravou; o histórico e o gráfico por exercício não mudam, porque cada série continua ligada ao próprio exercício. O treino ao vivo marca a rodada inteira e dispara um descanso só. O registro de uma vez (`TREINO_AO_VIVO` desligado) e o treino livre continuam por exercício.
+
 ## 7. Visão de contexto (C4 nível 1)
 
 ```mermaid
@@ -210,8 +217,9 @@ Regra de dependência: `Api → Application → Domain` e `Infrastructure → Ap
 | Identidade | Usuario, UsuarioPapel | Provisionar usuário no primeiro acesso, consultar perfil |
 | Vínculos | Vinculo | Convidar aluno, aceitar, encerrar |
 | Catálogo | Exercicio, Metrica, Membro, Musculo | Listar catálogo global + exercícios próprios com filtro por membro, criar exercício |
-| Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita | Montar e editar fichas; criar, renomear, duplicar, definir em uso e excluir plano (PBI-44) |
-| Execução | Sessao, SerieExecutada | Abrir sessão pré-preenchida, salvar sessão, editar sessão |
+| Planejamento | PlanoTreino, Treino, TreinoExercicio, EtapaPrescrita, RodadaMarcador, PlanoDiaSemana, BlocoExercicio | Montar e editar fichas; criar, renomear, duplicar, definir em uso e excluir plano (PBI-44); semana do plano (PBI-35); bloco conjugado (PBI-101, regras puras em `RegrasBloco`) |
+| Execução | Sessao, SerieExecutada | Abrir sessão pré-preenchida (com os blocos da ficha), salvar sessão (com o bloco de cada série, PBI-102), editar sessão |
+| Corpo | MedidaCorporal, dados corporais em Usuario | Medidas por dia, evolução, dados corporais e TMB calculada ou informada (E12) |
 | Progresso | (consultas) | Evolução por exercício, resumo do período, sessões do período |
 
 ### 9.3 Bibliotecas de referência
@@ -414,8 +422,8 @@ flowchart LR
 | Nível | Ferramenta | O que cobre |
 |---|---|---|
 | Unitário | xUnit | Regras de domínio, controle de acesso, cálculo de pré-preenchimento |
-| Integração | xUnit + Testcontainers + WebApplicationFactory | Endpoints com Postgres real e token falso assinado localmente |
-| E2E | `integration_test` (`flutter drive` + ChromeDriver) | Fluxo principal contra a stack real (Postgres + API + Auth Emulator): entrar, registrar treino, ver no progresso |
+| Integração | xUnit + Testcontainers + WebApplicationFactory | Endpoints com Postgres real e token falso assinado localmente. Sem Docker, a variável `TESTES_POSTGRES` aponta para um Postgres local e cada execução cria e apaga um banco próprio (PBI-100) |
+| E2E | `integration_test` (`flutter drive` + ChromeDriver) | Contra a stack real (Postgres + API + Auth Emulator), um drive por fluxo: entrar, registrar treino e ver no progresso (PBI-26); salvar os alvos e ver a ficha atualizada (PBI-100); treino ao vivo com bloco conjugado, com `TREINO_AO_VIVO` ligado (PBI-102) |
 | Front | flutter_test | Widgets críticos (formulário de série, filtro de período) |
 
 Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do nível adequado passando no CI, migration criada quando houver mudança de banco, este documento atualizado se alguma decisão mudou.
@@ -447,6 +455,10 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 | ~~Métrica do gráfico (maior carga ou volume)~~ | ~~Afeta consulta de progresso~~ | **Resolvido (PO, 14/10):** maior carga da sessão + reps daquela série; isometria = maior tempo. Implementado no PBI-20 |
 | Exercício só de repetições no gráfico: melhor série ou total da sessão | Muda a consulta de progresso | Implementada a **melhor série** (maior número de repetições da sessão, PBI-73). Decisão do PO pendente |
 | Exercício repetido em fichas e sessões antigas | Tela com item duplicado ao abrir dado antigo | A unicidade (PBI-74) vive na aplicação, sem constraint no banco. Dados anteriores podem ter repetição e continuam abrindo |
+| Ficha com o valor antigo depois de salvar os alvos (PBI-100) | Atleta vê "1 série" até reabrir a ficha | Não reproduzido em Chrome, widget e app inteiro. A API responde com `no-store`; falta conferir no Safari do iPhone. Se continuar, a próxima medida é reler a ficha à força ao voltar da tela de alvos |
+| Rotas de ficha sem a regra do autor | O atleta conseguiria editar exercícios e blocos da ficha do professor pela API (o app não oferece) | As rotas de plano checam o autor (403); as de ficha, de exercício e de bloco só checam o acesso (404). Registrado; alinhar quando o PO decidir |
+| Rascunho local do treino sem versão | Rascunho com formato inesperado é apagado sem aviso | Campos novos entram opcionais (PBI-102 manteve rascunhos antigos abrindo). Uma versão no JSON resolveria de vez |
+| E2E sensível a dado de execução anterior | Falha ao rodar de novo no mesmo banco | No CI o banco nasce limpo; o retry roda no mesmo banco. O fluxo do bloco cria exercícios próprios a cada execução para não herdar pré-preenchimento |
 
 ## 19. Evolução prevista
 
