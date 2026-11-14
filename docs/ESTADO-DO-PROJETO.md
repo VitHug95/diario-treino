@@ -78,8 +78,9 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - Ficha (tela 22): só edição. Adicionar vários exercícios de uma vez (seletor com
   filtro de músculo), reordenar, remover, alvos por exercício (séries, carga, faixa
   de repetições, descanso, tags de série).
-- **Bloco conjugado (PBI-101):** "Juntar com o de baixo" (ícone de elo) junta 2 a 4
-  exercícios num cartão só, "Conjugado · 4 rodadas · descanso 30 s", com um descanso
+- **Bloco conjugado (PBI-101):** "Juntar com…" (ícone de elo) abre a lista da ficha
+  para escolher com quais exercícios juntar (ou em qual bloco entrar); "Adicionar
+  exercício" no cabeçalho do bloco traz mais um. Junta 2 a 4 exercícios num cartão só, "Conjugado · 4 rodadas · descanso 30 s", com um descanso
   por rodada; "Descanso" e "Desfazer bloco" no cabeçalho; cada exercício tem "Mover
   para cima/baixo", "Tirar do bloco" e "Remover da ficha". O bloco se arrasta
   inteiro. Dentro do bloco, o editor de alvos não tem descanso. Vale para o
@@ -87,7 +88,8 @@ front). Incrementos 1 (atleta) e o épico do educador (E7) estão entregues.
 - **Bloco no treino ao vivo (PBI-102):** o bloco é um cartão só na tela 14 ("2 de 4
   rodadas") e abre a tela do bloco, rodada a rodada, com "RODADA FEITA", o check de
   cada série e um descanso só por rodada. O registro de uma vez mostra os exercícios
-  separados. O detalhe da sessão ainda não agrupa (PBI-103).
+  separados. O detalhe da sessão (também na visão do educador) mostra o bloco
+  agrupado rodada a rodada, com o descanso uma vez por rodada (PBI-103).
 - **Semana do plano (PBI-35):** seção Semana no plano define qual ficha cai em cada
   dia (no máximo 1 ficha por dia; opcional; semana fixa). Duplicar copia a semana;
   arquivar libera os dias. "Fez" = treinou no dia com qualquer ficha.
@@ -201,8 +203,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 552 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 140 unitários e 259 de integração), incluindo o fluxo de registro com o app inteiro,
+- **Front (widget):** 561 testes em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas; backend: 140 unitários e 260 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
