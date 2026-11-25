@@ -259,6 +259,7 @@ lib/
 | Login | firebase_auth |
 | Gráficos | fl_chart |
 | Tema | `ThemeMode` (sistema, claro, escuro) persistido com shared_preferences |
+| Treino em andamento | rascunho em shared_preferences (`treino_em_andamento`), JSON com `versao` e migração por versão (`migrarRascunhoTreino`) |
 | Escritas e atualização das telas | comandos por funcionalidade (`*_comandos.dart`) e mapa único de invalidação (`core/dados/invalidacao.dart`), PBI-70 |
 
 Organização por funcionalidade (feature-first): cada pasta de `features` tem suas telas, estado e chamadas, o que casa uma PBI com uma pasta.
@@ -463,7 +464,7 @@ Definition of Done mínima de uma PBI: critérios de aceite atendidos, testes do
 | Exercício repetido em fichas e sessões antigas | Tela com item duplicado ao abrir dado antigo | A unicidade (PBI-74) vive na aplicação, sem constraint no banco. Dados anteriores podem ter repetição e continuam abrindo |
 | Ficha com o valor antigo depois de salvar os alvos (PBI-100) | Atleta vê "1 série" até reabrir a ficha | Não reproduzido em Chrome, widget e app inteiro. A API responde com `no-store`; falta conferir no Safari do iPhone. Se continuar, a próxima medida é reler a ficha à força ao voltar da tela de alvos |
 | Rotas de ficha sem a regra do autor | O atleta conseguiria editar exercícios e blocos da ficha do professor pela API (o app não oferece) | As rotas de plano checam o autor (403); as de ficha, de exercício e de bloco só checam o acesso (404). Registrado; alinhar quando o PO decidir |
-| Rascunho local do treino sem versão | Rascunho com formato inesperado é apagado sem aviso | Campos novos entram opcionais (PBI-102 manteve rascunhos antigos abrindo). Uma versão no JSON resolveria de vez |
+| Formato do rascunho local do treino | Uma mudança no JSON faria um treino em andamento sumir | **Mitigado:** o JSON tem `versao` (hoje 1; sem o campo = 0, o formato até o #151) e `migrarRascunhoTreino` leva cada versão até a atual. Rascunho de versão mais nova do app não é apagado; texto que não abre vai para `treino_em_andamento_guardado` em vez de sumir. Campo novo opcional continua sem versão nova |
 | E2E sensível a dado de execução anterior | Falha ao rodar de novo no mesmo banco | No CI o banco nasce limpo; o retry roda no mesmo banco. O fluxo do bloco cria exercícios próprios a cada execução para não herdar pré-preenchimento |
 
 ## 19. Evolução prevista

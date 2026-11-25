@@ -45,7 +45,18 @@ class TreinoEmAndamento {
   DateTime get data => DateTime.parse(dataIso);
   DateTime get inicio => DateTime.fromMillisecondsSinceEpoch(inicioMillis);
 
+  /// Versão do formato gravado no aparelho. **Suba este número** quando mudar o
+  /// JSON de um jeito que o [TreinoEmAndamento.doJson] atual não lê (renomear,
+  /// remover ou mudar o tipo de um campo, ou campo novo obrigatório) e escreva
+  /// o passo em [migrarRascunhoTreino]. Campo novo opcional (com padrão na
+  /// leitura) não precisa de versão nova.
+  ///
+  /// 0 = rascunhos gravados antes do campo `versao` existir (até o #151): o
+  /// formato é o mesmo da 1, que só passou a gravar o número.
+  static const versaoAtual = 1;
+
   Map<String, dynamic> paraJson() => {
+        'versao': versaoAtual,
         'treinoId': treinoId,
         'treinoNome': treinoNome,
         'treinoLivre': treinoLivre,
@@ -222,22 +233,52 @@ class RascunhoTreinoService {
 
   static const _chave = 'treino_em_andamento';
 
+  /// Cópia do texto que não deu para ler (ou que veio de uma versão mais nova
+  /// do app), guardada antes de outro treino ocupar a chave principal: o treino
+  /// nunca some sem rastro, e uma versão do app que saiba ler pode recuperá-lo.
+  static const chaveGuardado = 'treino_em_andamento_guardado';
+
   TreinoEmAndamento? carregar() {
     final texto = _prefs.getString(_chave);
     if (texto == null || texto.isEmpty) return null;
+    final Map<String, dynamic> json;
     try {
-      final json = jsonDecode(texto) as Map<String, dynamic>;
-      return TreinoEmAndamento.doJson(json);
+      json = jsonDecode(texto) as Map<String, dynamic>;
     } catch (_) {
-      // Rascunho corrompido ou de uma versão antiga: descarta sem quebrar.
+      // Texto corrompido: não dá para ler nunca. Guarda e libera a chave.
+      _guardar(texto);
+      _prefs.remove(_chave);
+      return null;
+    }
+
+    final versao = (json['versao'] as num?)?.toInt() ?? 0;
+    if (versao > TreinoEmAndamento.versaoAtual) {
+      // Gravado por uma versão mais nova do app (ex.: outra aba já atualizada).
+      // Esta não sabe ler, mas também não apaga: a mais nova continua o treino.
+      return null;
+    }
+    try {
+      return TreinoEmAndamento.doJson(migrarRascunhoTreino(json, versao));
+    } catch (_) {
+      // Formato que nenhuma migração cobre: guarda o texto e libera a chave,
+      // para o app não travar num rascunho que não abre.
+      _guardar(texto);
       _prefs.remove(_chave);
       return null;
     }
   }
 
+  void _guardar(String texto) => _prefs.setString(chaveGuardado, texto);
+
   // O shared_preferences atualiza a cópia em memória na hora; o aviso pode
   // sair antes de o disco terminar.
   Future<void> salvar(TreinoEmAndamento treino) {
+    // Um rascunho de versão mais nova ainda na chave seria sobrescrito: guarda
+    // antes (só acontece se o atleta começar outro treino na versão antiga).
+    final atual = _prefs.getString(_chave);
+    if (atual != null && _versaoDe(atual) > TreinoEmAndamento.versaoAtual) {
+      _guardar(atual);
+    }
     final gravacao = _prefs.setString(_chave, jsonEncode(treino.paraJson()));
     _aoMudar?.call();
     return gravacao;
@@ -248,6 +289,34 @@ class RascunhoTreinoService {
     _aoMudar?.call();
     return remocao;
   }
+}
+
+int _versaoDe(String texto) {
+  try {
+    final json = jsonDecode(texto);
+    return json is Map<String, dynamic> ? (json['versao'] as num?)?.toInt() ?? 0 : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/// Leva o JSON gravado na [versao] até a [TreinoEmAndamento.versaoAtual], um
+/// passo por versão. Cada passo recebe o mapa da versão anterior e devolve o da
+/// seguinte; o resultado é lido por [TreinoEmAndamento.doJson].
+///
+/// Para mudar o formato: suba `versaoAtual` para N, acrescente o `case` N − 1
+/// aqui e um teste com um rascunho real da versão N − 1 em
+/// `test/treino_em_andamento_test.dart`.
+Map<String, dynamic> migrarRascunhoTreino(Map<String, dynamic> json, int versao) {
+  var atual = Map<String, dynamic>.of(json);
+  for (var v = versao; v < TreinoEmAndamento.versaoAtual; v++) {
+    atual = switch (v) {
+      // 0 → 1: o formato é o mesmo; só passou a gravar `versao`.
+      0 => atual,
+      _ => throw StateError('Sem migração do rascunho da versão $v'),
+    };
+  }
+  return atual;
 }
 
 /// Converte o estado vivo da tela ([ExercicioEdicao]) para o rascunho e de volta.

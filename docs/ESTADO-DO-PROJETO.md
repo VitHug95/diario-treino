@@ -150,7 +150,11 @@ Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
   `arquitetura_invalidacao_test.dart` falha se a regra for quebrada.
 - **Treino em andamento:** `treinoEmAndamentoProvider` deriva do treino ao vivo e,
   sem ele, do rascunho do aparelho (que avança `versaoRascunhoTreinoProvider` ao
-  gravar). O rascunho é gravado já ao iniciar.
+  gravar). O rascunho é gravado já ao iniciar. O JSON tem `versao`
+  (`TreinoEmAndamento.versaoAtual`, hoje 1): mudar o formato de um jeito que a
+  leitura atual não entende pede subir a versão e escrever o passo em
+  `migrarRascunhoTreino`. Rascunho de versão mais nova não é apagado, e o que
+  não abre fica guardado em `treino_em_andamento_guardado`.
 - **Criar plano:** `criarPlanoEAbrir` (`planos/acoes_plano.dart`), chamado de todos
   os pontos de entrada.
 - **"Manter na ficha?":** `perguntarManterNaFicha` (`sessao/manter_na_ficha.dart`),
@@ -210,7 +214,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 599 testes em `app/test/` (rodam no `flutter test`,
+- **Front (widget):** 605 testes em `app/test/` (rodam no `flutter test`,
   headless, com as bordas fakeadas; backend: 142 unitários e 281 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
@@ -369,12 +373,12 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Técnico (sem bloqueio)**
 8. Aplicar a regra do autor (403) nas rotas de ficha, exercício e bloco, se o PO
    confirmar que a regra do plano vale para elas.
-9. Versão no JSON do rascunho local do treino, para mudanças de formato não
-   apagarem um treino em andamento.
-10. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
-    retry do CI roda no mesmo banco).
-11. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
+9. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
+   retry do CI roda no mesmo banco).
+10. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
     depois de ver se há dado acima de 600 em produção.
+11. Selo "Privado" / "Compartilhado" na tela de evolução da medida (tela 26),
+    que o desenho da PBI-96 pedia e ficou de fora.
 
 **Depois**
 12. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.
