@@ -5,8 +5,8 @@ que falta. O detalhe de cada entrega, PR por PR, está em
 [HISTORICO-DE-ALTERACOES.md](HISTORICO-DE-ALTERACOES.md); o contrato da API, no
 [MAS](MAS.md) (seção 12); as PBIs, no [BACKLOG](BACKLOG.md).
 
-Data do levantamento: 14/11/2026, com o PR das PBIs 95 e 96 (compartilhar o
-corpo com o educador) depois do #148. Incrementos 1 (atleta), o épico do educador
+Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
+#151 (o educador encerra o vínculo). Incrementos 1 (atleta), o épico do educador
 (E7), o E12 (corpo e medidas) e o E13 (exercícios conjugados) estão entregues.
 
 ---
@@ -251,11 +251,11 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   publicação na Google Play (E10).
 
 ### Entregue recentemente (PR)
-- **E12 — compartilhar o corpo com o educador:** PBIs 95 e 96 (PR
-  das PBIs 95 e 96). A PBI-99 foi descartada pelo PO.
+- **E12 — compartilhar o corpo com o educador:** PBIs 95 e 96 (#150). A PBI-99
+  foi descartada pelo PO.
 - **PBI-104 — Meus educadores:** o atleta vê quem o acompanha e encerra o
-  vínculo (`GET /educadores`), e o educador encerra em "Meus alunos"; a tela de compartilhamento passou a usar a mesma
-  leitura (PR da PBI-104, depois do das PBIs 95 e 96).
+  vínculo (`GET /educadores`, #150); a tela de compartilhamento usa a mesma
+  leitura. O educador encerra em "Meus alunos" (#151).
 - **E13 — exercícios conjugados:** PBI-101 bloco na ficha (#144), PBI-102 treino
   ao vivo com bloco (#145), PBI-103 bloco no detalhe da sessão (#146) e o ajuste
   "Juntar com…" para escolher os exercícios do bloco (#147).
@@ -346,9 +346,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 ## 9. Ponto de retomada
 
 Incremento 1 (atleta), E7 (educador), E12 até a PBI-98 e E13 (exercícios
-conjugados) estão na `main` (último PR: #149); as PBIs 95 e 96 (compartilhar o
-corpo, fecha o E12) e a PBI-104 (Meus educadores) estão em dois PRs, nessa
-ordem de merge. Próximos passos:
+conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
+(Meus educadores) no #150. O encerrar pelo educador está no #151. Próximos passos:
 
 **Com o PO (conferir o que foi entregue)**
 1. **E13:** o PO usar o bloco na ficha real dele (montar, treinar ao vivo, ver o
