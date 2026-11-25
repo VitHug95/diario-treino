@@ -1,4 +1,6 @@
 import 'package:diario_treino/core/rotas/app_router.dart';
+import 'package:diario_treino/features/educador/aluno_detalhe_screen.dart';
+import 'package:diario_treino/features/educador/alunos_screen.dart';
 import 'package:diario_treino/features/educador/convites_screen.dart';
 import 'package:diario_treino/features/educador/educador_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
@@ -11,7 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-/// PBI-104: "Meus educadores" (quem acompanha o atleta) e encerrar o vínculo.
+/// PBI-104: "Meus educadores" (quem acompanha o atleta) e encerrar o vínculo,
+/// pelo atleta e pelo educador ("Meus alunos").
 
 /// "Servidor" dos vínculos em memória: convites pendentes e vínculos ativos.
 class _RepoVinculos extends EducadorRepository {
@@ -239,4 +242,123 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  // ---- O educador encerra pelo "Meus alunos" ----
+
+  group('educador encerra em Meus alunos', () {
+    for (final escuro in [false, true]) {
+      testWidgets('360 px e fonte 1,3x (${escuro ? 'escuro' : 'claro'})', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _abrirAlunos(tester, _RepoAlunos(), escuro: escuro, largura: 360);
+        expect(find.text('Encerrar'), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('confirmar tira o aluno da lista e avisa', (tester) async {
+      final repo = _RepoAlunos();
+      await _abrirAlunos(tester, repo);
+
+      await tester.tap(find.text('Encerrar').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Encerrar acompanhamento?'), findsOneWidget);
+      expect(find.textContaining('Você deixa de ver os treinos e a evolução de João agora.'),
+          findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Encerrar'));
+      await tester.pumpAndSettle();
+
+      expect(repo.encerrados, ['v1']);
+      expect(find.text('Acompanhamento encerrado'), findsOneWidget);
+      expect(find.text('João'), findsNothing);
+      expect(find.text('Maria'), findsOneWidget);
+    });
+
+    testWidgets('cancelar não encerra', (tester) async {
+      final repo = _RepoAlunos();
+      await _abrirAlunos(tester, repo);
+
+      await tester.tap(find.text('Encerrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(repo.encerrados, isEmpty);
+      expect(find.text('João'), findsOneWidget);
+    });
+
+    testWidgets('409: o aluno já encerrou', (tester) async {
+      await _abrirAlunos(tester, _RepoAlunos(encerrarDa409: true));
+
+      await tester.tap(find.text('Encerrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Encerrar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Este vínculo já não está ativo'), findsOneWidget);
+      expect(find.text('João'), findsNothing);
+    });
+
+    testWidgets('o cartão continua abrindo o aluno; rótulos falados separados', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirAlunos(tester, _RepoAlunos());
+
+      expect(find.bySemanticsLabel('Abrir aluno João'), findsOneWidget);
+      expect(find.bySemanticsLabel('Encerrar acompanhamento de João'), findsOneWidget);
+
+      await tester.tap(find.text('João'));
+      await tester.pumpAndSettle();
+      expect(find.text('detalhe de João'), findsOneWidget);
+      semantica.dispose();
+    });
+  });
+}
+
+/// "Servidor" dos alunos do educador.
+class _RepoAlunos extends EducadorRepository {
+  _RepoAlunos({this.encerrarDa409 = false}) : super(Dio());
+
+  final bool encerrarDa409;
+  final encerrados = <String>[];
+  final alunos = [
+    const AlunoVinculado(vinculoId: 'v1', alunoId: 'a1', alunoNome: 'João', alunoEmail: 'joao@x.dev'),
+    const AlunoVinculado(vinculoId: 'v2', alunoId: 'a2', alunoNome: 'Maria', alunoEmail: 'maria@x.dev'),
+  ];
+
+  @override
+  Future<List<AlunoVinculado>> listarAlunos() async => List.of(alunos);
+
+  @override
+  Future<void> encerrar(String vinculoId) async {
+    alunos.removeWhere((a) => a.vinculoId == vinculoId);
+    if (encerrarDa409) throw const EducadorException('Este vínculo já não está ativo');
+    encerrados.add(vinculoId);
+  }
+}
+
+Future<void> _abrirAlunos(WidgetTester tester, _RepoAlunos repo,
+    {bool escuro = false, double largura = 400}) async {
+  tester.view.physicalSize = Size(largura, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final router = GoRouter(
+    initialLocation: Rotas.alunos,
+    routes: [
+      GoRoute(path: Rotas.alunos, builder: (_, __) => const AlunosScreen()),
+      GoRoute(
+        path: Rotas.alunoDetalhe,
+        builder: (_, s) => Scaffold(body: Text('detalhe de ${(s.extra! as AlunoDetalheArgs).alunoNome}')),
+      ),
+    ],
+  );
+  await tester.pumpWidget(ProviderScope(
+    overrides: [educadorRepositoryProvider.overrideWithValue(repo)],
+    child: MaterialApp.router(
+      theme: AppTheme.claro,
+      darkTheme: AppTheme.escuro,
+      themeMode: escuro ? ThemeMode.dark : ThemeMode.light,
+      routerConfig: router,
+    ),
+  ));
+  await tester.pumpAndSettle();
 }
