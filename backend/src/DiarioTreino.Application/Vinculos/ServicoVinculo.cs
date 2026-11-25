@@ -176,6 +176,24 @@ public sealed class ServicoVinculo
     }
 
     /// <summary>
+    /// Educadores com vínculo ATIVO em que o usuário logado é o aluno
+    /// (<c>GET /educadores</c>, PBI-104), do vínculo mais recente ao mais antigo.
+    /// Educador removido do sistema é ignorado, como nos convites.
+    /// </summary>
+    public async Task<List<EducadorVinculado>> ListarEducadoresAtivosAsync(Guid alunoId, CancellationToken ct)
+    {
+        var ativos = await _vinculos.ListarAtivosDoAlunoAsync(alunoId, ct);
+        var lista = new List<EducadorVinculado>(ativos.Count);
+        foreach (var v in ativos.OrderByDescending(v => v.Inicio))
+        {
+            var educador = await _usuarios.ObterPorIdAsync(v.EducadorId, ct);
+            if (educador is null) continue;
+            lista.Add(new EducadorVinculado(v.Id, educador.Id, educador.Nome, educador.Email, v.Inicio));
+        }
+        return lista;
+    }
+
+    /// <summary>
     /// Carrega o vínculo garantindo que o usuário logado é o ALUNO dele; caso
     /// contrário (vínculo de outro, ou inexistente) responde 404.
     /// </summary>

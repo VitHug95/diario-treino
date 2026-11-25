@@ -15,20 +15,17 @@ namespace DiarioTreino.Application.Corpo;
 public sealed class ServicoCompartilhamentoCorporal
 {
     private readonly IRepositorioUsuario _usuarios;
-    private readonly IRepositorioVinculo _vinculos;
     private readonly IControleAcesso _acesso;
     private readonly ServicoPerfilCorporal _perfilCorporal;
     private readonly ServicoMedidas _medidas;
 
     public ServicoCompartilhamentoCorporal(
         IRepositorioUsuario usuarios,
-        IRepositorioVinculo vinculos,
         IControleAcesso acesso,
         ServicoPerfilCorporal perfilCorporal,
         ServicoMedidas medidas)
     {
         _usuarios = usuarios;
-        _vinculos = vinculos;
         _acesso = acesso;
         _perfilCorporal = perfilCorporal;
         _medidas = medidas;
@@ -40,7 +37,7 @@ public sealed class ServicoCompartilhamentoCorporal
     {
         var usuario = await _usuarios.ObterPorIdAsync(usuarioId, ct)
             ?? throw new RecursoNaoEncontradoException();
-        return await MontarAsync(usuario, ct);
+        return Montar(usuario);
     }
 
     /// <summary>
@@ -65,29 +62,16 @@ public sealed class ServicoCompartilhamentoCorporal
             : null;
 
         await _usuarios.SalvarAsync(ct);
-        return await MontarAsync(usuario, ct);
+        return Montar(usuario);
     }
 
-    private async Task<CompartilhamentoCorporalResposta> MontarAsync(
-        Domain.Identidade.Usuario usuario, CancellationToken ct)
-    {
-        var educadores = new List<EducadorQueVe>();
-        foreach (var vinculo in await _vinculos.ListarAtivosDoAlunoAsync(usuario.Id, ct))
-        {
-            var educador = await _usuarios.ObterPorIdAsync(vinculo.EducadorId, ct);
-            if (educador is not null)
-            {
-                educadores.Add(new EducadorQueVe(educador.Id, educador.Nome));
-            }
-        }
-
-        return new CompartilhamentoCorporalResposta(
+    // Quem vê não vem aqui: é o GET /educadores (PBI-104), uma leitura só.
+    private static CompartilhamentoCorporalResposta Montar(Domain.Identidade.Usuario usuario) =>
+        new(
             usuario.DadosCorporaisCompartilhadosEm is not null,
             usuario.DadosCorporaisCompartilhadosEm,
             usuario.MedidasCompartilhadasEm is not null,
-            usuario.MedidasCompartilhadasEm,
-            educadores.OrderBy(e => e.Nome, StringComparer.CurrentCultureIgnoreCase).ToList());
-    }
+            usuario.MedidasCompartilhadasEm);
 
     // ---- O educador (/alunos/{atletaId}) ----
 

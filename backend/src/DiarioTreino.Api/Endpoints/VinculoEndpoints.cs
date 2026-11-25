@@ -150,6 +150,21 @@ public static class VinculoEndpoints
         })
         .WithName("ListarAlunos").WithTags("Vínculos").WithSummary("Alunos com vínculo ativo");
 
+        // Educadores com vínculo ativo do aluno logado (PBI-104, espelha /alunos).
+        grupo.MapGet("/educadores", async (
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoVinculo vinculos,
+            CancellationToken ct) =>
+        {
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            var educadores = await vinculos.ListarEducadoresAtivosAsync(perfil.Id, ct);
+            return Results.Ok(educadores);
+        })
+        .WithName("ListarEducadores").WithTags("Vínculos").WithSummary("Educadores com vínculo ativo do aluno");
+
         return app;
     }
 

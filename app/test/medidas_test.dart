@@ -98,6 +98,7 @@ Future<ProviderScope> _escopo(_RepoFake repo, Widget filho) async {
       perfilProvider.overrideWith((ref) async => const Perfil(
           id: 'u1', nome: 'Vitor', email: 'v@teste.local', papeis: ['ATLETA'])),
       convitesPendentesProvider.overrideWith((ref) async => []),
+      educadoresDoAlunoProvider.overrideWith((ref) async => []),
       // O Perfil também lê os dados corporais; aqui, sem eles.
       perfilCorporalProvider.overrideWith((ref) async => const PerfilCorporal()),
     ],
@@ -212,6 +213,8 @@ void main() {
 
   testWidgets('Perfil mostra o bloco Corpo sem campos e "Nenhuma medida ainda"',
       (tester) async {
+    // A seção EDUCADOR ganhou "Meus educadores" (PBI-104): tela alta.
+    _telaDeCelular(tester);
     await tester.pumpWidget(
         await _escopo(_RepoFake(), MaterialApp(theme: AppTheme.claro, home: const PerfilScreen())));
     await tester.pumpAndSettle();
@@ -223,6 +226,7 @@ void main() {
   });
 
   testWidgets('Perfil resume a última medição', (tester) async {
+    _telaDeCelular(tester);
     final repo = _RepoFake()..dias[_dia] = {TipoMedida.cintura: 84.0};
     await tester.pumpWidget(
         await _escopo(repo, MaterialApp(theme: AppTheme.claro, home: const PerfilScreen())));
@@ -232,6 +236,7 @@ void main() {
   });
 
   testWidgets('Linha do Perfil fala o resumo, não só o título', (tester) async {
+    _telaDeCelular(tester);
     final handle = tester.ensureSemantics();
     final repo = _RepoFake()..dias[_dia] = {TipoMedida.cintura: 84.0};
     await tester.pumpWidget(

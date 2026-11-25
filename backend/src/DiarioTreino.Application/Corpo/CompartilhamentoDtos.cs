@@ -3,17 +3,14 @@ namespace DiarioTreino.Application.Corpo;
 /// <summary>
 /// O que o atleta compartilha com os educadores de vínculo ativo (PBI-95,
 /// <c>GET /me/compartilhamento-corporal</c>). Dois cadeados independentes,
-/// trancados por padrão; <see cref="Educadores"/> diz quem vê hoje.
+/// trancados por padrão. Quem vê (os educadores com vínculo ativo) vem de
+/// <c>GET /educadores</c> (PBI-104).
 /// </summary>
 public sealed record CompartilhamentoCorporalResposta(
     bool DadosCorporais,
     DateTimeOffset? DadosCorporaisDesde,
     bool Medidas,
-    DateTimeOffset? MedidasDesde,
-    IReadOnlyList<EducadorQueVe> Educadores);
-
-/// <summary>Educador com vínculo ativo: quem vê o que estiver destrancado.</summary>
-public sealed record EducadorQueVe(Guid EducadorId, string Nome);
+    DateTimeOffset? MedidasDesde);
 
 /// <summary>Corpo de <c>PUT /me/compartilhamento-corporal</c>: os dois cadeados, sempre os dois.</summary>
 public sealed record DefinirCompartilhamentoRequest(bool? DadosCorporais, bool? Medidas);

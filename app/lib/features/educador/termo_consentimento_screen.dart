@@ -36,7 +36,8 @@ class TermoConsentimentoScreen extends StatelessWidget {
                     'registrados e sua evolução enquanto o vínculo estiver '
                     'ativo. Observações marcadas como privadas não são '
                     'compartilhadas. Você pode encerrar o acompanhamento quando '
-                    'quiser, e o acesso é removido na hora — seus dados '
+                    'quiser, em Perfil, Meus educadores, e o acesso é removido '
+                    'na hora — seus dados '
                     'continuam com você.',
                     style: AppText.body.copyWith(color: cores.textStrong),
                   ),

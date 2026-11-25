@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/rede/cliente_http.dart';
 
-/// Os dois cadeados do corpo e quem vê (E12 / PBI-95 e 96). Destrancado, todo
+/// Os dois cadeados do corpo (E12 / PBI-95 e 96); quem vê vem de
+/// educadoresDoAlunoProvider (PBI-104). Destrancado, todo
 /// educador com vínculo ativo vê, só leitura; trancado é o padrão.
 class CompartilhamentoCorporal {
   const CompartilhamentoCorporal({
     required this.dadosCorporais,
     required this.medidas,
-    required this.educadores,
   });
 
   /// Sexo, idade, altura, peso e TMB liberados.
@@ -18,8 +18,6 @@ class CompartilhamentoCorporal {
   /// Medidas corporais (e a evolução delas) liberadas.
   final bool medidas;
 
-  /// Nomes dos educadores com vínculo ativo: quem vê o que estiver liberado.
-  final List<String> educadores;
 
   bool get algumLiberado => dadosCorporais || medidas;
 
@@ -27,10 +25,6 @@ class CompartilhamentoCorporal {
       CompartilhamentoCorporal(
         dadosCorporais: json['dadosCorporais'] as bool? ?? false,
         medidas: json['medidas'] as bool? ?? false,
-        educadores: [
-          for (final e in (json['educadores'] as List<dynamic>? ?? const []))
-            (e as Map<String, dynamic>)['nome'] as String,
-        ],
       );
 }
 

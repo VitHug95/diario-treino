@@ -12,6 +12,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../educador/dialogo_convidar_aluno.dart';
 import '../educador/educador_comandos.dart';
+import '../educador/educador_models.dart';
 import '../educador/educador_repository.dart';
 import '../medidas/compartilhamento_repository.dart';
 import '../medidas/compartilhar_corpo_screen.dart';
@@ -363,6 +364,11 @@ class _SecaoEducador extends ConsumerWidget {
       data: (lista) => lista.length,
       orElse: () => 0,
     );
+    final subtituloMeusEducadores = ref.watch(educadoresDoAlunoProvider).when(
+          loading: () => 'Carregando…',
+          error: (_, __) => 'Toque para ver quem acompanha você',
+          data: resumoMeusEducadores,
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,6 +398,15 @@ class _SecaoEducador extends ConsumerWidget {
             aoTocar: () => _convidar(context, ref),
           ),
         ],
+        const SizedBox(height: AppSpacing.x8),
+        // Qualquer um pode ser acompanhado (PBI-104).
+        _LinhaAcao(
+          icone: LucideIcons.shieldCheck,
+          titulo: 'Meus educadores',
+          subtitulo: subtituloMeusEducadores,
+          rotuloFalado: 'Meus educadores. $subtituloMeusEducadores',
+          aoTocar: () => context.push(Rotas.meusEducadores),
+        ),
         const SizedBox(height: AppSpacing.x8),
         _LinhaAcao(
           icone: LucideIcons.mail,

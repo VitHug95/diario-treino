@@ -25,10 +25,9 @@ public sealed class CompartilhamentoCorporalEndpointTests
     private const string RotaMe = "/api/v1/me/compartilhamento-corporal";
 
     private sealed record CriadoResposta(Guid Id);
-    private sealed record EducadorResp(Guid EducadorId, string Nome);
     private sealed record CompartilhamentoResp(
         bool DadosCorporais, DateTimeOffset? DadosCorporaisDesde,
-        bool Medidas, DateTimeOffset? MedidasDesde, List<EducadorResp> Educadores);
+        bool Medidas, DateTimeOffset? MedidasDesde);
     private sealed record PerfilResp(string? Sexo, short? AlturaCm, decimal? PesoKg, int? TmbKcal, bool TmbManual);
     private sealed record UltimaResp(string Tipo, decimal Valor);
     private sealed record ResumoResp(List<UltimaResp> Ultimas);
@@ -111,7 +110,7 @@ public sealed class CompartilhamentoCorporalEndpointTests
     // ---- O atleta ----
 
     [Fact]
-    public async Task Comeca_tudo_trancado_e_sem_educador()
+    public async Task Comeca_tudo_trancado()
     {
         var u = NovoUsuario(_postgres);
         await using var _a = u.Api;
@@ -120,7 +119,6 @@ public sealed class CompartilhamentoCorporalEndpointTests
         Assert.False(c!.DadosCorporais);
         Assert.False(c.Medidas);
         Assert.Null(c.DadosCorporaisDesde);
-        Assert.Empty(c.Educadores);
     }
 
     [Fact]
@@ -163,24 +161,6 @@ public sealed class CompartilhamentoCorporalEndpointTests
         var c = await u.Client.GetFromJsonAsync<CompartilhamentoResp>(RotaMe);
         Assert.True(c!.DadosCorporais);
         Assert.True(c.Medidas);
-    }
-
-    [Fact]
-    public async Task Lista_quem_ve_so_os_educadores_com_vinculo_ativo()
-    {
-        var (ativo, aluno, _) = await Par("ATIVO");
-        await using var _e = ativo.Api;
-        await using var _a = aluno.Api;
-        // Um segundo educador, só com convite pendente: não vê.
-        var pendente = NovoUsuario(_postgres, "Prof. Bia");
-        await using var _p = pendente.Api;
-        await Provisionar(pendente);
-        (await pendente.Client.PostAsync("/api/v1/me/papeis/educador", null)).EnsureSuccessStatusCode();
-        await pendente.Client.PostAsJsonAsync("/api/v1/vinculos", new { email = aluno.Email });
-
-        var c = await aluno.Client.GetFromJsonAsync<CompartilhamentoResp>(RotaMe);
-        var quem = Assert.Single(c!.Educadores);
-        Assert.Equal("Prof. Ana", quem.Nome);
     }
 
     [Fact]

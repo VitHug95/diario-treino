@@ -134,6 +134,9 @@ corpo com o educador) depois do #148. Incrementos 1 (atleta), o épico do educad
   PDF na tela do aluno.
 - Privacidade (PBI-87): observação privada do atleta e termo de consentimento
   (texto provisório). Ao sair de ATIVO, o educador perde o acesso sem apagar dados.
+- Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
+  (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
+  confirmação. O encerrar pelo lado do educador ainda não tem tela.
 
 ---
 
@@ -207,8 +210,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 581 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 140 unitários e 276 de integração), incluindo o fluxo de registro com o app inteiro,
+- **Front (widget):** 593 testes em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas; backend: 142 unitários e 281 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
@@ -248,8 +251,11 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   publicação na Google Play (E10).
 
 ### Entregue recentemente (PR)
-- **E12 — compartilhar o corpo com o educador:** PBIs 95 e 96 (PR desta
-  entrega). A PBI-99 foi descartada pelo PO.
+- **E12 — compartilhar o corpo com o educador:** PBIs 95 e 96 (PR
+  das PBIs 95 e 96). A PBI-99 foi descartada pelo PO.
+- **PBI-104 — Meus educadores:** o atleta vê quem o acompanha e encerra o
+  vínculo (`GET /educadores`); a tela de compartilhamento passou a usar a mesma
+  leitura (PR da PBI-104, depois do das PBIs 95 e 96).
 - **E13 — exercícios conjugados:** PBI-101 bloco na ficha (#144), PBI-102 treino
   ao vivo com bloco (#145), PBI-103 bloco no detalhe da sessão (#146) e o ajuste
   "Juntar com…" para escolher os exercícios do bloco (#147).
@@ -324,7 +330,9 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
   modo educador.
 - **Educador e CREF:** proposta de verificação do educador conversada, ainda sem
-  PBI registrada.
+  PBI registrada (se abrir, é a PBI-105).
+- **PBI-104:** o educador também deve poder encerrar pelo "Meus alunos"? O back
+  já aceita; falta a tela.
 - **Ficha do professor:** a API não aplica o 403 nas rotas de ficha, exercício e
   bloco (o app esconde as ações). Alinhar com a regra do plano?
 
@@ -339,8 +347,9 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 ## 9. Ponto de retomada
 
 Incremento 1 (atleta), E7 (educador), E12 até a PBI-98 e E13 (exercícios
-conjugados) estão na `main` (último PR: #148); as PBIs 95 e 96 (compartilhar o
-corpo, fecha o E12) estão no PR desta entrega. Próximos passos:
+conjugados) estão na `main` (último PR: #149); as PBIs 95 e 96 (compartilhar o
+corpo, fecha o E12) e a PBI-104 (Meus educadores) estão em dois PRs, nessa
+ordem de merge. Próximos passos:
 
 **Com o PO (conferir o que foi entregue)**
 1. **E13:** o PO usar o bloco na ficha real dele (montar, treinar ao vivo, ver o
@@ -352,6 +361,7 @@ corpo, fecha o E12) estão no PR desta entrega. Próximos passos:
 4. **E12 · PBIs 95 e 96:** confirmar as respostas assumidas para as perguntas 1
    e 2 (todos os educadores com vínculo ativo; dois cadeados) e conferir as telas
    "Compartilhar com o educador" e "Corpo" do aluno nos dois temas.
+   Conferir também "Meus educadores" (PBI-104) com o vínculo real do PO.
 
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.

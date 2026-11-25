@@ -79,8 +79,9 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         ..invalidate(perfilProvider)
         ..invalidate(convitesPendentesProvider)
         ..invalidate(alunosProvider)
-        // Quem vê o corpo depende dos vínculos ativos (PBI-96).
-        ..invalidate(compartilhamentoCorporalProvider)
+        // "Meus educadores" e o "Quem vê" do corpo (PBI-104 e 96).
+        ..invalidate(educadoresDoAlunoProvider)
+        // O educador que perdeu o vínculo não vê mais o corpo do aluno.
         ..invalidate(corpoDoAlunoProvider)
         ..invalidate(evolucaoMedidaDoAlunoProvider);
     case Mudanca.medidas:

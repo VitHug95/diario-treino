@@ -13,6 +13,7 @@ import '../../features/educador/aluno_plano_detalhe_screen.dart';
 import '../../features/educador/aluno_planos_screen.dart';
 import '../../features/educador/alunos_screen.dart';
 import '../../features/educador/convites_screen.dart';
+import '../../features/educador/meus_educadores_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
@@ -80,6 +81,8 @@ abstract final class Rotas {
   static const alunoPlanos = '/perfil/alunos/aluno/planos';
   static const alunoPlanoDetalhe = '/perfil/alunos/aluno/planos/plano';
   static const convites = '/perfil/convites';
+  /// "Meus educadores" (PBI-104): quem acompanha o atleta e encerrar.
+  static const meusEducadores = '/perfil/educadores';
 
   /// Corpo do aluno (PBI-96), só leitura; extra: AlunoDetalheArgs.
   static const alunoCorpo = '/perfil/alunos/aluno/corpo';
@@ -313,6 +316,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'convites',
                         name: 'convites',
                         builder: (context, state) => const ConvitesScreen(),
+                      ),
+                      // Meus educadores (PBI-104).
+                      GoRoute(
+                        path: 'educadores',
+                        name: 'meusEducadores',
+                        builder: (context, state) =>
+                            const MeusEducadoresScreen(),
                       ),
                       // Compartilhar o corpo com o educador (PBI-96).
                       GoRoute(

@@ -10,6 +10,7 @@ import '../../shared/mostrar_aviso.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import '../educador/educador_repository.dart';
 import 'compartilhamento_comandos.dart';
 import 'compartilhamento_repository.dart';
 
@@ -78,10 +79,12 @@ class _ConteudoState extends ConsumerState<_Conteudo> {
   }
 
   Future<bool> _confirmar(String parte) async {
-    final c = widget.atual;
-    final quem = c.educadores.isEmpty
+    final educadores = [
+      for (final e in ref.read(educadoresDoAlunoProvider).value ?? const []) e.educadorNome,
+    ];
+    final quem = educadores.isEmpty
         ? 'Hoje você não tem educador com vínculo ativo; quando tiver, ele passa a ver.'
-        : 'Hoje quem vê: ${c.educadores.join(', ')}.';
+        : 'Hoje quem vê: ${educadores.join(', ')}.';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -97,10 +100,18 @@ class _ConteudoState extends ConsumerState<_Conteudo> {
     return ok ?? false;
   }
 
+  /// Quem vê: os educadores com vínculo ativo, da mesma leitura de "Meus
+  /// educadores" (GET /educadores, PBI-104).
+  List<String> _educadores() => [
+        for (final e in ref.watch(educadoresDoAlunoProvider).value ?? const [])
+          e.educadorNome,
+      ];
+
   @override
   Widget build(BuildContext context) {
     final cores = AppColors.of(context);
     final c = widget.atual;
+    final educadores = _educadores();
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.margemTela),
       children: [
@@ -143,14 +154,14 @@ class _ConteudoState extends ConsumerState<_Conteudo> {
         const SizedBox(height: AppSpacing.x24),
         Text('QUEM VÊ', style: AppText.overline.copyWith(color: cores.textSecondary)),
         const SizedBox(height: AppSpacing.x8),
-        if (c.educadores.isEmpty)
+        if (educadores.isEmpty)
           Text(
             'Você não tem educador com vínculo ativo. Ninguém vê, mesmo o que estiver '
             'compartilhado.',
             style: AppText.body,
           )
         else ...[
-          for (final nome in c.educadores)
+          for (final nome in educadores)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.x6),
               child: Row(

@@ -2,6 +2,8 @@ import 'package:diario_treino/core/localizacao/material_pt.dart';
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/features/educador/aluno_corpo_screen.dart';
 import 'package:diario_treino/features/educador/corpo_do_aluno.dart';
+import 'package:diario_treino/features/educador/educador_models.dart';
+import 'package:diario_treino/features/educador/educador_repository.dart';
 import 'package:diario_treino/features/medidas/compartilhamento_repository.dart';
 import 'package:diario_treino/features/medidas/compartilhar_corpo_screen.dart';
 import 'package:diario_treino/features/medidas/medida_evolucao_screen.dart';
@@ -11,6 +13,7 @@ import 'package:diario_treino/theme/app_theme.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,7 +30,7 @@ class _RepoCadeados extends CompartilhamentoRepository {
   final chamadas = <String>[];
 
   CompartilhamentoCorporal get _atual =>
-      CompartilhamentoCorporal(dadosCorporais: dados, medidas: medidas, educadores: educadores);
+      CompartilhamentoCorporal(dadosCorporais: dados, medidas: medidas);
 
   @override
   Future<CompartilhamentoCorporal> obter() async => _atual;
@@ -85,6 +88,12 @@ final _medidas = ResumoMedidas(
   historico: [DiaHistoricoMedidas(data: DateTime(2026, 11, 5), quantidade: 1)],
 );
 
+/// Quem vê vem de GET /educadores (PBI-104).
+Override _quemVe(List<String> nomes) => educadoresDoAlunoProvider.overrideWith((ref) async => [
+      for (final (i, n) in nomes.indexed)
+        EducadorVinculado(vinculoId: 'v$i', educadorId: 'e$i', educadorNome: n, educadorEmail: 'e$i@x.dev'),
+    ]);
+
 void _tela(WidgetTester tester, {double largura = 400}) {
   tester.view.physicalSize = Size(largura, 2400);
   tester.view.devicePixelRatio = 1;
@@ -94,7 +103,10 @@ void _tela(WidgetTester tester, {double largura = 400}) {
 Future<void> _abrirCompartilhar(WidgetTester tester, _RepoCadeados repo) async {
   _tela(tester);
   await tester.pumpWidget(ProviderScope(
-    overrides: [compartilhamentoRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      compartilhamentoRepositoryProvider.overrideWithValue(repo),
+      _quemVe(repo.educadores),
+    ],
     child: MaterialApp(
       theme: AppTheme.claro,
       localizationsDelegates: LocalizacoesPt.delegates,
@@ -216,7 +228,7 @@ void main() {
 
   test('resumo para o Perfil', () {
     CompartilhamentoCorporal c(bool d, bool m) =>
-        CompartilhamentoCorporal(dadosCorporais: d, medidas: m, educadores: const []);
+        CompartilhamentoCorporal(dadosCorporais: d, medidas: m);
     expect(resumoCompartilhamento(c(false, false)), 'Tudo privado');
     expect(resumoCompartilhamento(c(true, false)), 'Dados corporais compartilhados');
     expect(resumoCompartilhamento(c(false, true)), 'Medidas compartilhadas');
@@ -322,7 +334,10 @@ void main() {
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(ProviderScope(
-        overrides: [compartilhamentoRepositoryProvider.overrideWithValue(_RepoCadeados())],
+        overrides: [
+          compartilhamentoRepositoryProvider.overrideWithValue(_RepoCadeados()),
+          _quemVe(const ['Prof. Ana']),
+        ],
         child: MaterialApp(
           theme: AppTheme.claro,
           darkTheme: AppTheme.escuro,

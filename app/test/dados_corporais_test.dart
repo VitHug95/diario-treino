@@ -155,11 +155,12 @@ Future<ProviderScope> _escopo(_RepoPerfil repo, Widget filho) async {
       perfilProvider.overrideWith((ref) async => const Perfil(
           id: 'u1', nome: 'Vitor', email: 'v@teste.local', papeis: ['ATLETA'])),
       convitesPendentesProvider.overrideWith((ref) async => []),
+      educadoresDoAlunoProvider.overrideWith((ref) async => []),
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
       // Cadeados do corpo (PBI-96): tudo privado, sem rede.
       compartilhamentoCorporalProvider.overrideWith((ref) async =>
-          const CompartilhamentoCorporal(dadosCorporais: false, medidas: false, educadores: [])),
+          const CompartilhamentoCorporal(dadosCorporais: false, medidas: false)),
     ],
     child: filho,
   );

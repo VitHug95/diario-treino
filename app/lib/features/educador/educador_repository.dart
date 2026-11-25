@@ -59,8 +59,19 @@ class EducadorRepository {
       _executar(() => _dio.post<void>('/vinculos/$vinculoId/recusar'));
 
   /// Encerra um vínculo ativo (educador ou aluno).
-  Future<void> encerrar(String vinculoId) =>
-      _executar(() => _dio.post<void>('/vinculos/$vinculoId/encerrar'));
+  Future<void> encerrar(String vinculoId) => _executar(
+        () => _dio.post<void>('/vinculos/$vinculoId/encerrar'),
+        traduzir: _traduzirEncerrar,
+      );
+
+  /// Educadores com vínculo ativo do aluno logado (PBI-104).
+  Future<List<EducadorVinculado>> listarEducadores() async {
+    final resposta = await _dio.get<List<dynamic>>('/educadores');
+    return (resposta.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(EducadorVinculado.doJson)
+        .toList();
+  }
 
   /// Alunos com vínculo ativo do educador logado.
   Future<List<AlunoVinculado>> listarAlunos() async {
@@ -153,6 +164,16 @@ class EducadorRepository {
     };
   }
 
+  /// Mensagens do encerrar (PBI-104): 409 é o vínculo que já foi encerrado.
+  static String _traduzirEncerrar(DioException e) {
+    final status = e.response?.statusCode;
+    return switch (status) {
+      404 || 409 => 'Este vínculo já não está ativo',
+      null => 'Sem conexão. Verifique sua internet e tente de novo.',
+      _ => 'Não foi possível encerrar. Tente novamente.',
+    };
+  }
+
   /// Mensagens específicas do convite por e-mail (POST /vinculos).
   static String _traduzirConvite(DioException e) {
     final status = e.response?.statusCode;
@@ -176,6 +197,13 @@ final educadorRepositoryProvider = Provider<EducadorRepository>(
 final convitesPendentesProvider =
     FutureProvider.autoDispose<List<ConvitePendente>>(
   (ref) => ref.watch(educadorRepositoryProvider).listarConvitesPendentes(),
+);
+
+/// Educadores com vínculo ativo do aluno logado (PBI-104): "Meus educadores",
+/// a linha do Perfil e o "Quem vê" do compartilhamento do corpo (PBI-96).
+final educadoresDoAlunoProvider =
+    FutureProvider.autoDispose<List<EducadorVinculado>>(
+  (ref) => ref.watch(educadorRepositoryProvider).listarEducadores(),
 );
 
 /// Alunos com vínculo ativo do educador logado.
