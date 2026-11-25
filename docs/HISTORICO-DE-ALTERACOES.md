@@ -213,6 +213,12 @@ fechados sem merge.
 | #150 | PBI-104 | Back: `GET /educadores` (educadores com vínculo ativo do aluno, com o `desde`; espelha o `GET /alunos`). Front: linha "Meus educadores" no Perfil e tela com um cartão por educador e "Encerrar" (com confirmação; 409 avisa que já não está ativo); estado vazio com "Ver convites"; aceitar convite avisa "Agora {nome} acompanha você"; o termo diz onde encerrar. A tela "Compartilhar com o educador" passou a ler "quem vê" do `GET /educadores`, e o `GET /me/compartilhamento-corporal` deixou de trazer a lista. Sem migration. |
 | #151 | PBI-104 (ajuste) | O educador também encerra o vínculo: cada cartão de "Meus alunos" ganhou "Encerrar", com confirmação, aviso e o 409. Pedido do PO. Só front. |
 
+## Manutenção · 25/11
+
+| PR | PBI | O que mudou |
+|---|---|---|
+| (PR do rascunho versionado) | técnico | Rascunho do treino em andamento com `versao` no JSON (hoje 1; rascunho sem o campo é a versão 0, mesmo formato) e `migrarRascunhoTreino` para os passos futuros. Antes, qualquer rascunho que não abrisse era apagado sem aviso; agora o de versão mais nova do app fica intacto (e é guardado se outro treino ocupar a chave) e o que não abre vai para `treino_em_andamento_guardado`. Só front, sem mudança de tela. |
+
 ---
 
 ## Migrations do banco
