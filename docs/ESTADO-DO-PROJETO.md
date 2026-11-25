@@ -136,7 +136,7 @@ corpo com o educador) depois do #148. Incrementos 1 (atleta), o épico do educad
   (texto provisório). Ao sair de ATIVO, o educador perde o acesso sem apagar dados.
 - Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
   (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
-  confirmação. O encerrar pelo lado do educador ainda não tem tela.
+  confirmação. O educador também encerra, em "Meus alunos".
 
 ---
 
@@ -210,7 +210,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 593 testes em `app/test/` (rodam no `flutter test`,
+- **Front (widget):** 599 testes em `app/test/` (rodam no `flutter test`,
   headless, com as bordas fakeadas; backend: 142 unitários e 281 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
@@ -254,7 +254,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - **E12 — compartilhar o corpo com o educador:** PBIs 95 e 96 (PR
   das PBIs 95 e 96). A PBI-99 foi descartada pelo PO.
 - **PBI-104 — Meus educadores:** o atleta vê quem o acompanha e encerra o
-  vínculo (`GET /educadores`); a tela de compartilhamento passou a usar a mesma
+  vínculo (`GET /educadores`), e o educador encerra em "Meus alunos"; a tela de compartilhamento passou a usar a mesma
   leitura (PR da PBI-104, depois do das PBIs 95 e 96).
 - **E13 — exercícios conjugados:** PBI-101 bloco na ficha (#144), PBI-102 treino
   ao vivo com bloco (#145), PBI-103 bloco no detalhe da sessão (#146) e o ajuste
@@ -304,6 +304,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - (12/11, PBI-98) A TMB calculada é a padrão; o atleta pode informar outra
   (800 a 5.000 kcal), que vale até ele voltar ao cálculo.
 - (13/11) A PBI-99 foi descartada ("pode ignorar").
+- (PBI-104) O educador também pode encerrar o vínculo, em "Meus alunos".
 - (12/11, E13) Exercícios conjugados em bloco de 2 a 4, com um descanso só por
   rodada; rodadas = maior número de séries; exercício sozinho continua igual.
 - (13/11, PBI-101) Juntar escolhendo os exercícios ("Juntar com…"), e não só o
@@ -331,8 +332,6 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   modo educador.
 - **Educador e CREF:** proposta de verificação do educador conversada, ainda sem
   PBI registrada (se abrir, é a PBI-105).
-- **PBI-104:** o educador também deve poder encerrar pelo "Meus alunos"? O back
-  já aceita; falta a tela.
 - **Ficha do professor:** a API não aplica o 403 nas rotas de ficha, exercício e
   bloco (o app esconde as ações). Alinhar com a regra do plano?
 
