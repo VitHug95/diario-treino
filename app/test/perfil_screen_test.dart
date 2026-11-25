@@ -13,7 +13,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<Widget> _tela({Perfil? perfil, List<ConvitePendente> convites = const []}) async {
+Future<Widget> _tela({
+  Perfil? perfil,
+  List<ConvitePendente> convites = const [],
+  List<EducadorVinculado> educadores = const [],
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
@@ -28,6 +32,7 @@ Future<Widget> _tela({Perfil? perfil, List<ConvitePendente> convites = const []}
             papeis: ['ATLETA'],
           )),
       convitesPendentesProvider.overrideWith((ref) async => convites),
+      educadoresDoAlunoProvider.overrideWith((ref) async => educadores),
       // O bloco Corpo (E12) lê o resumo das medidas; aqui, sem medidas.
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
@@ -134,5 +139,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('1 convite(s) aguardando'), findsOneWidget);
+  });
+
+  testWidgets('"Meus educadores" aparece para o atleta, com a quantidade (PBI-104)',
+      (tester) async {
+    _telaAlta(tester);
+    await tester.pumpWidget(await _tela());
+    await tester.pumpAndSettle();
+    expect(find.text('Meus educadores'), findsOneWidget);
+    expect(find.text('Ninguém acompanha você agora'), findsOneWidget);
+
+    // Escopo novo (chave nova): os overrides não mudam num ProviderScope vivo.
+    await tester.pumpWidget(KeyedSubtree(key: UniqueKey(), child: await _tela(educadores: const [
+      EducadorVinculado(vinculoId: 'v1', educadorId: 'e1', educadorNome: 'Ana', educadorEmail: 'a@x.dev'),
+      EducadorVinculado(vinculoId: 'v2', educadorId: 'e2', educadorNome: 'Bia', educadorEmail: 'b@x.dev'),
+    ])));
+    await tester.pumpAndSettle();
+    expect(find.text('2 educadores'), findsOneWidget);
   });
 }

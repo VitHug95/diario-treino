@@ -32,5 +32,15 @@ public class Usuario
     /// </summary>
     public short? TmbManualKcal { get; set; }
 
+    /// <summary>
+    /// Desde quando os dados corporais (sexo, idade, altura, peso e TMB) estão
+    /// liberados para os educadores com vínculo ativo (PBI-95). Nulo = trancado,
+    /// que é o padrão.
+    /// </summary>
+    public DateTimeOffset? DadosCorporaisCompartilhadosEm { get; set; }
+
+    /// <summary>Desde quando as medidas corporais estão liberadas (PBI-95). Nulo = trancado.</summary>
+    public DateTimeOffset? MedidasCompartilhadasEm { get; set; }
+
     public ICollection<UsuarioPapel> Papeis { get; set; } = [];
 }

@@ -13,6 +13,17 @@ public sealed record ConvitePendente(
     string EducadorNome,
     string EducadorEmail);
 
+/// <summary>
+/// Educador com vínculo ativo, do ponto de vista do aluno (<c>GET /educadores</c>,
+/// PBI-104). <see cref="Desde"/> é o início do vínculo (o aceite).
+/// </summary>
+public sealed record EducadorVinculado(
+    Guid VinculoId,
+    Guid EducadorId,
+    string EducadorNome,
+    string EducadorEmail,
+    DateTimeOffset? Desde);
+
 /// <summary>Aluno com vínculo ativo, do ponto de vista do educador (<c>GET /alunos</c>).</summary>
 public sealed record AlunoVinculado(
     Guid VinculoId,

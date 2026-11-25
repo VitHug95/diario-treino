@@ -18,5 +18,13 @@ DateTime? lerDataCompleta(String texto) {
   return data;
 }
 
+const _meses = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+/// "12 de outubro de 2026", para o leitor de tela.
+String formatarDataPorExtenso(DateTime d) => '${d.day} de ${_meses[d.month - 1]} de ${d.year}';
+
 /// A mesma data à meia-noite local (tira a hora).
 DateTime soDia(DateTime d) => DateTime(d.year, d.month, d.day);

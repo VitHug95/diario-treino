@@ -1,11 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable, ProviderOrFamily;
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../core/dados/invalidacao.dart';
 import '../../shared/progresso/grafico_exercicio.dart'
     show CaixaGrafico, MensagemGrafico;
+import '../educador/corpo_do_aluno.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
@@ -23,9 +25,19 @@ import 'medidas_repository.dart';
 /// (caixa de altura fixa para a tela não pular entre estados). O gráfico em si é
 /// próprio: o do exercício é por sessão e tem observação, este é por dia.
 class MedidaEvolucaoScreen extends ConsumerStatefulWidget {
-  const MedidaEvolucaoScreen({super.key, required this.tipo});
+  const MedidaEvolucaoScreen({
+    super.key,
+    required this.tipo,
+    this.atletaId,
+    this.alunoNome,
+  });
 
   final TipoMedida tipo;
+
+  /// Educador vendo a medida do aluno (PBI-96): mesma tela, só leitura, pela
+  /// rota do aluno. Nulo = as medidas do próprio usuário.
+  final String? atletaId;
+  final String? alunoNome;
 
   @override
   ConsumerState<MedidaEvolucaoScreen> createState() =>
@@ -40,11 +52,22 @@ class _MedidaEvolucaoScreenState extends ConsumerState<MedidaEvolucaoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final chave = (tipo: widget.tipo, periodo: _periodo);
-    final evolucao = ref.watch(evolucaoMedidaProvider(chave));
+    final atletaId = widget.atletaId;
+    final ProviderListenable<AsyncValue<EvolucaoMedida>> fonte = atletaId == null
+        ? evolucaoMedidaProvider((tipo: widget.tipo, periodo: _periodo))
+        : evolucaoMedidaDoAlunoProvider(
+            (atletaId: atletaId, tipo: widget.tipo, periodo: _periodo));
+    final ProviderOrFamily leitura = atletaId == null
+        ? evolucaoMedidaProvider((tipo: widget.tipo, periodo: _periodo))
+        : evolucaoMedidaDoAlunoProvider(
+            (atletaId: atletaId, tipo: widget.tipo, periodo: _periodo));
+    final evolucao = ref.watch(fonte);
+    final titulo = widget.alunoNome == null
+        ? widget.tipo.rotulo
+        : '${widget.tipo.rotulo} · ${widget.alunoNome}';
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.tipo.rotulo)),
+      appBar: AppBar(title: Text(titulo, overflow: TextOverflow.ellipsis)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.margemTela),
@@ -66,15 +89,18 @@ class _MedidaEvolucaoScreenState extends ConsumerState<MedidaEvolucaoScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   ),
               error:
-                  (_, __) => CaixaGrafico(
-                    child: MensagemGrafico(
-                      icone: LucideIcons.cloudOff,
-                      texto: 'Não foi possível carregar a evolução.',
-                      aoTentar:
-                          () => tentarDeNovo(ref, [
-                            evolucaoMedidaProvider(chave),
-                          ]),
-                    ),
+                  (erro, __) => CaixaGrafico(
+                    // O aluno trancou as medidas no meio do caminho (403).
+                    child: erro is CorpoTrancadoException
+                        ? const MensagemGrafico(
+                            icone: LucideIcons.lock,
+                            texto: 'O aluno não compartilhou as medidas.',
+                          )
+                        : MensagemGrafico(
+                            icone: LucideIcons.cloudOff,
+                            texto: 'Não foi possível carregar a evolução.',
+                            aoTentar: () => tentarDeNovo(ref, [leitura]),
+                          ),
                   ),
               data: (dados) {
                 if (dados.vazia) {

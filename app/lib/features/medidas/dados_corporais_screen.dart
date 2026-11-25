@@ -13,6 +13,7 @@ import '../../shared/seletor_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'compartilhar_corpo_screen.dart';
 import 'medidas_formato.dart';
 import 'perfil_corporal_comandos.dart';
 import 'perfil_corporal_models.dart';
@@ -20,7 +21,8 @@ import 'perfil_corporal_repository.dart';
 
 /// Dados corporais e TMB (E12 / PBI-93, tela 23): sexo, nascimento, altura e
 /// peso, e o cartão da taxa metabólica basal. A conta da TMB é do back; aqui só
-/// se mostra o número recebido. Tudo é opcional e só o dono vê.
+/// se mostra o número recebido. Tudo é opcional; o educador só vê se o atleta
+/// destrancar (PBI-96).
 class DadosCorporaisScreen extends ConsumerWidget {
   const DadosCorporaisScreen({super.key});
 
@@ -235,24 +237,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.margemTela),
       children: [
-        // Privacidade: o compartilhamento com o educador chega na PBI-96.
-        Row(
-          children: [
-            Icon(
-              LucideIcons.lock,
-              size: AppSizes.iconeSm,
-              color: cores.iconMuted,
-            ),
-            const SizedBox(width: AppSpacing.x8),
-            Expanded(
-              child: Text(
-                'Só você vê estes dados.',
-                style: AppText.caption.copyWith(color: cores.textSecondary),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.x24),
+        // Privacidade (PBI-96): o cadeado dos dados corporais; toque abre o
+        // "Compartilhar com o educador".
+        const SeloCompartilhamento(parte: ParteDoCorpo.dadosCorporais),
+        const SizedBox(height: AppSpacing.x16),
         Text(
           'SEXO, PARA O CÁLCULO',
           style: AppText.overline.copyWith(color: cores.textSecondary),

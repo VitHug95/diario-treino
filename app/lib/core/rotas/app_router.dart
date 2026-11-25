@@ -7,15 +7,18 @@ import '../../features/auth/cadastro_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/catalogo/catalogo_screen.dart';
 import '../../features/catalogo/criar_exercicio_screen.dart';
+import '../../features/educador/aluno_corpo_screen.dart';
 import '../../features/educador/aluno_detalhe_screen.dart';
 import '../../features/educador/aluno_plano_detalhe_screen.dart';
 import '../../features/educador/aluno_planos_screen.dart';
 import '../../features/educador/alunos_screen.dart';
 import '../../features/educador/convites_screen.dart';
+import '../../features/educador/meus_educadores_screen.dart';
 import '../../features/fichas/fichas_screen.dart';
 import '../../features/auth/perfil_screen.dart';
 import '../../features/inicio/calendario_mes_screen.dart';
 import '../../features/inicio/inicio_screen.dart';
+import '../../features/medidas/compartilhar_corpo_screen.dart';
 import '../../features/medidas/dados_corporais_screen.dart';
 import '../../features/medidas/medida_evolucao_screen.dart';
 import '../../features/medidas/medidas_corporais_screen.dart';
@@ -78,6 +81,17 @@ abstract final class Rotas {
   static const alunoPlanos = '/perfil/alunos/aluno/planos';
   static const alunoPlanoDetalhe = '/perfil/alunos/aluno/planos/plano';
   static const convites = '/perfil/convites';
+  /// "Meus educadores" (PBI-104): quem acompanha o atleta e encerrar.
+  static const meusEducadores = '/perfil/educadores';
+
+  /// Corpo do aluno (PBI-96), só leitura; extra: AlunoDetalheArgs.
+  static const alunoCorpo = '/perfil/alunos/aluno/corpo';
+
+  /// Evolução de uma medida do aluno; extra: AlunoMedidaArgs.
+  static const alunoMedidaEvolucao = '/perfil/alunos/aluno/corpo/evolucao';
+
+  /// "Compartilhar com o educador" (PBI-96): os dois cadeados do corpo.
+  static const compartilharCorpo = '/perfil/compartilhar-corpo';
 
   /// Medidas corporais (E12 / PBI-92), empilhadas sobre o Perfil. O registro é
   /// em tela cheia (extra: DateTime do dia a editar; sem extra, hoje).
@@ -111,6 +125,14 @@ class RegistrarSessaoArgs {
   /// "Registrar treino já feito" (PBI-37): data editável, duração digitada, sem
   /// treino em andamento. Falso = iniciar treino agora (em andamento).
   final bool registroPosterior;
+}
+
+/// Evolução de uma medida do aluno, vista pelo educador (PBI-96).
+class AlunoMedidaArgs {
+  const AlunoMedidaArgs({required this.atletaId, required this.alunoNome, required this.tipo});
+  final String atletaId;
+  final String alunoNome;
+  final TipoMedida tipo;
 }
 
 /// Dados passados ao abrir o detalhe de uma sessão (via `extra`).
@@ -223,6 +245,36 @@ final routerProvider = Provider<GoRouter>((ref) {
                               );
                             },
                             routes: [
+                              // Corpo do aluno (PBI-96), só leitura.
+                              GoRoute(
+                                path: 'corpo',
+                                name: 'alunoCorpo',
+                                builder: (context, state) {
+                                  final args = state.extra as AlunoDetalheArgs?;
+                                  return AlunoCorpoScreen(
+                                    key: ValueKey('alunoCorpo:${args?.atletaId}'),
+                                    atletaId: args?.atletaId ?? '',
+                                    alunoNome: args?.alunoNome ?? 'Aluno',
+                                  );
+                                },
+                                routes: [
+                                  GoRoute(
+                                    path: 'evolucao',
+                                    name: 'alunoMedidaEvolucao',
+                                    builder: (context, state) {
+                                      final args = state.extra as AlunoMedidaArgs?;
+                                      final tipo = args?.tipo ?? TipoMedida.peso;
+                                      return MedidaEvolucaoScreen(
+                                        key: ValueKey(
+                                            'alunoEvolucao:${args?.atletaId}:${tipo.codigo}'),
+                                        tipo: tipo,
+                                        atletaId: args?.atletaId,
+                                        alunoNome: args?.alunoNome,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                               // Planos do aluno (PBI-88d): o educador monta
                               // plano/ficha. Detalhe do plano empilha em cima.
                               GoRoute(
@@ -264,6 +316,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'convites',
                         name: 'convites',
                         builder: (context, state) => const ConvitesScreen(),
+                      ),
+                      // Meus educadores (PBI-104).
+                      GoRoute(
+                        path: 'educadores',
+                        name: 'meusEducadores',
+                        builder: (context, state) =>
+                            const MeusEducadoresScreen(),
+                      ),
+                      // Compartilhar o corpo com o educador (PBI-96).
+                      GoRoute(
+                        path: 'compartilhar-corpo',
+                        name: 'compartilharCorpo',
+                        builder: (context, state) =>
+                            const CompartilharCorpoScreen(),
                       ),
                       // Dados corporais e TMB (E12 / PBI-93).
                       GoRoute(

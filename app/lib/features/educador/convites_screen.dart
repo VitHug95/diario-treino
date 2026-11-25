@@ -109,9 +109,13 @@ class _CartaoConvite extends ConsumerWidget {
       ),
     );
     if (confirmou != true || !context.mounted) return;
+    // O cartão sai da lista ao aceitar: o aviso vai pelo messenger da tela.
+    final messenger = ScaffoldMessenger.of(context);
+    final cores = AppColors.of(context);
     try {
       await ref.read(educadorComandosProvider).aceitar(convite.vinculoId);
-      if (context.mounted) mostrarAviso(context, 'Convite aceito');
+      // O vínculo novo já aparece em "Meus educadores" (Mudanca.vinculos).
+      mostrarAvisoNoMessenger(messenger, cores, 'Agora ${convite.educadorNome} acompanha você');
     } on EducadorException catch (e) {
       if (context.mounted) mostrarErro(context, e.mensagem);
     }

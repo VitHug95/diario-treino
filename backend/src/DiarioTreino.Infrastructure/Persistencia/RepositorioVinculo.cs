@@ -52,6 +52,11 @@ public sealed class RepositorioVinculo : IRepositorioVinculo
             .Where(v => v.EducadorId == educadorId && v.Status == StatusVinculo.Ativo)
             .ToListAsync(ct);
 
+    public Task<List<Vinculo>> ListarAtivosDoAlunoAsync(Guid alunoId, CancellationToken ct) =>
+        _db.Vinculos
+            .Where(v => v.AlunoId == alunoId && v.Status == StatusVinculo.Ativo)
+            .ToListAsync(ct);
+
     public Task SalvarAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
     public async Task<bool> TentarCriarAsync(Vinculo vinculo, CancellationToken ct)

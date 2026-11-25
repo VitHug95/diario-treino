@@ -1,6 +1,7 @@
 import 'package:diario_treino/features/educador/aluno_detalhe_screen.dart';
 import 'package:diario_treino/features/educador/alunos_screen.dart';
 import 'package:diario_treino/features/educador/convites_screen.dart';
+import 'package:diario_treino/features/educador/corpo_do_aluno.dart';
 import 'package:diario_treino/features/educador/educador_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
 import 'package:diario_treino/features/progresso/progresso_models.dart';
@@ -57,12 +58,26 @@ Widget telaAluno({
         exerciciosDoAlunoProvider
             .overrideWith((ref, atletaId) async => exercicios),
         progressoDoAlunoProvider.overrideWith((ref, atletaId) async => null),
+        // Corpo do aluno (PBI-96): nada compartilhado, sem rede.
+        corpoDoAlunoProvider.overrideWith((ref, atletaId) async => const CorpoDoAluno(
+            dadosCorporaisCompartilhados: false,
+            dadosCorporais: null,
+            medidasCompartilhadas: false,
+            medidas: null)),
       ],
       child: MaterialApp(
         theme: AppTheme.claro,
         home: const AlunoDetalheScreen(atletaId: 'a1', alunoNome: 'João'),
       ),
     );
+
+/// Tela alta: com a linha "Corpo" (PBI-96), as sessões ficam mais abaixo na
+/// lista preguiçosa.
+void _telaAlta(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
 
 void main() {
   // ---- Alunos ----
@@ -180,6 +195,7 @@ void main() {
 
   testWidgets('Aluno: AppBar com o nome e estado vazio de sessões',
       (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(telaAluno());
     await tester.pumpAndSettle();
 
@@ -193,6 +209,7 @@ void main() {
   });
 
   testWidgets('Aluno: lista as sessões recentes do aluno', (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(telaAluno(sessoes: [
       SessaoResumo(
         id: 's1',

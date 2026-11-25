@@ -1699,6 +1699,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<DateTimeOffset?>("DadosCorporaisCompartilhadosEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dados_corporais_compartilhados_em");
+
                     b.Property<DateOnly?>("DataNascimento")
                         .HasColumnType("date")
                         .HasColumnName("data_nascimento");
@@ -1714,6 +1718,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("firebase_uid");
+
+                    b.Property<DateTimeOffset?>("MedidasCompartilhadasEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("medidas_compartilhadas_em");
 
                     b.Property<string>("Nome")
                         .IsRequired()

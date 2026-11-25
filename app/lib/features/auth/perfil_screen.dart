@@ -12,7 +12,10 @@ import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
 import '../educador/dialogo_convidar_aluno.dart';
 import '../educador/educador_comandos.dart';
+import '../educador/educador_models.dart';
 import '../educador/educador_repository.dart';
+import '../medidas/compartilhamento_repository.dart';
+import '../medidas/compartilhar_corpo_screen.dart';
 import '../medidas/medidas_formato.dart';
 import '../medidas/medidas_models.dart';
 import '../medidas/medidas_repository.dart';
@@ -64,6 +67,8 @@ class PerfilScreen extends ConsumerWidget {
             _LinhaDados(perfil: ref.watch(perfilCorporalProvider)),
             const SizedBox(height: AppSpacing.x8),
             _LinhaMedidas(resumo: ref.watch(resumoMedidasProvider)),
+            const SizedBox(height: AppSpacing.x8),
+            _LinhaCompartilhar(estado: ref.watch(compartilhamentoCorporalProvider)),
             const SizedBox(height: AppSpacing.x28),
             Text('TEMA',
                 style: AppText.overline.copyWith(color: cores.textSecondary)),
@@ -359,6 +364,11 @@ class _SecaoEducador extends ConsumerWidget {
       data: (lista) => lista.length,
       orElse: () => 0,
     );
+    final subtituloMeusEducadores = ref.watch(educadoresDoAlunoProvider).when(
+          loading: () => 'Carregando…',
+          error: (_, __) => 'Toque para ver quem acompanha você',
+          data: resumoMeusEducadores,
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,6 +398,15 @@ class _SecaoEducador extends ConsumerWidget {
             aoTocar: () => _convidar(context, ref),
           ),
         ],
+        const SizedBox(height: AppSpacing.x8),
+        // Qualquer um pode ser acompanhado (PBI-104).
+        _LinhaAcao(
+          icone: LucideIcons.shieldCheck,
+          titulo: 'Meus educadores',
+          subtitulo: subtituloMeusEducadores,
+          rotuloFalado: 'Meus educadores. $subtituloMeusEducadores',
+          aoTocar: () => context.push(Rotas.meusEducadores),
+        ),
         const SizedBox(height: AppSpacing.x8),
         _LinhaAcao(
           icone: LucideIcons.mail,
@@ -468,6 +487,30 @@ class _LinhaMedidas extends StatelessWidget {
       subtitulo: subtitulo,
       rotuloFalado: 'Medidas corporais. $subtitulo',
       aoTocar: () => context.push(Rotas.medidas),
+    );
+  }
+}
+
+/// "Compartilhar com o educador" (PBI-96): o estado dos dois cadeados.
+class _LinhaCompartilhar extends StatelessWidget {
+  const _LinhaCompartilhar({required this.estado});
+
+  final AsyncValue<CompartilhamentoCorporal> estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitulo = estado.when(
+      loading: () => 'Carregando…',
+      error: (_, __) => 'Toque para escolher o que compartilhar',
+      data: resumoCompartilhamento,
+    );
+    final liberado = estado.value?.algumLiberado ?? false;
+    return _LinhaAcao(
+      icone: liberado ? LucideIcons.unlock : LucideIcons.lock,
+      titulo: 'Compartilhar com o educador',
+      subtitulo: subtitulo,
+      rotuloFalado: 'Compartilhar com o educador. $subtitulo',
+      aoTocar: () => context.push(Rotas.compartilharCorpo),
     );
   }
 }

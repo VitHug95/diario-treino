@@ -9,6 +9,7 @@ import '../../shared/estado_erro.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'compartilhar_corpo_screen.dart';
 import 'medidas_formato.dart';
 import 'medidas_models.dart';
 import 'medidas_repository.dart';
@@ -59,6 +60,9 @@ class _Conteudo extends StatelessWidget {
             label: const Text('Registrar medidas'),
           ),
         ),
+        const SizedBox(height: AppSpacing.x8),
+        // Privacidade (PBI-96): o cadeado das medidas.
+        const SeloCompartilhamento(parte: ParteDoCorpo.medidas),
         const SizedBox(height: AppSpacing.x24),
         if (resumo.vazio)
           _CartaoVazio()

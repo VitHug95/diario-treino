@@ -35,6 +35,9 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.DataNascimento).HasColumnName("data_nascimento");
         builder.Property(u => u.AlturaCm).HasColumnName("altura_cm");
         builder.Property(u => u.TmbManualKcal).HasColumnName("tmb_manual_kcal");
+        // Compartilhamento com o educador (PBI-95): nulo = trancado.
+        builder.Property(u => u.DadosCorporaisCompartilhadosEm).HasColumnName("dados_corporais_compartilhados_em");
+        builder.Property(u => u.MedidasCompartilhadasEm).HasColumnName("medidas_compartilhadas_em");
 
         builder.HasIndex(u => u.FirebaseUid).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();
