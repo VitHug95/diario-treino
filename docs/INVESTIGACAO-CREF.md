@@ -1,6 +1,6 @@
 # PBI-105 · Investigação das consultas públicas de CREF
 
-Status: **decisão proposta ("seguir só em parte"), a confirmar pelo PO.** Primeira
+Status: **decisão tomada: seguir só em parte** (PO, 26/11). Primeira
 passada em 26/11/2026, sem nenhuma busca: só o `robots.txt` e a página inicial de
 cada consulta. Respostas do PO na seção 4. Falta o formato da página de resultado
 (seção 5) para o adaptador real.
@@ -98,7 +98,8 @@ pela regra da PBI-106** (CPF + número). Precisa ser confirmado na tela.
 
 ## 5. Decisão
 
-**Proposta: seguir só em parte**, a confirmar pelo PO.
+**Seguir só em parte**, confirmada pelo PO em 26/11, que aceita o risco de usar
+páginas sem autorização expressa para acesso por programa.
 
 - **Habilitação automática** nas UFs das dez consultas regionais da lista (SC, MG,
   DF, PR, PB, RN, BA, GO, TO, MT, SE e ES), depois de cada uma passar pelo teste do
