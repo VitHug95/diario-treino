@@ -337,8 +337,10 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   última rodada; "Rodada feita" marca com os valores pré-preenchidos.
 - **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
   modo educador.
-- **Educador e CREF:** proposta de verificação do educador conversada, ainda sem
-  PBI registrada (se abrir, é a PBI-105).
+- **Educador e CREF (PBIs 105 e 106):** perguntar ao CONFEF por canal oficial;
+  uma busca de teste com os dados do PO; categorias que habilitam; educadores
+  atuais como legado; texto sobre o CPF ser enviado ao CREF. Ver
+  [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -369,7 +371,9 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **CREF / verificação do educador:** decidir se vira PBI.
+7. **PBIs 105 e 106 (habilitar o educador pelo CREF):** terminar a investigação
+   (itens que precisam de uma pessoa em [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md))
+   e decidir seguir, seguir em parte ou plano B. A PBI-106 só começa depois.
 
 **Técnico (sem bloqueio)**
 8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
