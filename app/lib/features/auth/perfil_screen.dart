@@ -369,6 +369,12 @@ class _SecaoEducador extends ConsumerWidget {
           error: (_, __) => 'Toque para ver quem acompanha você',
           data: resumoMeusEducadores,
         );
+    // PBI-106: com a verificação exigida pelo servidor, o modo educador passa
+    // pelo CREF. Sem a resposta (carregando ou erro), vale o fluxo antigo.
+    final cref = ref.watch(situacaoCrefProvider).value;
+    final exigeCref = cref?.verificacaoExigida ?? false;
+    final travado = ehEducador && exigeCref && !(cref?.habilitado ?? false);
+    void abrirCref() => context.push(Rotas.registroCref, extra: travado);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,23 +386,44 @@ class _SecaoEducador extends ConsumerWidget {
           _LinhaAcao(
             icone: LucideIcons.graduationCap,
             titulo: 'Ativar modo educador',
-            subtitulo: 'Convide alunos e acompanhe os treinos deles.',
-            aoTocar: () => _ativar(context, ref),
+            subtitulo: exigeCref
+                ? 'Confirme seu registro no CREF e acompanhe seus alunos.'
+                : 'Convide alunos e acompanhe os treinos deles.',
+            aoTocar: exigeCref ? abrirCref : () => _ativar(context, ref),
           )
         else ...[
+          if (travado) ...[
+            _LinhaAcao(
+              icone: LucideIcons.shieldAlert,
+              titulo: 'Confirme seu registro no CREF',
+              subtitulo: 'Para continuar acompanhando alunos.',
+              destaque: true,
+              aoTocar: abrirCref,
+            ),
+            const SizedBox(height: AppSpacing.x8),
+          ],
           _LinhaAcao(
             icone: LucideIcons.users,
             titulo: 'Meus alunos',
             subtitulo: 'Veja e convide seus alunos.',
-            aoTocar: () => context.push(Rotas.alunos),
+            aoTocar: travado ? abrirCref : () => context.push(Rotas.alunos),
           ),
           const SizedBox(height: AppSpacing.x8),
           _LinhaAcao(
             icone: LucideIcons.userPlus,
             titulo: 'Convidar aluno',
             subtitulo: 'Envie um convite por e-mail.',
-            aoTocar: () => _convidar(context, ref),
+            aoTocar: travado ? abrirCref : () => _convidar(context, ref),
           ),
+          if (exigeCref && !travado) ...[
+            const SizedBox(height: AppSpacing.x8),
+            _LinhaAcao(
+              icone: LucideIcons.badgeCheck,
+              titulo: 'Registro profissional (CREF)',
+              subtitulo: 'Registro confirmado',
+              aoTocar: abrirCref,
+            ),
+          ],
         ],
         const SizedBox(height: AppSpacing.x8),
         // Qualquer um pode ser acompanhado (PBI-104).

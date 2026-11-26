@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Identidade;
+using DiarioTreino.Application.Educador;
 using DiarioTreino.Application.Vinculos;
 using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Identidade;
@@ -75,7 +76,7 @@ public sealed class ServicoVinculoTests
         var vBia = new Vinculo { Id = Guid.NewGuid(), EducadorId = bia.Id, AlunoId = aluno, Status = StatusVinculo.Ativo, Inicio = inicioBia };
         vinculos.Ativos.AddRange([vAna, vBia]);
 
-        var servico = new ServicoVinculo(vinculos, usuarios, new ConsentimentosFake());
+        var servico = new ServicoVinculo(vinculos, usuarios, new ConsentimentosFake(), new DiarioTreino.UnitTests.Educador.RepositorioEducadorCrefFake(), new ConfiguracaoEducador(false));
         var lista = await servico.ListarEducadoresAtivosAsync(aluno, CancellationToken.None);
 
         Assert.Equal(
@@ -97,7 +98,7 @@ public sealed class ServicoVinculoTests
             Status = StatusVinculo.Ativo, Inicio = DateTimeOffset.UtcNow,
         });
 
-        var servico = new ServicoVinculo(vinculos, new UsuariosFake(), new ConsentimentosFake());
+        var servico = new ServicoVinculo(vinculos, new UsuariosFake(), new ConsentimentosFake(), new DiarioTreino.UnitTests.Educador.RepositorioEducadorCrefFake(), new ConfiguracaoEducador(false));
 
         Assert.Empty(await servico.ListarEducadoresAtivosAsync(aluno, CancellationToken.None));
     }

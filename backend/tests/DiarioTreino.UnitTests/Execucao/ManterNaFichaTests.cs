@@ -95,7 +95,7 @@ public sealed class ManterNaFichaTests
         var servico = new ServicoSessao(
             sessoes,
             planos,
-            new ControleAcesso(new Fakes.RepositorioVinculoFake()),
+            new ControleAcesso(new Fakes.RepositorioVinculoFake(), new DiarioTreino.UnitTests.Educador.RepositorioEducadorCrefFake(), new DiarioTreino.Application.Educador.ConfiguracaoEducador(false)),
             new Fakes.RepositorioExercicioFake(),
             new Fakes.RepositorioMetricaFake());
         return new Cenario(servico, planos, sessoes, atleta, treino.Id, teSupino.Id);

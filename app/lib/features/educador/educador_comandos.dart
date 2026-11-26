@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/dados/invalidacao.dart';
 import '../auth/perfil_api.dart';
+import 'cref_models.dart';
 import 'educador_repository.dart';
 
 /// Escritas do modo educador (PBI-88): ativar o papel, convidar, aceitar,
@@ -33,6 +34,15 @@ class EducadorComandos {
   Future<void> recusar(String vinculoId) => _mudar((r) => r.recusar(vinculoId));
 
   Future<void> encerrar(String vinculoId) => _mudar((r) => r.encerrar(vinculoId));
+
+  /// Verifica o registro no CREF (PBI-106). Habilitado, o perfil ganha o papel
+  /// EDUCADOR e a tela se atualiza pela invalidação de [Mudanca.vinculos].
+  Future<ResultadoVerificacaoCref> verificarCref({
+    required String uf,
+    required String numero,
+    required String cpf,
+  }) =>
+      _mudar((r) => r.verificarCref(uf: uf, numero: numero, cpf: cpf));
 }
 
 final educadorComandosProvider =

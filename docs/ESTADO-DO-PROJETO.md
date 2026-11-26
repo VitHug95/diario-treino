@@ -134,6 +134,9 @@ Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
   PDF na tela do aluno.
 - Privacidade (PBI-87): observação privada do atleta e termo de consentimento
   (texto provisório). Ao sair de ATIVO, o educador perde o acesso sem apagar dados.
+- Habilitação pelo CREF (PBI-106, parte 1): tela "Registro profissional (CREF)"
+  e a trava do educador sem registro, atrás da chave `Educador:ExigirCref`,
+  desligada em produção até o leitor do site real existir.
 - Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
   (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
   confirmação. O educador também encerra, em "Meus alunos".
@@ -205,6 +208,7 @@ Migrations versionadas (todas aplicam do zero):
 | `20261113173129_BlocoConjugado` | PBI-101 | Tabela `bloco_exercicio` e `treino_exercicio.bloco_id` |
 | `20261113191412_SerieBloco` | PBI-102 | `serie_executada.bloco` e `posicao_no_bloco` |
 | `20261114042934_CompartilhamentoCorporal` | PBI-95 | `dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` em `usuario` (nulo = trancado) |
+| `20261126190636_CrefEducador` | PBI-106 | Tabelas `educador_cref` e `educador_cref_tentativa` (vazias) |
 
 As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 (só dados). As demais correções, o calendário (PBI-82), o E2E (PBI-26), o PDF
@@ -214,8 +218,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 605 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 147 unitários e 286 de integração), incluindo o fluxo de registro com o app inteiro,
+- **Front (widget):** 627 testes em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas; backend: 188 unitários e 299 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
@@ -337,10 +341,9 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   última rodada; "Rodada feita" marca com os valores pré-preenchidos.
 - **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
   modo educador.
-- **Educador e CREF (PBIs 105 e 106):** confirmar a decisão "seguir só em
-  parte"; salvar três páginas de resultado para as fixtures (e ver se a
-  nacional mostra a situação); texto sobre o CPF ser enviado ao CREF. Ver
-  [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
+- **Educador e CREF (PBIs 105 e 106):** salvar três páginas de resultado para as
+  fixtures (e ver se a nacional mostra a situação); texto sobre o CPF ser
+  enviado ao CREF. Ver [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -371,11 +374,12 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **PBIs 105 e 106 (habilitar o educador pelo CREF):** o PO confirma "seguir
-   só em parte" e manda as três páginas de resultado
-   ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Com a confirmação, a
-   PBI-106 pode começar pela parte que não depende do site (banco, API, trava,
-   tela, consulta falsa); o leitor do site real entra quando houver as páginas.
+7. **PBI-106, parte 2 (leitor do site do CREF):** o PO manda as três páginas de
+   resultado ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Depois do
+   leitor: ligar `Educador:ExigirCref` em produção, rodar
+   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius e avisar os
+   educadores atuais de que precisam verificar. A parte 1 (banco, API, trava,
+   tela) já está pronta, com a chave desligada.
 
 **Técnico (sem bloqueio)**
 8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o

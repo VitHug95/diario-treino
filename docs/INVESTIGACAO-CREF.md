@@ -1,6 +1,8 @@
 # PBI-105 · Investigação das consultas públicas de CREF
 
-Status: **decisão tomada: seguir só em parte** (PO, 26/11). Primeira
+Status: **decisão tomada: seguir só em parte** (PO, 26/11). A PBI-106 parte 1
+(tudo menos o leitor do site) está feita, com a chave `Educador:ExigirCref`
+desligada até o leitor existir. Primeira
 passada em 26/11/2026, sem nenhuma busca: só o `robots.txt` e a página inicial de
 cada consulta. Respostas do PO na seção 4. Falta o formato da página de resultado
 (seção 5) para o adaptador real.

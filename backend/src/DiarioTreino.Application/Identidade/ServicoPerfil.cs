@@ -1,3 +1,5 @@
+using DiarioTreino.Application.Comum;
+using DiarioTreino.Application.Educador;
 using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Identidade;
 
@@ -11,10 +13,12 @@ namespace DiarioTreino.Application.Identidade;
 public sealed class ServicoPerfil
 {
     private readonly IRepositorioUsuario _repositorio;
+    private readonly ConfiguracaoEducador _config;
 
-    public ServicoPerfil(IRepositorioUsuario repositorio)
+    public ServicoPerfil(IRepositorioUsuario repositorio, ConfiguracaoEducador config)
     {
         _repositorio = repositorio;
+        _config = config;
     }
 
     public async Task<PerfilUsuario> ObterOuProvisionarAsync(
@@ -33,13 +37,25 @@ public sealed class ServicoPerfil
     /// tem o papel, não faz nada. Login é único (ADR-04): a pessoa continua
     /// ATLETA e ganha EDUCADOR por cima. Devolve o perfil com os papéis atuais.
     /// </summary>
+    /// <remarks>
+    /// PBI-106: com a chave <c>Educador:ExigirCref</c> ligada, esta rota não
+    /// concede mais o papel (a habilitação é pela verificação do CREF); quem já é
+    /// educador só recebe o perfil de volta.
+    /// </remarks>
     public async Task<PerfilUsuario> ConcederPapelEducadorAsync(Guid usuarioId, CancellationToken ct)
     {
         var usuario = await _repositorio.ObterPorIdAsync(usuarioId, ct)
             ?? throw new InvalidOperationException(
                 "Usuário logado não encontrado ao conceder o papel de educador.");
 
-        if (!usuario.Papeis.Any(p => p.Papel == Papeis.Educador))
+        var jaEducador = usuario.Papeis.Any(p => p.Papel == Papeis.Educador);
+        if (!jaEducador && _config.ExigirCref)
+        {
+            throw new AcaoNaoPermitidaException(
+                "A habilitação do modo educador passa pela verificação do registro no CREF.");
+        }
+
+        if (!jaEducador)
         {
             usuario.Papeis.Add(new UsuarioPapel { UsuarioId = usuario.Id, Papel = Papeis.Educador });
             await _repositorio.SalvarAsync(ct);

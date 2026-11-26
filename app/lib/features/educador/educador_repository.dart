@@ -7,6 +7,7 @@ import '../fichas/fichas_repository.dart';
 import '../fichas/plano_models.dart';
 import '../progresso/progresso_models.dart';
 import '../sessao/sessao_models.dart';
+import 'cref_models.dart';
 import 'educador_models.dart';
 
 /// Erro de negócio do modo educador (vínculo/convite), com mensagem amigável.
@@ -63,6 +64,37 @@ class EducadorRepository {
         () => _dio.post<void>('/vinculos/$vinculoId/encerrar'),
         traduzir: _traduzirEncerrar,
       );
+
+  // ---- Habilitação pelo CREF (PBI-106) ----
+
+  /// Se a verificação é exigida e o registro do usuário logado.
+  Future<SituacaoCref> obterSituacaoCref() async {
+    final resposta = await _dio.get<Map<String, dynamic>>('/me/educador/cref');
+    return SituacaoCref.doJson(resposta.data!);
+  }
+
+  /// Consulta o CREF. O CPF vai só no corpo (nunca na URL) e não é guardado.
+  Future<ResultadoVerificacaoCref> verificarCref({
+    required String uf,
+    required String numero,
+    required String cpf,
+  }) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>(
+        '/me/educador/cref/verificar',
+        data: {'uf': uf, 'numero': numero, 'cpf': cpf},
+      );
+      return ResultadoVerificacaoCref.doJson(resposta.data!);
+    } on DioException catch (e) {
+      throw EducadorException(switch (e.response?.statusCode) {
+        400 => 'Confira a UF, o número e o CPF.',
+        409 => 'Este registro do CREF já está ligado a outra conta.',
+        429 => 'Você já tentou 5 vezes hoje. Tente amanhã.',
+        null => 'Sem conexão. Verifique sua internet e tente de novo.',
+        _ => 'Não foi possível verificar agora. Tente de novo.',
+      });
+    }
+  }
 
   /// Educadores com vínculo ativo do aluno logado (PBI-104).
   Future<List<EducadorVinculado>> listarEducadores() async {
@@ -156,12 +188,19 @@ class EducadorRepository {
     final status = e.response?.statusCode;
     return switch (status) {
       400 => 'Confira os dados e tente de novo.',
+      403 when _travado(e) => 'Confirme seu registro no CREF para continuar.',
       403 => 'Ative o modo educador para convidar alunos.',
       404 => 'Convite não encontrado.',
       409 => 'Este convite não está mais disponível.',
       null => 'Sem conexão. Verifique sua internet e tente de novo.',
       _ => 'Não foi possível concluir. Tente novamente.',
     };
+  }
+
+  /// Educador sem habilitação pelo CREF (PBI-106).
+  static bool _travado(DioException e) {
+    final dados = e.response?.data;
+    return dados is Map && dados['type'] == 'educador-nao-habilitado';
   }
 
   /// Mensagens do encerrar (PBI-104): 409 é o vínculo que já foi encerrado.
@@ -179,6 +218,7 @@ class EducadorRepository {
     final status = e.response?.statusCode;
     return switch (status) {
       400 => 'Você não pode convidar a si mesmo.',
+      403 when _travado(e) => 'Confirme seu registro no CREF para continuar.',
       403 => 'Ative o modo educador para convidar alunos.',
       // 404: e-mail não existe (mensagem neutra, sem revelar o cadastro).
       404 => 'Não encontramos um aluno com esse e-mail.',
@@ -204,6 +244,12 @@ final convitesPendentesProvider =
 final educadoresDoAlunoProvider =
     FutureProvider.autoDispose<List<EducadorVinculado>>(
   (ref) => ref.watch(educadorRepositoryProvider).listarEducadores(),
+);
+
+/// Situação do CREF do usuário logado (PBI-106): o Perfil decide por ela se o
+/// "Ativar modo educador" abre a verificação e se o educador está travado.
+final situacaoCrefProvider = FutureProvider.autoDispose<SituacaoCref>(
+  (ref) => ref.watch(educadorRepositoryProvider).obterSituacaoCref(),
 );
 
 /// Alunos com vínculo ativo do educador logado.

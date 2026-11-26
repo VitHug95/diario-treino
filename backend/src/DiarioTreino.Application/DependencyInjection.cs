@@ -1,6 +1,7 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Corpo;
+using DiarioTreino.Application.Educador;
 using DiarioTreino.Application.Execucao;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
@@ -27,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<ServicoMedidas>();
         services.AddScoped<ServicoPerfilCorporal>();
         services.AddScoped<ServicoCompartilhamentoCorporal>();
+        services.AddScoped<ServicoCref>();
+        services.AddScoped<IValidator<VerificarCrefRequest>, VerificarCrefValidator>();
         services.AddScoped<IValidator<DefinirCompartilhamentoRequest>, DefinirCompartilhamentoValidator>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();
