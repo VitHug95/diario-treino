@@ -1,4 +1,7 @@
 using DiarioTreino.Application.Acesso;
+using DiarioTreino.Application.Educador;
+using DiarioTreino.Domain.Educador;
+using DiarioTreino.UnitTests.Educador;
 using DiarioTreino.Domain.Vinculos;
 
 namespace DiarioTreino.UnitTests.Acesso;
@@ -41,7 +44,51 @@ public sealed class ControleAcessoTests
     }
 
     private static ControleAcesso Com(bool vinculoAtivo)
-        => new(new RepositorioVinculoFake(vinculoAtivo));
+        => new(new RepositorioVinculoFake(vinculoAtivo), new RepositorioEducadorCrefFake(), new ConfiguracaoEducador(false));
+
+    // ---- Trava do CREF (PBI-106) ----
+
+    private static ControleAcesso ComCref(bool vinculoAtivo, Guid? habilitado)
+    {
+        var cref = new RepositorioEducadorCrefFake();
+        if (habilitado is { } id)
+        {
+            cref.Habilitados.Add(new EducadorCref { UsuarioId = id, Origem = OrigemCref.Legado });
+        }
+        return new(new RepositorioVinculoFake(vinculoAtivo), cref, new ConfiguracaoEducador(true));
+    }
+
+    [Fact]
+    public async Task Com_a_chave_ligada_educador_sem_cref_recebe_403_e_nao_pode()
+    {
+        var educador = Guid.NewGuid();
+        var controle = ComCref(vinculoAtivo: true, habilitado: null);
+
+        Assert.False(await controle.PodeAcessarAtletaAsync(educador, Guid.NewGuid(), CancellationToken.None));
+        await Assert.ThrowsAsync<EducadorNaoHabilitadoException>(() =>
+            controle.GarantirAcessoAtletaAsync(educador, Guid.NewGuid(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Com_a_chave_ligada_sem_vinculo_continua_404_antes_da_trava()
+    {
+        var controle = ComCref(vinculoAtivo: false, habilitado: null);
+
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
+            controle.GarantirAcessoAtletaAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Com_a_chave_ligada_educador_habilitado_e_o_proprio_atleta_passam()
+    {
+        var educador = Guid.NewGuid();
+        var atleta = Guid.NewGuid();
+        var controle = ComCref(vinculoAtivo: true, habilitado: educador);
+
+        await controle.GarantirAcessoAtletaAsync(educador, atleta, CancellationToken.None);
+        await ComCref(vinculoAtivo: false, habilitado: null)
+            .GarantirAcessoAtletaAsync(atleta, atleta, CancellationToken.None);
+    }
 
     [Fact]
     public async Task Dono_pode_acessar_os_proprios_dados()

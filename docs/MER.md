@@ -47,7 +47,7 @@ o plano ativo com a sessão mais recente (empate: início mais novo). É idempot
 e não tem reversão, de propósito. Depois, `ObservacaoPrivadaEConsentimento`
 (`20261030143221`, PBI-87): adiciona `sessao.observacao_privada` e cria a tabela
 `consentimento`. Por último, `PlanoSemana` (`20261105201232`, PBI-35): cria a
-tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000; e `BlocoConjugado` (`20261113173129`, PBI-101): cria `bloco_exercicio` e acrescenta `treino_exercicio.bloco_id` (nula, sem mexer em linha nenhuma); e `SerieBloco` (`20261113191412`, PBI-102): acrescenta `serie_executada.bloco` e `posicao_no_bloco` (nulas, com `CHECK`); e `CompartilhamentoCorporal` (`20261114042934`, PBI-95): acrescenta `usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` (nulas; todo mundo começa trancado).
+tabela `plano_dia_semana` vazia, sem mexer em planos, fichas ou sessões. E, no épico E12, `MedidaCorporal` (`20261109174739`, PBI-91): cria a tabela `medida_corporal` vazia; e `PerfilCorporal` (`20261111144536`, PBI-93): acrescenta `sexo`, `data_nascimento` e `altura_cm` (nulos) a `usuario`, com `CHECK` de sexo e de altura; e `TmbManual` (`20261112202209`, PBI-98): acrescenta `tmb_manual_kcal` (nula) com `CHECK` de 800 a 5000; e `BlocoConjugado` (`20261113173129`, PBI-101): cria `bloco_exercicio` e acrescenta `treino_exercicio.bloco_id` (nula, sem mexer em linha nenhuma); e `SerieBloco` (`20261113191412`, PBI-102): acrescenta `serie_executada.bloco` e `posicao_no_bloco` (nulas, com `CHECK`); e `CompartilhamentoCorporal` (`20261114042934`, PBI-95): acrescenta `usuario.dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` (nulas; todo mundo começa trancado); e `CrefEducador` (`20261126190636`, PBI-106): cria `educador_cref` e `educador_cref_tentativa` vazias (ninguém é habilitado pela migration; o legado entra por script).
 
 **Planejado:** nada pendente no modelo além do incremento 2 e do modo educador (seção 7).
 
@@ -579,6 +579,35 @@ só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro 
 `(usuario_id, tipo, data DESC)` para a última medida e a evolução por tipo. Tipo novo
 é uma entrada em `TipoMedida` mais uma migration pequena do `CHECK`.
 
+### 3.16 `educador_cref`
+
+Habilitação do educador pelo CREF (PBI-106). Uma linha só para quem foi habilitado: pela consulta (`AUTOMATICA`) ou por script, sem consulta (`LEGADO`). **Nunca** guarda CPF nem nome.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| usuario_id | uuid | não | PK, FK `usuario` (`ON DELETE CASCADE`) |
+| uf | char(2) | sim | UF do registro |
+| numero | varchar(20) | sim | Só dígitos, sem prefixo de UF e sem zeros à esquerda |
+| situacao | varchar(30) | sim | Como o CREF devolveu (`ATIVO` na habilitação) |
+| categoria | varchar(30) | sim | Como o CREF devolveu; não restringe |
+| origem | varchar(20) | não | `CHECK IN ('AUTOMATICA','LEGADO')` |
+| consultado_em | timestamptz | sim | Instante da consulta |
+
+`CHECK`: fora do `LEGADO`, `uf`, `numero`, `situacao`, `categoria` e `consultado_em` são obrigatórios. Índice único `(uf, numero)`: o mesmo registro não habilita duas contas (os nulos do legado não colidem).
+
+### 3.17 `educador_cref_tentativa`
+
+Tentativas de verificação (PBI-106), só para o limite de 5 em 24 h. Sem CPF, número nem nome.
+
+| Coluna | Tipo | Nulo | Regra |
+|---|---|---|---|
+| id | uuid | não | PK |
+| usuario_id | uuid | não | FK `usuario` (`ON DELETE CASCADE`) |
+| em | timestamptz | não | Instante da tentativa |
+| resultado | varchar(30) | não | `CHECK IN ('HABILITADO','RECUSADO','NAO_ENCONTRADO','INDISPONIVEL')` |
+
+Índice `(usuario_id, em)`. `INDISPONIVEL` não é gravado (não conta).
+
 ## 4. Índices de consulta
 
 | Índice | Atende |
@@ -619,6 +648,8 @@ só o dono lê e grava (sob `/me`); nenhum valor vai para log, mensagem de erro 
 19. **Bloco na sessão (PBI-102 e 103):** cada série continua sendo de um exercício, ligada ao exercício e ao `treino_exercicio` dele; por isso histórico, pré-preenchimento e gráfico por exercício não mudam. A série de bloco grava `bloco` (número do bloco na sessão, na ordem em que aparece) e `posicao_no_bloco` (1 a 4), os dois juntos ou nenhum. O descanso do bloco vai só na última série feita de cada rodada; as outras séries do bloco ficam com `descanso_seg` nulo. O detalhe da sessão agrupa pelos dois campos, não pela ficha atual; sessão antiga (sem os campos) aparece por exercício, como antes.
 
 20. **Compartilhamento do corpo (PBI-95 e 96):** dois cadeados independentes em `usuario`: `dados_corporais_compartilhados_em` (sexo, idade, altura, peso e TMB, inclusive se a TMB foi informada) e `medidas_compartilhadas_em` (últimas medidas e evolução). Nulo = trancado, o padrão. Destrancar grava o instante (truncado para microssegundos); destrancar de novo mantém o "desde"; trancar zera. Destrancado, **todo educador com vínculo ATIVO** vê, só leitura, sem escolher por educador (resposta assumida para as perguntas 1 e 2 do BACKLOG, a confirmar com o PO). A leitura do educador é por rotas próprias (`/alunos/{atletaId}/corpo` e `/alunos/{atletaId}/medidas/{tipo}/evolucao`) e verifica primeiro o vínculo ATIVO (sem ele, 404, MAS 11.3) e depois o cadeado (no corpo, seção trancada volta nula; na evolução, 403 `corpo-nao-compartilhado`). Vínculo pendente, recusado ou encerrado não vê nada. O educador nunca grava dado corporal, e o PDF do progresso não leva dado corporal.
+
+21. **Habilitação do educador (PBI-106):** com a chave `Educador:ExigirCref` ligada, o papel `EDUCADOR` só é concedido quando a consulta do CREF por **CPF** na UF informada devolve o **número informado** (comparado sem prefixo e sem zeros à esquerda) com situação **exatamente `ATIVO`**; a categoria é guardada e não restringe. Evidência e papel na mesma transação. `RECUSADO` (situação não ativa ou número que não confere) e `NAO_ENCONTRADO` contam tentativa; `INDISPONIVEL` (site fora do ar, erro ou UF sem consulta levantada) nunca recusa nem conta. No máximo 5 tentativas em 24 h (contadas no banco). Educador com o papel e sem linha em `educador_cref` fica **travado**: não convida, não lista nem lê dados de alunos (403 `educador-nao-habilitado`, depois do 404 de quem não é parte do vínculo); nada é apagado e o acesso volta ao habilitar. UFs com consulta: SC, MG, DF, PR, PB, RN, BA, GO, TO, MT, SE e ES (PBI-105). Com a chave desligada (padrão até o leitor do site real existir), tudo funciona como antes.
 
 ## 6. Exemplo de dados
 

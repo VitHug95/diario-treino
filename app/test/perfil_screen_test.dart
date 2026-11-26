@@ -2,6 +2,7 @@ import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/perfil_api.dart';
 import 'package:diario_treino/features/auth/perfil_screen.dart';
 import 'package:diario_treino/features/educador/educador_models.dart';
+import 'package:diario_treino/features/educador/cref_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
 import 'package:diario_treino/features/medidas/medidas_models.dart';
 import 'package:diario_treino/features/medidas/medidas_repository.dart';
@@ -33,6 +34,8 @@ Future<Widget> _tela({
           )),
       convitesPendentesProvider.overrideWith((ref) async => convites),
       educadoresDoAlunoProvider.overrideWith((ref) async => educadores),
+      // Verificação do CREF desligada (PBI-106), como em produção hoje.
+      situacaoCrefProvider.overrideWith((ref) async => const SituacaoCref(verificacaoExigida: false)),
       // O bloco Corpo (E12) lê o resumo das medidas; aqui, sem medidas.
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),

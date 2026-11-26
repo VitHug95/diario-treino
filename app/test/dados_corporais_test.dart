@@ -3,6 +3,7 @@ import 'package:diario_treino/core/relogio.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/auth/perfil_api.dart';
 import 'package:diario_treino/features/auth/perfil_screen.dart';
+import 'package:diario_treino/features/educador/cref_models.dart';
 import 'package:diario_treino/features/educador/educador_repository.dart';
 import 'package:diario_treino/features/medidas/compartilhamento_repository.dart';
 import 'package:diario_treino/features/medidas/dados_corporais_screen.dart';
@@ -156,6 +157,8 @@ Future<ProviderScope> _escopo(_RepoPerfil repo, Widget filho) async {
           id: 'u1', nome: 'Vitor', email: 'v@teste.local', papeis: ['ATLETA'])),
       convitesPendentesProvider.overrideWith((ref) async => []),
       educadoresDoAlunoProvider.overrideWith((ref) async => []),
+      // Verificação do CREF desligada (PBI-106), como em produção hoje.
+      situacaoCrefProvider.overrideWith((ref) async => const SituacaoCref(verificacaoExigida: false)),
       resumoMedidasProvider.overrideWith(
           (ref) async => const ResumoMedidas(ultimas: [], historico: [])),
       // Cadeados do corpo (PBI-96): tudo privado, sem rede.

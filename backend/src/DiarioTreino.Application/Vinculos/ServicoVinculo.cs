@@ -1,5 +1,6 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Comum;
+using DiarioTreino.Application.Educador;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Domain.Comum;
 using DiarioTreino.Domain.Identidade;
@@ -18,15 +19,21 @@ public sealed class ServicoVinculo
     private readonly IRepositorioVinculo _vinculos;
     private readonly IRepositorioUsuario _usuarios;
     private readonly IRepositorioConsentimento _consentimentos;
+    private readonly IRepositorioEducadorCref _cref;
+    private readonly ConfiguracaoEducador _config;
 
     public ServicoVinculo(
         IRepositorioVinculo vinculos,
         IRepositorioUsuario usuarios,
-        IRepositorioConsentimento consentimentos)
+        IRepositorioConsentimento consentimentos,
+        IRepositorioEducadorCref cref,
+        ConfiguracaoEducador config)
     {
         _vinculos = vinculos;
         _usuarios = usuarios;
         _consentimentos = consentimentos;
+        _cref = cref;
+        _config = config;
     }
 
     /// <summary>
@@ -44,6 +51,13 @@ public sealed class ServicoVinculo
         {
             throw new AcaoNaoPermitidaException(
                 "Você precisa ativar o modo educador para convidar alunos.");
+        }
+
+        // PBI-106: com a chave ligada, o papel só não basta; precisa da
+        // habilitação pelo CREF (ou do legado).
+        if (_config.ExigirCref && !await _cref.HabilitadoAsync(educadorId, ct))
+        {
+            throw new EducadorNaoHabilitadoException();
         }
 
         // Aluno inexistente responde 404, igual a recurso de outro usuário: não
@@ -164,6 +178,13 @@ public sealed class ServicoVinculo
     /// <summary>Alunos com vínculo ATIVO do educador logado (<c>GET /alunos</c>).</summary>
     public async Task<List<AlunoVinculado>> ListarAlunosAtivosAsync(Guid educadorId, CancellationToken ct)
     {
+        // PBI-106: o educador travado não vê a lista (nome e e-mail são dados
+        // dos alunos). Os vínculos continuam lá e voltam ao habilitar.
+        if (_config.ExigirCref && !await _cref.HabilitadoAsync(educadorId, ct))
+        {
+            throw new EducadorNaoHabilitadoException();
+        }
+
         var ativos = await _vinculos.ListarAtivosDoEducadorAsync(educadorId, ct);
         var lista = new List<AlunoVinculado>(ativos.Count);
         foreach (var v in ativos)

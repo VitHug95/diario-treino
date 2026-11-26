@@ -292,7 +292,7 @@ public sealed class ServicoPlanejamentoTests
         RepositorioVinculoFake? vinculos = null)
         => new(
             repo,
-            new ControleAcesso(vinculos ?? new RepositorioVinculoFake()),
+            new ControleAcesso(vinculos ?? new RepositorioVinculoFake(), new DiarioTreino.UnitTests.Educador.RepositorioEducadorCrefFake(), new DiarioTreino.Application.Educador.ConfiguracaoEducador(false)),
             exercicios ?? new RepositorioExercicioFake(),
             new RepositorioMetricaFake());
 

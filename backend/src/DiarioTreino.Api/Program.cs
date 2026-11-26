@@ -33,6 +33,9 @@ try
     // Traduz CorpoNaoCompartilhadoException em 403 (cadeado do corpo; PBI-95).
     builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.CorpoNaoCompartilhadoHandler>();
 
+    // Habilitação do educador pelo CREF (PBI-106): 403 educador-nao-habilitado e 429.
+    builder.Services.AddExceptionHandler<DiarioTreino.Api.Middleware.EducadorCrefHandler>();
+
     // Problem Details (RFC 9457) como formato padrão de erro da API.
     builder.Services.AddProblemDetails(options =>
     {
@@ -121,6 +124,7 @@ try
     app.MapMedidaEndpoints();
     app.MapPerfilCorporalEndpoints();
     app.MapCompartilhamentoCorporalEndpoints();
+    app.MapEducadorCrefEndpoints();
     app.MapProgressoEndpoints();
     app.MapVinculoEndpoints();
 

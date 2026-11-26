@@ -220,6 +220,7 @@ fechados sem merge.
 | #152 | técnico | Rascunho do treino em andamento com `versao` no JSON (hoje 1; rascunho sem o campo é a versão 0, mesmo formato) e `migrarRascunhoTreino` para os passos futuros. Antes, qualquer rascunho que não abrisse era apagado sem aviso; agora o de versão mais nova do app fica intacto (e é guardado se outro treino ocupar a chave) e o que não abre vai para `treino_em_andamento_guardado`. Só front, sem mudança de tela. |
 | #153 | técnico (MAS 18) | A regra do autor do plano (403 `plano-somente-leitura`, depois do 404) passou a valer em editar e excluir ficha, nos exercícios da ficha (adicionar, remover, reordenar, alvos) e nos blocos. O educador edita só a ficha dos planos que ele montou. "Salvar treino livre como ficha" com o plano do professor em uso dá 403 antes de criar a ficha. Front: mensagens do 403 na ficha. Testes: `FichaAutorEndpointTests` (todas as escritas, educador autor, terceiro 404, aluno no próprio plano, treino livre) e o de blocos do educador ajustado. |
 | (PR dos docs do CREF) | PBI-105, 106 | Registro das PBIs 105 e 106 (habilitar o educador pelo CREF, sem aprovação manual) e a primeira passada da investigação em `INVESTIGACAO-CREF.md`, sem nenhuma busca. Decisão pendente. |
+| (PR da PBI-106, parte 1) | PBI-106 | Habilitação do educador pelo CREF, menos o leitor do site real, atrás da chave `Educador:ExigirCref` (desligada em produção). Back: migration `CrefEducador`, CPF validado localmente e nunca guardado, tabela de decisão, limite de 5 em 24 h, 409, `GET /me/educador/cref` e `POST /me/educador/cref/verificar`, trava do educador sem registro (403 `educador-nao-habilitado`) no acesso, no convite e na lista de alunos, rota antiga sem conceder o papel. Script do legado em `docs/scripts/`. Front: tela "Registro profissional (CREF)" com máscara do CPF e o Perfil com o educador travado. |
 
 ---
 
@@ -244,6 +245,7 @@ fechados sem merge.
 | `20261113173129_BlocoConjugado` | PBI-101 | Tabela `bloco_exercicio` (descanso do bloco, CHECK de 0 a 600) e coluna `treino_exercicio.bloco_id` (nula, ON DELETE SET NULL). Não mexe nas linhas existentes. |
 | `20261113191412_SerieBloco` | PBI-102 | Colunas `serie_executada.bloco` e `posicao_no_bloco` (nulas), com CHECK "os dois juntos, posição 1 a 4". Não mexe nas séries existentes. |
 | `20261114042934_CompartilhamentoCorporal` | PBI-95 | Colunas `dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` em `usuario` (`timestamptz` nulas; nulo = trancado). Só `AddColumn`: todo mundo começa trancado. |
+| `20261126190636_CrefEducador` | PBI-106 | Tabelas `educador_cref` (habilitação, PK `usuario_id`, CHECK de origem e de preenchimento, único `(uf, numero)`) e `educador_cref_tentativa` (limite de tentativas). Cascata do usuário. Não cria linha para ninguém. |
 
 ## Infraestrutura
 

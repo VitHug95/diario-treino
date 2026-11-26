@@ -1482,6 +1482,87 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.EducadorCref", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("Categoria")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("categoria");
+
+                    b.Property<DateTimeOffset?>("ConsultadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consultado_em");
+
+                    b.Property<string>("Numero")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("numero");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("origem");
+
+                    b.Property<string>("Situacao")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("situacao");
+
+                    b.Property<string>("Uf")
+                        .HasColumnType("char(2)")
+                        .HasColumnName("uf");
+
+                    b.HasKey("UsuarioId");
+
+                    b.HasIndex("Uf", "Numero")
+                        .IsUnique()
+                        .HasDatabaseName("ux_educador_cref_uf_numero");
+
+                    b.ToTable("educador_cref", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_educador_cref_automatica_completa", "origem = 'LEGADO' OR (uf IS NOT NULL AND numero IS NOT NULL AND situacao IS NOT NULL AND categoria IS NOT NULL AND consultado_em IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_educador_cref_origem", "origem IN ('AUTOMATICA','LEGADO')");
+                        });
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.TentativaCref", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("Em")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("em");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("resultado");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Em")
+                        .HasDatabaseName("ix_educador_cref_tentativa_usuario_em");
+
+                    b.ToTable("educador_cref_tentativa", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_educador_cref_tentativa_resultado", "resultado IN ('HABILITADO','RECUSADO','NAO_ENCONTRADO','INDISPONIVEL')");
+                        });
+                });
+
             modelBuilder.Entity("DiarioTreino.Domain.Execucao.SerieExecutada", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2156,6 +2237,24 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                 });
 
             modelBuilder.Entity("DiarioTreino.Domain.Corpo.MedidaCorporal", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Identidade.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.EducadorCref", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Identidade.Usuario", null)
+                        .WithOne()
+                        .HasForeignKey("DiarioTreino.Domain.Educador.EducadorCref", "UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.TentativaCref", b =>
                 {
                     b.HasOne("DiarioTreino.Domain.Identidade.Usuario", null)
                         .WithMany()

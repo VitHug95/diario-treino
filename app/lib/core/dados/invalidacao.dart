@@ -81,6 +81,8 @@ void invalidarDerivados(Ref ref, Mudanca mudanca) {
         ..invalidate(alunosProvider)
         // "Meus educadores" e o "Quem vê" do corpo (PBI-104 e 96).
         ..invalidate(educadoresDoAlunoProvider)
+        // Registro do CREF (PBI-106): habilitar muda o Perfil e a tela do CREF.
+        ..invalidate(situacaoCrefProvider)
         // O educador que perdeu o vínculo não vê mais o corpo do aluno.
         ..invalidate(corpoDoAlunoProvider)
         ..invalidate(evolucaoMedidaDoAlunoProvider);

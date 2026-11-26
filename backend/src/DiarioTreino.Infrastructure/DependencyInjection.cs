@@ -1,7 +1,9 @@
 using DiarioTreino.Application.Acesso;
 using DiarioTreino.Application.Catalogo;
 using DiarioTreino.Application.Corpo;
+using DiarioTreino.Application.Educador;
 using DiarioTreino.Application.Execucao;
+using DiarioTreino.Infrastructure.Educador;
 using DiarioTreino.Application.Identidade;
 using DiarioTreino.Application.Planejamento;
 using DiarioTreino.Application.Progresso;
@@ -40,6 +42,14 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioSessao, RepositorioSessao>();
         services.AddScoped<IRepositorioProgresso, RepositorioProgresso>();
         services.AddScoped<IRepositorioMedida, RepositorioMedida>();
+        services.AddScoped<IRepositorioEducadorCref, RepositorioEducadorCref>();
+
+        // Habilitação do educador pelo CREF (PBI-106). A chave fica desligada até
+        // o leitor do site real existir: ligada antes, ninguém novo se habilitaria.
+        services.AddSingleton(new ConfiguracaoEducador(
+            bool.TryParse(configuration["Educador:ExigirCref"], out var exigirCref) && exigirCref));
+        services.AddSingleton<IConsultaCref, ConsultaCrefNaoConfigurada>();
+        services.AddSingleton(TimeProvider.System);
 
         // Geração de PDF do progresso (PBI-89). A licença Community do QuestPDF
         // é configurada pelo próprio gerador (cctor), então ele é autossuficiente.

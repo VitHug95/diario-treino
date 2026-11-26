@@ -26,6 +26,7 @@ const _escritas = [
   'salvarPerfilCorporal', 'limparPerfilCorporal', // dados corporais (E12)
   'definirTmbManual', 'usarTmbCalculada', // TMB informada (PBI-98)
   'definirCompartilhamentoCorporal', // cadeados do corpo (PBI-96)
+  'verificarCref', // habilitação do educador (PBI-106)
 ];
 
 Iterable<File> _arquivosDart() => Directory('lib')
