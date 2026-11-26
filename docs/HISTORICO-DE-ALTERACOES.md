@@ -217,7 +217,8 @@ fechados sem merge.
 
 | PR | PBI | O que mudou |
 |---|---|---|
-| (PR do rascunho versionado) | técnico | Rascunho do treino em andamento com `versao` no JSON (hoje 1; rascunho sem o campo é a versão 0, mesmo formato) e `migrarRascunhoTreino` para os passos futuros. Antes, qualquer rascunho que não abrisse era apagado sem aviso; agora o de versão mais nova do app fica intacto (e é guardado se outro treino ocupar a chave) e o que não abre vai para `treino_em_andamento_guardado`. Só front, sem mudança de tela. |
+| #152 | técnico | Rascunho do treino em andamento com `versao` no JSON (hoje 1; rascunho sem o campo é a versão 0, mesmo formato) e `migrarRascunhoTreino` para os passos futuros. Antes, qualquer rascunho que não abrisse era apagado sem aviso; agora o de versão mais nova do app fica intacto (e é guardado se outro treino ocupar a chave) e o que não abre vai para `treino_em_andamento_guardado`. Só front, sem mudança de tela. |
+| (PR da regra do autor na ficha) | técnico (MAS 18) | A regra do autor do plano (403 `plano-somente-leitura`, depois do 404) passou a valer em editar e excluir ficha, nos exercícios da ficha (adicionar, remover, reordenar, alvos) e nos blocos. O educador edita só a ficha dos planos que ele montou. "Salvar treino livre como ficha" com o plano do professor em uso dá 403 antes de criar a ficha. Front: mensagens do 403 na ficha. Testes: `FichaAutorEndpointTests` (todas as escritas, educador autor, terceiro 404, aluno no próprio plano, treino livre) e o de blocos do educador ajustado. |
 
 ---
 

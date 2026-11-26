@@ -186,7 +186,11 @@ class FichasRepository {
               'descricao': descricao,
               'exercicioIds': exercicioIds,
             },
-          ));
+          ),
+          // A ficha nova vai para o plano em uso; se ele é do professor, 403.
+          traduzir: (e) => e.response?.statusCode == 403
+              ? 'o plano em uso é do seu professor. Use um plano seu para guardar fichas.'
+              : _traduzir(e));
 
   Future<void> editarFicha({
     required String treinoId,
@@ -354,6 +358,8 @@ class FichasRepository {
     final status = e.response?.statusCode;
     return switch (status) {
       400 => 'Confira os campos: algo está inválido.',
+      // Regra do autor (403 plano-somente-leitura): ficha do plano do professor.
+      403 => 'Esta ficha é do plano do seu professor: só ele edita. Copie o plano para mudar.',
       404 => 'Ficha não encontrada.',
       // PBI-74: exercício repetido na ficha.
       409 => 'Este exercício já está na ficha.',

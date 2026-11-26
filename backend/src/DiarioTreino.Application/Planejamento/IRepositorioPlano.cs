@@ -87,6 +87,10 @@ public interface IRepositorioPlano
     /// treino não existe.</summary>
     public Task<Guid?> ObterAtletaDoTreinoAsync(Guid treinoId, CancellationToken ct);
 
+    /// <summary>Autor do plano a que o treino pertence (mesmo plano escondido),
+    /// ou nulo se o treino não existe. Base da regra do autor na ficha.</summary>
+    public Task<Guid?> ObterAutorDoTreinoAsync(Guid treinoId, CancellationToken ct);
+
     /// <summary>Maior ordem entre as fichas ativas do plano (0 se não houver).</summary>
     public Task<short> ObterMaiorOrdemAsync(Guid planoId, CancellationToken ct);
 

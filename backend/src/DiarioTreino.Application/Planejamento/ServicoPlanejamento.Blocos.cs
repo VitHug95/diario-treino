@@ -22,7 +22,7 @@ public sealed partial class ServicoPlanejamento
         CriarBlocoRequest request,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
 
         var exercicios = await _repositorio.ObterExerciciosDaFichaAsync(treinoId, ct);
         var porId = exercicios.ToDictionary(te => te.Id);
@@ -66,7 +66,7 @@ public sealed partial class ServicoPlanejamento
         short? descansoSeg,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
         var bloco = await ObterBlocoDaFichaAsync(treinoId, blocoId, ct);
 
         bloco.DescansoSeg = descansoSeg;
@@ -83,7 +83,7 @@ public sealed partial class ServicoPlanejamento
         Guid blocoId,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
         var bloco = await ObterBlocoDaFichaAsync(treinoId, blocoId, ct);
         var exercicios = await _repositorio.ObterExerciciosDaFichaAsync(treinoId, ct);
 
@@ -103,7 +103,7 @@ public sealed partial class ServicoPlanejamento
         IReadOnlyList<Guid> treinoExercicioIds,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
         var bloco = await ObterBlocoDaFichaAsync(treinoId, blocoId, ct);
         var exercicios = await _repositorio.ObterExerciciosDaFichaAsync(treinoId, ct);
         var porId = exercicios.ToDictionary(te => te.Id);

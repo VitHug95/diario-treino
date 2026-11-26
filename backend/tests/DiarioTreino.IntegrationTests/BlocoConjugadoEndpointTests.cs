@@ -449,12 +449,47 @@ public sealed class BlocoConjugadoEndpointTests
         var vinculoId = (await convite.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
         (await aluno.Client.PostAsync($"/api/v1/vinculos/{vinculoId}/aceitar", null)).EnsureSuccessStatusCode();
 
-        // A ficha é do aluno; quem junta é o educador.
-        var (_, treinoId, t) = await MontarFicha(aluno.Client, 2);
-        await Juntar(educador.Client, treinoId, 30, t[0], t[1]);
+        await using (var db = _postgres.CriarContexto())
+        {
+            var alunoId = await db.Usuarios.Where(u => u.FirebaseUid == aluno.Uid).Select(u => u.Id).SingleAsync();
 
-        var f = await Ficha(aluno.Client, treinoId);
-        Assert.Equal((short)30, f.Blocos.Single().DescansoSeg);
+            // Plano que o educador monta para o aluno (autor = educador): ele monta o bloco.
+            var plano = await educador.Client.PostAsJsonAsync("/api/v1/planos", new { nome = "Do professor", atletaId = alunoId });
+            plano.EnsureSuccessStatusCode();
+            var planoId = (await plano.Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+            var ficha = await (await educador.Client.PostAsJsonAsync($"/api/v1/planos/{planoId}/treinos",
+                new { nome = "Mobilidade", descricao = (string?)null })).Content.ReadFromJsonAsync<CriadoResp>();
+            var tes = new List<Guid>();
+            foreach (var exercicioId in await ExerciciosDoSeed(2))
+            {
+                var r = await educador.Client.PostAsJsonAsync($"/api/v1/treinos/{ficha!.Id}/exercicios", new { exercicioId });
+                r.EnsureSuccessStatusCode();
+                tes.Add((await r.Content.ReadFromJsonAsync<CriadoResp>())!.Id);
+            }
+            await Juntar(educador.Client, ficha!.Id, 30, tes[0], tes[1]);
+
+            var f = await Ficha(aluno.Client, ficha.Id);
+            Assert.Equal((short)30, f.Blocos.Single().DescansoSeg);
+        }
+
+        // Ficha que o próprio aluno montou (autor = aluno): o educador lê, mas não
+        // mexe (regra do autor, 403 depois do acesso).
+        // (Plano com nome: o "POST /planos" sem corpo devolveria o plano em uso,
+        // que aqui é o do professor.)
+        var planoDoAluno = await (await aluno.Client.PostAsJsonAsync("/api/v1/planos", new { nome = "Meu" }))
+            .Content.ReadFromJsonAsync<CriadoResp>();
+        var treinoDoAluno = (await (await aluno.Client.PostAsJsonAsync($"/api/v1/planos/{planoDoAluno!.Id}/treinos",
+            new { nome = "Minha", descricao = (string?)null })).Content.ReadFromJsonAsync<CriadoResp>())!.Id;
+        var t = new List<Guid>();
+        foreach (var exercicioId in await ExerciciosDoSeed(2))
+        {
+            var r = await aluno.Client.PostAsJsonAsync($"/api/v1/treinos/{treinoDoAluno}/exercicios", new { exercicioId });
+            r.EnsureSuccessStatusCode();
+            t.Add((await r.Content.ReadFromJsonAsync<CriadoResp>())!.Id);
+        }
+        var juntar = await educador.Client.PostAsJsonAsync($"/api/v1/treinos/{treinoDoAluno}/blocos",
+            new { treinoExercicioIds = new[] { t[0], t[1] }, descansoSeg = (short?)30 });
+        Assert.Equal(HttpStatusCode.Forbidden, juntar.StatusCode);
     }
 
     // ---- Cascata e cópia ----

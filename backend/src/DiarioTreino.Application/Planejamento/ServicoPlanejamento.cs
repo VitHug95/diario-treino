@@ -298,6 +298,13 @@ public sealed partial class ServicoPlanejamento
                 _repositorio.AdicionarPlano(emUso);
                 await _repositorio.SalvarAsync(ct);
             }
+            else if (emUso.AutorId != usuarioLogadoId)
+            {
+                // O plano em uso é do professor: a ficha nova não entra nele
+                // (regra do autor). Recusa ANTES de criar, para não deixar uma
+                // ficha vazia para trás (ex.: "Salvar também como ficha").
+                throw new PlanoSomenteLeituraException();
+            }
             plano = emUso;
         }
 
@@ -441,13 +448,9 @@ public sealed partial class ServicoPlanejamento
         Guid treinoId,
         CancellationToken ct)
     {
-        var atletaId = await _repositorio.ObterAtletaDoTreinoAsync(treinoId, ct);
-        if (atletaId is null)
-        {
-            throw new RecursoNaoEncontradoException();
-        }
-
-        await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId.Value, ct);
+        // Só as escritas usam este caminho (editar e excluir a ficha): acesso
+        // (404) e depois a regra do autor (403).
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
 
         var treino = await _repositorio.ObterTreinoAsync(treinoId, ct);
         return treino ?? throw new RecursoNaoEncontradoException();
@@ -542,7 +545,7 @@ public sealed partial class ServicoPlanejamento
         Guid exercicioId,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
 
         if (!await _exercicios.ExisteDisponivelAsync(exercicioId, usuarioLogadoId, ct))
         {
@@ -580,7 +583,7 @@ public sealed partial class ServicoPlanejamento
     {
         var te = await _repositorio.ObterTreinoExercicioAsync(treinoExercicioId, ct)
             ?? throw new RecursoNaoEncontradoException();
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
 
         // PBI-101: bloco que ficaria com um só se desfaz.
         await AjustarBlocoAoRemoverAsync(te, ct);
@@ -595,7 +598,7 @@ public sealed partial class ServicoPlanejamento
         IReadOnlyList<Guid> idsNaOrdem,
         CancellationToken ct)
     {
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, treinoId, ct);
 
         var exercicios = await _repositorio.ObterExerciciosDaFichaAsync(treinoId, ct);
         var porId = exercicios.ToDictionary(te => te.Id);
@@ -630,7 +633,7 @@ public sealed partial class ServicoPlanejamento
     {
         var te = await _repositorio.ObterTreinoExercicioComEtapasAsync(treinoExercicioId, ct)
             ?? throw new RecursoNaoEncontradoException();
-        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
+        await GarantirEdicaoDoTreinoAsync(usuarioLogadoId, te.TreinoId, ct);
 
         await ValidarEixoAsync(request.IntensidadeMetricaId, EixoMetrica.Intensidade, ct);
         await ValidarEixoAsync(request.VolumeMetricaId, EixoMetrica.Volume, ct);
@@ -725,6 +728,7 @@ public sealed partial class ServicoPlanejamento
         }
     }
 
+    /// <summary>Leitura da ficha: só a regra de acesso (MAS 11.3, 404).</summary>
     private async Task GarantirAcessoAoTreinoAsync(
         Guid usuarioLogadoId,
         Guid treinoId,
@@ -736,5 +740,27 @@ public sealed partial class ServicoPlanejamento
             throw new RecursoNaoEncontradoException();
         }
         await _acesso.GarantirAcessoAtletaAsync(usuarioLogadoId, atletaId.Value, ct);
+    }
+
+    /// <summary>
+    /// Escrita na ficha (nome, excluir, exercícios, alvos, ordem e blocos): a
+    /// regra de acesso (404) e, DEPOIS dela, a regra do autor do plano (403
+    /// <c>plano-somente-leitura</c>), a mesma do plano (regra 11 do MER). O
+    /// educador edita a ficha do plano que montou; o aluno não edita a ficha do
+    /// plano do professor (pode duplicar o plano para ter a dele).
+    /// </summary>
+    private async Task GarantirEdicaoDoTreinoAsync(
+        Guid usuarioLogadoId,
+        Guid treinoId,
+        CancellationToken ct)
+    {
+        await GarantirAcessoAoTreinoAsync(usuarioLogadoId, treinoId, ct);
+
+        var autorId = await _repositorio.ObterAutorDoTreinoAsync(treinoId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+        if (autorId != usuarioLogadoId)
+        {
+            throw new PlanoSomenteLeituraException();
+        }
     }
 }

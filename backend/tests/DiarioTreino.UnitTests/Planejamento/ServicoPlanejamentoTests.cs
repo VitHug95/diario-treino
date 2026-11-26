@@ -155,6 +155,12 @@ public sealed class ServicoPlanejamentoTests
         public Task<Guid?> ObterAtletaDoTreinoAsync(Guid treinoId, CancellationToken ct)
             => Task.FromResult(AtletaDoTreino);
 
+        /// <summary>Autor do plano da ficha; sem valor, o próprio atleta (o caso comum).</summary>
+        public Guid? AutorDoTreino;
+
+        public Task<Guid?> ObterAutorDoTreinoAsync(Guid treinoId, CancellationToken ct)
+            => Task.FromResult(AutorDoTreino ?? AtletaDoTreino);
+
         public Task<short> ObterMaiorOrdemAsync(Guid planoId, CancellationToken ct)
             => Task.FromResult(MaiorOrdem);
 
@@ -337,6 +343,103 @@ public sealed class ServicoPlanejamentoTests
         await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
             Montar(repo).EditarFichaAsync(
                 terceiro, treinoId, new SalvarTreinoRequest("X", null), CancellationToken.None));
+    }
+
+    // ---- Regra do autor na ficha (403 depois do 404) ----
+
+    [Fact]
+    public async Task Aluno_nao_edita_ficha_do_plano_do_professor()
+    {
+        var aluno = Guid.NewGuid();
+        var professor = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = aluno,
+            AutorDoTreino = professor,
+            Treinos = { new Treino { Id = treinoId, Nome = "A" } },
+        };
+        var servico = Montar(repo);
+
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            servico.EditarFichaAsync(aluno, treinoId, new SalvarTreinoRequest("X", null), CancellationToken.None));
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            servico.ExcluirFichaAsync(aluno, treinoId, CancellationToken.None));
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            servico.AdicionarExercicioAsync(aluno, treinoId, Guid.NewGuid(), CancellationToken.None));
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            servico.ReordenarExerciciosAsync(aluno, treinoId, [], CancellationToken.None));
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            servico.CriarBlocoAsync(aluno, treinoId, new CriarBlocoRequest([], 30), CancellationToken.None));
+        Assert.Equal("A", repo.Treinos.Single().Nome);
+    }
+
+    [Fact]
+    public async Task Aluno_ainda_le_a_ficha_do_professor()
+    {
+        var aluno = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = aluno,
+            AutorDoTreino = Guid.NewGuid(),
+            Treinos = { new Treino { Id = treinoId, Nome = "A" } },
+        };
+
+        var ficha = await Montar(repo).ObterFichaAsync(aluno, treinoId, CancellationToken.None);
+
+        Assert.Equal("A", ficha.Nome);
+    }
+
+    [Fact]
+    public async Task Educador_autor_edita_a_ficha_do_aluno()
+    {
+        var aluno = Guid.NewGuid();
+        var educador = Guid.NewGuid();
+        var treinoId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = aluno,
+            AutorDoTreino = educador,
+            Treinos = { new Treino { Id = treinoId, Nome = "A" } },
+        };
+        var vinculos = new RepositorioVinculoFake();
+        vinculos.Ativos.Add((educador, aluno));
+
+        await Montar(repo, vinculos: vinculos).EditarFichaAsync(
+            educador, treinoId, new SalvarTreinoRequest("B", null), CancellationToken.None);
+
+        Assert.Equal("B", repo.Treinos.Single().Nome);
+    }
+
+    [Fact]
+    public async Task Terceiro_recebe_404_antes_da_regra_do_autor()
+    {
+        var treinoId = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            AtletaDoTreino = Guid.NewGuid(),
+            AutorDoTreino = Guid.NewGuid(),
+            Treinos = { new Treino { Id = treinoId, Nome = "A" } },
+        };
+
+        await Assert.ThrowsAsync<RecursoNaoEncontradoException>(() =>
+            Montar(repo).EditarFichaAsync(
+                Guid.NewGuid(), treinoId, new SalvarTreinoRequest("X", null), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Ficha_nova_sem_plano_na_url_nao_entra_no_plano_do_professor()
+    {
+        var aluno = Guid.NewGuid();
+        var repo = new RepositorioPlanoFake
+        {
+            PlanoAtivo = new PlanoTreino { Id = Guid.NewGuid(), AtletaId = aluno, AutorId = Guid.NewGuid(), EmUso = true },
+        };
+
+        await Assert.ThrowsAsync<PlanoSomenteLeituraException>(() =>
+            Montar(repo).AdicionarFichaAsync(aluno, null, new SalvarTreinoRequest("A", null), CancellationToken.None));
+        Assert.Empty(repo.Treinos);
     }
 
     [Fact]
