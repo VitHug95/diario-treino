@@ -337,9 +337,9 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   última rodada; "Rodada feita" marca com os valores pré-preenchidos.
 - **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
   modo educador.
-- **Educador e CREF (PBIs 105 e 106):** perguntar ao CONFEF por canal oficial;
-  uma busca de teste com os dados do PO; categorias que habilitam; educadores
-  atuais como legado; texto sobre o CPF ser enviado ao CREF. Ver
+- **Educador e CREF (PBIs 105 e 106):** confirmar a decisão "seguir só em
+  parte"; salvar três páginas de resultado para as fixtures (e ver se a
+  nacional mostra a situação); texto sobre o CPF ser enviado ao CREF. Ver
   [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
 
 ### Pendências de infraestrutura

@@ -1,9 +1,9 @@
 # PBI-105 · Investigação das consultas públicas de CREF
 
-Status: **em andamento, decisão pendente.** Primeira passada feita em 26/11/2026,
-sem nenhuma busca: só leitura do `robots.txt` e da página inicial de cada
-consulta. As buscas de teste precisam de uma pessoa com dados próprios (ver
-"O que falta").
+Status: **decisão proposta ("seguir só em parte"), a confirmar pelo PO.** Primeira
+passada em 26/11/2026, sem nenhuma busca: só o `robots.txt` e a página inicial de
+cada consulta. Respostas do PO na seção 4. Falta o formato da página de resultado
+(seção 5) para o adaptador real.
 
 ## 1. O que já se sabe
 
@@ -79,17 +79,60 @@ pela regra da PBI-106** (CPF + número). Precisa ser confirmado na tela.
    quais valem para usar o modo educador.
 6. **Com o PO:** o texto sobre o CPF ser enviado ao CREF (risco 1).
 
-## 4. Decisão
+## 4. Respostas do PO (26/11)
 
-**Pendente.** Recomendação provisória, para o PO avaliar:
+1. **Canal oficial:** o CONFEF não tem outro; os registros são validados por estas
+   páginas. Item 1 da seção 3 respondido.
+2. **CREF6/MG no navegador:** sem captcha.
+3. **Nacional:** aceita CPF. Não confirmado se mostra a situação nem se cobre SP,
+   RJ e RS. A resposta "aparece ativo se for pelo site do estado" indica que a
+   situação talvez só apareça no regional.
+4. **Categorias:** vale a situação `ATIVO`; a categoria é guardada, mas **não
+   restringe** por ora.
+5. **Educadores atuais:** ficam travados até verificar. Só o Vinicius é habilitado
+   sem consulta (`LEGADO`, por script de banco de uso único).
 
-- Se o CONFEF tiver canal oficial: **seguir** por ele.
-- Se não tiver, e o regional responder por CPF sem captcha: **seguir só em parte**,
-  nas UFs com consulta regional que responde, com no máximo uma consulta por
-  tentativa do usuário, `User-Agent` identificando o app e um contato, e tempo
-  limite curto. UFs sem consulta que responda (provavelmente SP, RJ e RS, e a BA se a
-  Cloudflare barrar) ficam no **plano B** (aprovação por administrador) ou sem
-  habilitação até haver canal.
-- Se o regional tiver captcha ou barrar: **não seguir**, plano B.
+**Termos e `robots.txt`:** nenhuma página proíbe nem autoriza acesso por programa
+(seção 1). A regra da PBI-105 manda "parar e anotar" nesse caso: está anotado, e
+**seguir é uma aceitação de risco do PO**, sabendo que não há canal oficial.
 
-A PBI-106 não começa antes desta decisão.
+## 5. Decisão
+
+**Proposta: seguir só em parte**, a confirmar pelo PO.
+
+- **Habilitação automática** nas UFs das dez consultas regionais da lista (SC, MG,
+  DF, PR, PB, RN, BA, GO, TO, MT, SE e ES), depois de cada uma passar pelo teste do
+  formulário (seção 3, item 3). A BA fica de fora se a Cloudflare barrar.
+- **Nacional:** só entra se mostrar a situação. Se não mostrar, os 15 estados
+  fora da lista (SP, RJ e RS entre eles) **não habilitam** até alguém levantar a
+  consulta regional de cada um. Contornar bloqueio de navegador não é opção.
+- **Regras de uso:** uma consulta por tentativa do usuário (duas chamadas HTTP:
+  abrir e enviar o formulário), no máximo 5 tentativas por usuário em 24 h,
+  tempo limite de 10 s, sem novas tentativas automáticas, no máximo 2 consultas
+  ao mesmo site ao mesmo tempo, `User-Agent` com o nome do app e um contato.
+
+**O que ainda impede a parte do adaptador real** (o resto da PBI-106 não depende
+disto): o formato da resposta. Sem uma página de resultado de verdade não dá para
+escrever o leitor nem as fixtures. O que basta, sem dado de terceiro:
+
+1. Na consulta do CREF6/MG, o PO busca **Profissional + CPF/CNPJ** com o próprio
+   CPF e salva a página do resultado (Ctrl+S, "página completa").
+2. Repete com um **CPF válido inventado** (resultado "não encontrado").
+3. Repete na **nacional** com o próprio CPF (para ver se há situação).
+
+Os arquivos ficam fora do repositório; daqui saem fixtures **anonimizadas** (nome,
+CPF e número trocados por valores fictícios) antes de qualquer commit.
+
+## 6. Contrato do adaptador (para a PBI-106)
+
+```
+IConsultaCref.ConsultarPorCpfAsync(uf, cpf, ct) -> ResultadoConsultaCref
+  Encontrado(registros: [{ numero, situacao, categoria }])  // nome nunca sai do adaptador
+  NaoEncontrado
+  Indisponivel                                               // erro, tempo limite, HTML inesperado
+```
+
+- Configuração por UF (endereço, tipo de formulário) em `appsettings`, não no
+  código. UF sem configuração devolve `Indisponivel` com o motivo "UF sem consulta".
+- O adaptador só monta a busca Profissional por CPF; a decisão (número confere,
+  situação `ATIVO`) fica no serviço, testável sem HTML.
