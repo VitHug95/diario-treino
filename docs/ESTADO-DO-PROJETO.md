@@ -371,9 +371,11 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **PBIs 105 e 106 (habilitar o educador pelo CREF):** terminar a investigação
-   (itens que precisam de uma pessoa em [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md))
-   e decidir seguir, seguir em parte ou plano B. A PBI-106 só começa depois.
+7. **PBIs 105 e 106 (habilitar o educador pelo CREF):** o PO confirma "seguir
+   só em parte" e manda as três páginas de resultado
+   ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Com a confirmação, a
+   PBI-106 pode começar pela parte que não depende do site (banco, API, trava,
+   tela, consulta falsa); o leitor do site real entra quando houver as páginas.
 
 **Técnico (sem bloqueio)**
 8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
