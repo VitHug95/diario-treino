@@ -1571,7 +1571,6 @@ O PO monta fichas em que alguns exercícios são feitos juntos, alternando, com 
 | E13: o item 5 (isometria + panturrilha) não tem descanso, e a panturrilha acompanha as 2 séries da isometria? | PBI-101 a 103 (ajuste de dado na ficha) | PO |
 | E13: o descanso do bloco vale também depois da última rodada (hoje sim, como nas séries) e "Rodada feita" marca com os valores pré-preenchidos (hoje sim)? | PBI-102 | PO |
 | PBI-100: em qual navegador e aparelho a ficha mostrou o valor antigo? Foi no modo educador? | PBI-100 | PO |
-| Ficha do professor: a regra do autor (403) vale também para editar ficha, exercícios e blocos? Hoje a API só checa o acesso nessas rotas; o app esconde as ações | MAS 18 | PO |
 | Educador e CREF: registrar como PBI a verificação do educador? Se sim, vira a PBI-105 | futura | PO |
 | E12: os textos de privacidade (Só você vê e o aviso de compartilhamento) passam pelo texto jurídico do termo | PBI-92, 96 | PO |
 

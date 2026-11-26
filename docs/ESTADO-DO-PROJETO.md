@@ -215,7 +215,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 ## 7. Testes e CI
 
 - **Front (widget):** 605 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 142 unitários e 281 de integração), incluindo o fluxo de registro com o app inteiro,
+  headless, com as bordas fakeadas; backend: 147 unitários e 286 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
@@ -309,6 +309,9 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   (800 a 5.000 kcal), que vale até ele voltar ao cálculo.
 - (13/11) A PBI-99 foi descartada ("pode ignorar").
 - (PBI-104) O educador também pode encerrar o vínculo, em "Meus alunos".
+- (25/11) A regra do autor vale também para ficha, exercícios e blocos: só o
+  autor do plano edita. O educador não edita a ficha de um plano que o aluno
+  criou.
 - (12/11, E13) Exercícios conjugados em bloco de 2 a 4, com um descanso só por
   rodada; rodadas = maior número de séries; exercício sozinho continua igual.
 - (13/11, PBI-101) Juntar escolhendo os exercícios ("Juntar com…"), e não só o
@@ -336,8 +339,6 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
   modo educador.
 - **Educador e CREF:** proposta de verificação do educador conversada, ainda sem
   PBI registrada (se abrir, é a PBI-105).
-- **Ficha do professor:** a API não aplica o 403 nas rotas de ficha, exercício e
-  bloco (o app esconde as ações). Alinhar com a regra do plano?
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -371,14 +372,14 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 7. **CREF / verificação do educador:** decidir se vira PBI.
 
 **Técnico (sem bloqueio)**
-8. Aplicar a regra do autor (403) nas rotas de ficha, exercício e bloco, se o PO
-   confirmar que a regra do plano vale para elas.
-9. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
+8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o
    retry do CI roda no mesmo banco).
-10. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
-    depois de ver se há dado acima de 600 em produção.
-11. Selo "Privado" / "Compartilhado" na tela de evolução da medida (tela 26),
+9. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
+   depois de ver se há dado acima de 600 em produção.
+10. Selo "Privado" / "Compartilhado" na tela de evolução da medida (tela 26),
     que o desenho da PBI-96 pedia e ficou de fora.
+11. Esconder "Salvar também como ficha" no treino livre quando o plano em uso é
+    do professor (hoje a API recusa com 403 e o app avisa depois de salvar).
 
 **Depois**
 12. **E8 a E11:** épicos futuros do [BACKLOG](BACKLOG.md), seção 9.

@@ -410,6 +410,13 @@ public sealed class RepositorioPlano : IRepositorioPlano
         return dados;
     }
 
+    public Task<Guid?> ObterAutorDoTreinoAsync(Guid treinoId, CancellationToken ct) =>
+        _db.Treinos
+            .Where(t => t.Id == treinoId)
+            .Join(_db.PlanosTreino, t => t.PlanoId, p => p.Id, (t, p) => p.AutorId)
+            .Cast<Guid?>()
+            .FirstOrDefaultAsync(ct);
+
     public async Task<short> ObterMaiorOrdemAsync(Guid planoId, CancellationToken ct)
     {
         var ordens = await _db.Treinos
