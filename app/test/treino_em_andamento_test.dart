@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:diario_treino/core/tema/tema_controller.dart';
 import 'package:diario_treino/features/sessao/treino_em_andamento.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,6 +66,105 @@ void main() {
     expect(s.intensidadeTexto, '30');
     expect(s.volumeTexto, '10');
     expect(s.descansoTexto, '90');
+  });
+
+  group('versão do formato no aparelho', () {
+    Future<SharedPreferences> prefsCom(Object? valor) async {
+      SharedPreferences.setMockInitialValues(
+          {if (valor != null) 'treino_em_andamento': valor is String ? valor : jsonEncode(valor)});
+      return SharedPreferences.getInstance();
+    }
+
+    test('grava o número da versão atual', () async {
+      final prefs = await prefsCom(null);
+      await RascunhoTreinoService(prefs).salvar(_exemplo());
+
+      final json = jsonDecode(prefs.getString('treino_em_andamento')!) as Map<String, dynamic>;
+      expect(json['versao'], TreinoEmAndamento.versaoAtual);
+    });
+
+    test('rascunho da versão 0 (sem "versao", formato até o #151) abre igual', () async {
+      // Rascunho real de antes dos campos opcionais (concluido, blocoId,
+      // marcador, feita, blocos) e do número de versão.
+      final prefs = await prefsCom({
+        'treinoId': 'A',
+        'treinoNome': 'Treino A',
+        'treinoLivre': false,
+        'dataIso': '2026-10-02',
+        'inicioMillis': 1700000000000,
+        'exercicios': [
+          {
+            'treinoExercicioId': 'te1',
+            'exercicioId': 'ex1',
+            'nome': 'Supino reto',
+            'modalidade': 'FORCA',
+            'origemPreenchimento': null,
+            'foraDaFicha': false,
+            'realizado': true,
+            'series': [
+              {
+                'rodada': 1,
+                'ordem': 1,
+                'tipo': 'ESFORCO',
+                'intensidadeMetricaId': 1,
+                'intensidadeMetricaCodigo': 'CARGA_KG',
+                'intensidadeMetricaNome': 'Carga',
+                'intensidadeTexto': '30',
+                'volumeMetricaId': 10,
+                'volumeMetricaCodigo': 'REPETICOES',
+                'volumeMetricaNome': 'Repetições',
+                'volumeTexto': '10',
+                'descansoTexto': '90',
+              },
+            ],
+          },
+        ],
+      });
+
+      final lido = RascunhoTreinoService(prefs).carregar();
+
+      expect(lido, isNotNull);
+      expect(lido!.exercicios.single.series.single.intensidadeTexto, '30');
+      expect(lido.exercicios.single.concluido, isFalse);
+      expect(lido.exercicios.single.series.single.marcador, 'VALIDA');
+    });
+
+    test('a migração leva a versão 0 até a atual e marca o número', () {
+      final migrado = migrarRascunhoTreino(_exemplo().paraJson()..remove('versao'), 0);
+      expect(TreinoEmAndamento.doJson(migrado).treinoId, 'A');
+    });
+
+    test('versão mais nova do app: não abre, mas também não apaga', () async {
+      final maisNovo = {..._exemplo().paraJson(), 'versao': TreinoEmAndamento.versaoAtual + 1};
+      final prefs = await prefsCom(maisNovo);
+      final service = RascunhoTreinoService(prefs);
+
+      expect(service.carregar(), isNull);
+      expect(prefs.getString('treino_em_andamento'), jsonEncode(maisNovo));
+      expect(prefs.getString(RascunhoTreinoService.chaveGuardado), isNull);
+
+      // Começar outro treino nesta versão guarda o mais novo antes de ocupar a chave.
+      await service.salvar(_exemplo());
+      expect(prefs.getString(RascunhoTreinoService.chaveGuardado), jsonEncode(maisNovo));
+      expect(service.carregar()?.treinoId, 'A');
+    });
+
+    test('texto corrompido: libera a chave e guarda a cópia', () async {
+      final prefs = await prefsCom('{"treinoId": "A", ');
+
+      expect(RascunhoTreinoService(prefs).carregar(), isNull);
+      expect(prefs.getString('treino_em_andamento'), isNull);
+      expect(prefs.getString(RascunhoTreinoService.chaveGuardado), '{"treinoId": "A", ');
+    });
+
+    test('formato que não fecha (campo obrigatório faltando): libera e guarda', () async {
+      final quebrado = _exemplo().paraJson()..remove('treinoNome');
+      final prefs = await prefsCom(quebrado);
+
+      expect(RascunhoTreinoService(prefs).carregar(), isNull);
+      expect(prefs.getString('treino_em_andamento'), isNull);
+      expect(prefs.getString(RascunhoTreinoService.chaveGuardado), jsonEncode(quebrado));
+    });
   });
 
   test('limpar apaga o rascunho (finalizar/descartar)', () async {
