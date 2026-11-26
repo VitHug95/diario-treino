@@ -79,7 +79,7 @@ pela regra da PBI-106** (CPF + número). Precisa ser confirmado na tela.
 5. **Com o PO:** a lista de categorias que habilitam. Só `BACHAREL` foi visto; o
    sistema CONFEF tem outras (por exemplo licenciado e provisionado), e o PO decide
    quais valem para usar o modo educador.
-6. **Com o PO:** o texto sobre o CPF ser enviado ao CREF (risco 1).
+6. ~~Com o PO: o texto sobre o CPF ser enviado ao CREF (risco 1).~~ Resolvido (26/11): a tela avisa que as informações pessoais são usadas para validar o CREF e pede "Eu permito" / "Eu não permito".
 
 ## 4. Respostas do PO (26/11)
 

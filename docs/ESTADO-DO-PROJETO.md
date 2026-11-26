@@ -136,7 +136,8 @@ Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
   (texto provisório). Ao sair de ATIVO, o educador perde o acesso sem apagar dados.
 - Habilitação pelo CREF (PBI-106, parte 1): tela "Registro profissional (CREF)"
   e a trava do educador sem registro, atrás da chave `Educador:ExigirCref`,
-  desligada em produção até o leitor do site real existir.
+  desligada em produção até o leitor do site real existir. A consulta só acontece
+  com "Eu permito" marcado (texto sobre o uso dos dados pessoais).
 - Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
   (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
   confirmação. O educador também encerra, em "Meus alunos".
@@ -218,7 +219,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 627 testes em `app/test/` (rodam no `flutter test`,
+- **Front (widget):** 629 testes em `app/test/` (rodam no `flutter test`,
   headless, com as bordas fakeadas; backend: 188 unitários e 299 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
@@ -342,8 +343,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 - **PBI-100:** em qual navegador e aparelho o PO viu o valor antigo, e se foi no
   modo educador.
 - **Educador e CREF (PBIs 105 e 106):** salvar três páginas de resultado para as
-  fixtures (e ver se a nacional mostra a situação); texto sobre o CPF ser
-  enviado ao CREF. Ver [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
+  fixtures (e ver se a nacional mostra a situação). Ver
+  [INVESTIGACAO-CREF](INVESTIGACAO-CREF.md).
 
 ### Pendências de infraestrutura
 - Domínio próprio (hoje `*.fly.dev` e `*.workers.dev`).
@@ -377,9 +378,10 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 7. **PBI-106, parte 2 (leitor do site do CREF):** o PO manda as três páginas de
    resultado ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Depois do
    leitor: ligar `Educador:ExigirCref` em produção, rodar
-   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius e avisar os
-   educadores atuais de que precisam verificar. A parte 1 (banco, API, trava,
-   tela) já está pronta, com a chave desligada.
+   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius; o PO se
+   verifica pela tela. Só os dois usam o modo educador hoje, então não há mais
+   ninguém a avisar. A parte 1 (banco, API, trava, tela com "Eu permito") já
+   está pronta, com a chave desligada.
 
 **Técnico (sem bloqueio)**
 8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o

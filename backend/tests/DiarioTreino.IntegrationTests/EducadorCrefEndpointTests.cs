@@ -93,7 +93,7 @@ public sealed class EducadorCrefEndpointTests
     private static async Task<PerfilResp> Me(Usuario u) => (await u.Client.GetFromJsonAsync<PerfilResp>("/api/v1/me"))!;
 
     private Task<HttpResponseMessage> PedirVerificacao(Usuario u, string uf = "MG", string? numero = null, string cpf = CpfFormatado) =>
-        u.Client.PostAsJsonAsync(Verificar, new { uf, numero = numero ?? _numero, cpf });
+        u.Client.PostAsJsonAsync(Verificar, new { uf, numero = numero ?? _numero, cpf, permiteConsulta = true });
 
     private async Task<VerificarResp> Verificado(Usuario u, string uf = "MG", string? numero = null, string cpf = CpfFormatado)
     {
@@ -235,6 +235,13 @@ public sealed class EducadorCrefEndpointTests
         Assert.Equal(HttpStatusCode.BadRequest, (await PedirVerificacao(u, cpf: "529.982.247-26")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await PedirVerificacao(u, uf: "XX")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await PedirVerificacao(u, numero: "MG-12")).StatusCode);
+        // "Eu não permito" ou sem a resposta: 400, nada consultado, nada habilitado.
+        foreach (bool? permite in new bool?[] { false, null })
+        {
+            var semPermissao = await u.Client.PostAsJsonAsync(Verificar, new { uf = "MG", numero = _numero, cpf = Cpf, permiteConsulta = permite });
+            Assert.Equal(HttpStatusCode.BadRequest, semPermissao.StatusCode);
+        }
+        Assert.DoesNotContain(Papeis.Educador, (await Me(u)).Papeis);
         Assert.Equal(0, consulta.Chamadas);
     }
 
