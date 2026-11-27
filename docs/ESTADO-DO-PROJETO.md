@@ -375,7 +375,8 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **PBI-106, parte 2 (leitor do site do CREF):** o PO manda as três páginas de
+7. **PBI-106, parte 2 (leitores do site do CREF):** a configuração das 19 UFs e as
+   regras de uso já estão no código; faltam os dois leitores (Spiderware e Implanta). o PO manda as três páginas de
    resultado ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Depois do
    leitor: ligar `Educador:ExigirCref` em produção, rodar
    `docs/scripts/habilitar-educador-legado.sql` para o Vinicius; o PO se

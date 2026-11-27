@@ -57,9 +57,13 @@ public sealed class CrefTests
     public void Ufs_sao_27_e_as_com_consulta_estao_entre_elas()
     {
         Assert.Equal(27, RegistroCref.Ufs.Count);
-        Assert.Equal(12, RegistroCref.UfsComConsulta.Count);
+        Assert.Equal(19, RegistroCref.UfsComConsulta.Count);
         Assert.All(RegistroCref.UfsComConsulta, uf => Assert.Contains(uf, RegistroCref.Ufs));
-        Assert.DoesNotContain("SP", RegistroCref.UfsComConsulta);
+        // SP tem consulta, mas sem busca por CPF; as outras ainda sem endereço.
+        foreach (var uf in new[] { "SP", "MS", "PE", "PI", "PA", "AP", "AL", "MA" })
+        {
+            Assert.DoesNotContain(uf, RegistroCref.UfsComConsulta);
+        }
     }
 
     // ---- Tabela de decisão ----

@@ -13,13 +13,17 @@ public static class RegistroCref
     ];
 
     /// <summary>
-    /// UFs com consulta regional levantada na PBI-105 (CREF 3, 6, 7, 9, 10, 13,
-    /// 14, 17, 20 e 22). As outras não habilitam até haver consulta (decisão
-    /// "seguir só em parte").
+    /// UFs com consulta por CPF levantada na PBI-105 (docs/INVESTIGACAO-CREF.md,
+    /// seção 3.1): CREF 3, 5, 6, 7, 8, 9, 10, 13, 14, 17, 20 e 22 (Spiderware) e
+    /// CREF 1 e 2 (Implanta). SP tem consulta, mas sem busca por CPF; MS, PE, PI,
+    /// PA, AP, AL e MA ainda sem o endereço da consulta. As outras não habilitam
+    /// até haver consulta (decisão "seguir só em parte").
     /// </summary>
     public static readonly IReadOnlySet<string> UfsComConsulta = new HashSet<string>
     {
-        "SC", "MG", "DF", "PR", "PB", "RN", "BA", "GO", "TO", "MT", "SE", "ES",
+        "SC", "MG", "DF", "PR", "PB", "RN", "BA", "GO", "TO", "MT", "SE", "ES", // Spiderware
+        "CE", "AM", "AC", "RO", "RR", // Spiderware (CREF 5 e 8)
+        "RJ", "RS", // Implanta (CREF 1 e 2)
     };
 
     /// <summary>Situação que habilita: exatamente ATIVO (sem diferenciar maiúsculas).</summary>
