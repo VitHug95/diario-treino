@@ -136,6 +136,47 @@ O **robots.txt** do Implanta (`cref-sp.implanta.net.br/robots.txt`) existe, mas 
 deu para ler o conteúdo fora do navegador; falta alguém abrir e conferir se proíbe
 o caminho `/ServicosOnline/Publico/`.
 
+## 3.2 O que os prints do PO mostraram (27/11)
+
+Cinco capturas de tela, guardadas só no computador do PO (não entram no
+repositório: mostram nomes, números e um CPF).
+
+**Spiderware (CREF6/MG e CREF13/BA):**
+- Formulário: "Informe o tipo de pesquisa" (Profissional), "Selecione o tipo de
+  busca" (CPF/CNPJ, Nome, Num. Registro), campo de texto, "Cidade" (opcional) e
+  "Pesquisar". Sem captcha visível.
+- Resultado em tabela, colunas **Nº Registro**, **Nome**, **Categoria** e
+  **Situação**, com paginação ("Página 1 de 1", "Visualizar: 20").
+- Número com prefixo da UF e seis dígitos: `MG-` seguido do número com zeros à
+  esquerda. A normalização do app (só dígitos, sem zeros à esquerda) já cobre.
+- **Busca por CPF que não encontra** (CREF13/BA): a tabela vem vazia com a frase
+  "As Informações fornecidas não constam em nossa base de dados." O leitor usa essa
+  frase para o `NaoEncontrado`.
+- Os prints do CREF6/MG foram buscas por **nome e por número**, não por CPF. Falta
+  ver como a busca **por CPF** responde num registro que existe.
+
+**Implanta (CREF4/SP):**
+- Resultado em cartão: nome, categoria, "Nº inscrição no conselho" no formato
+  `000000-G/SP` (o `G` é de graduado), e na aba "Dados de inscrição": tipo de
+  inscrição, data e **Situação**.
+- Valores vistos: categoria `BACHAREL` e `LICENCIADO/BACHAREL`; situação `ATIVO` e
+  `BAIXADO`.
+- **A página tem a verificação da Cloudflare** (o selo "Sucesso!" da Cloudflare
+  embaixo do formulário). É uma barreira contra acesso por programa. Passar por ela
+  com o app seria **burlar uma proteção**, o que a regra da PBI-105 não permite.
+  Então o CREF4/SP fica fora mesmo que um dia aceite CPF.
+- **RJ e RS usam o mesmo sistema Implanta.** Se a mesma verificação aparecer
+  neles, também ficam fora. Falta o PO conferir se o selo da Cloudflare aparece na
+  consulta do CREF1/RJ e do CREF2/RS.
+
+**Valores de situação e categoria até agora:** situação `ATIVO` e `BAIXADO`;
+categoria `BACHAREL` e `LICENCIADO/BACHAREL`. Só `ATIVO` habilita; a categoria não
+restringe.
+
+**Atenção:** dois prints são buscas por nome que trouxeram registros de outras
+pessoas. A regra da PBI-105 é não usar a busca por nome e não guardar dados de
+terceiros; esses prints não serão usados no repositório nem nos testes.
+
 ## 4. Respostas do PO (26/11)
 
 1. **Canal oficial:** o CONFEF não tem outro; os registros são validados por estas

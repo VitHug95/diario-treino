@@ -41,6 +41,7 @@ public class DiarioTreinoDbContext : DbContext
     public DbSet<MedidaCorporal> MedidasCorporais => Set<MedidaCorporal>();
     public DbSet<EducadorCref> EducadoresCref => Set<EducadorCref>();
     public DbSet<TentativaCref> TentativasCref => Set<TentativaCref>();
+    public DbSet<FotoCarteiraCref> FotosCarteiraCref => Set<FotoCarteiraCref>();
 
     /// <summary>
     /// Mapeia a função <c>unaccent</c> do Postgres (extensão habilitada por

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -95,6 +97,47 @@ class EducadorRepository {
         _ => 'Não foi possível verificar agora. Tente de novo.',
       });
     }
+  }
+
+  /// Envia UF, número e foto da carteira (PBI-106, 27/11). Só chega aqui com
+  /// "Eu permito" marcado na tela.
+  Future<ResultadoVerificacaoCref> declararCref({
+    required String uf,
+    required String numero,
+    required Uint8List foto,
+    required String tipoFoto,
+  }) async {
+    try {
+      final resposta = await _dio.post<Map<String, dynamic>>(
+        '/me/educador/cref/declarar',
+        data: FormData.fromMap({
+          'uf': uf,
+          'numero': numero,
+          'permiteUso': 'true',
+          'foto': MultipartFile.fromBytes(
+            foto,
+            filename: tipoFoto == 'image/png' ? 'carteira.png' : 'carteira.jpg',
+            contentType: DioMediaType.parse(tipoFoto),
+          ),
+        }),
+      );
+      return ResultadoVerificacaoCref.doJson(resposta.data!);
+    } on DioException catch (e) {
+      throw EducadorException(switch (e.response?.statusCode) {
+        400 => _erroDaFoto(e) ?? 'Confira a UF, o número e a foto.',
+        409 => 'Este registro do CREF já está ligado a outra conta.',
+        null => 'Sem conexão. Verifique sua internet e tente de novo.',
+        _ => 'Não foi possível enviar agora. Tente de novo.',
+      });
+    }
+  }
+
+  static String? _erroDaFoto(DioException e) {
+    final dados = e.response?.data;
+    if (dados is! Map) return null;
+    final erros = dados['errors'];
+    final foto = erros is Map ? erros['foto'] : null;
+    return foto is List && foto.isNotEmpty ? foto.first.toString() : null;
   }
 
   /// Educadores com vínculo ativo do aluno logado (PBI-104).

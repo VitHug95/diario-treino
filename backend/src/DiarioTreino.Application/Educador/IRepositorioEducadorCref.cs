@@ -19,6 +19,8 @@ public interface IRepositorioEducadorCref
 
     public void Adicionar(EducadorCref educador);
 
+    public void AdicionarFoto(FotoCarteiraCref foto);
+
     /// <summary>
     /// Salva tudo numa transação. Devolve <c>false</c> se o registro colidiu no
     /// índice único (outra conta se habilitou com ele ao mesmo tempo).

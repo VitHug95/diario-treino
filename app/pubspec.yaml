@@ -18,6 +18,7 @@ dependencies:
   flutter_riverpod: ^3.3.2
   go_router: ^17.0.0
   google_fonts: ^6.3.2
+  image_picker: ^1.2.1
   lucide_icons: ^0.257.0
   shared_preferences: ^2.5.3
   # Download do PDF no navegador (PBI-89): Blob + link <a download>.

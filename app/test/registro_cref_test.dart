@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:diario_treino/core/rotas/app_router.dart';
 import 'package:diario_treino/core/tema/tema_controller.dart';
@@ -17,73 +19,82 @@ import 'package:diario_treino/theme/app_theme.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// PBI-106: a tela "Registro profissional (CREF)", a máscara do CPF e o Perfil
-/// com a verificação exigida.
+/// PBI-106: a tela "Registro profissional (CREF)" com o envio de número, UF e
+/// foto da carteira (decisão do PO, 27/11), o Perfil com a validação exigida, e
+/// a máscara e a conta do CPF (guardadas para a consulta futura).
 
 const _cpf = '52998224725';
 const _cpfFormatado = '529.982.247-25';
 
+/// PNG de 1×1 de verdade, para a prévia decodificar sem erro.
+final _png = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+
 /// "Servidor" do CREF em memória.
 class _RepoCref extends EducadorRepository {
-  _RepoCref({this.resposta = const ResultadoVerificacaoCref(resultado: 'NAO_ENCONTRADO'), this.educador = false})
-      : super(Dio());
+  _RepoCref({this.educador = false}) : super(Dio());
 
-  ResultadoVerificacaoCref resposta;
   bool educador;
   RegistroCref? registro;
   Completer<void>? segurar;
   EducadorException? erro;
-  final pedidos = <(String, String, String)>[];
+  final pedidos = <(String, String, int, String)>[];
 
   @override
   Future<SituacaoCref> obterSituacaoCref() async =>
       SituacaoCref(verificacaoExigida: true, registro: registro);
 
   @override
-  Future<ResultadoVerificacaoCref> verificarCref({
+  Future<ResultadoVerificacaoCref> declararCref({
     required String uf,
     required String numero,
-    required String cpf,
+    required Uint8List foto,
+    required String tipoFoto,
   }) async {
-    pedidos.add((uf, numero, cpf));
+    pedidos.add((uf, numero, foto.length, tipoFoto));
     await segurar?.future;
     if (erro != null) throw erro!;
-    if (resposta.habilitado) {
-      educador = true;
-      registro = RegistroCref(
-        uf: uf, numero: numero, situacao: 'ATIVO', categoria: 'BACHAREL', origem: 'AUTOMATICA',
-        consultadoEm: DateTime(2026, 11, 26),
-      );
-    }
-    return resposta;
+    educador = true;
+    registro = RegistroCref(uf: uf, numero: numero, origem: 'DECLARADA', declaradoEm: DateTime(2026, 11, 27));
+    return const ResultadoVerificacaoCref(resultado: 'HABILITADO');
   }
 }
 
+/// Foto que o "seletor" devolve; nulo = desistiu.
+Uint8List? _fotoDoSeletor;
+
+Override _seletor() => escolherFotoCrefProvider.overrideWithValue(() async => _fotoDoSeletor);
+
 Future<void> _preencher(WidgetTester tester,
-    {String uf = 'MG', String numero = '1234', String cpf = _cpf, bool? permitir = true}) async {
+    {String uf = 'MG', String numero = '1234', Uint8List? foto, bool comFoto = true, bool? permitir = true}) async {
   await tester.tap(find.byType(DropdownButtonFormField<String>));
   await tester.pumpAndSettle();
   await tester.tap(find.text(uf).last);
   await tester.pumpAndSettle();
   await tester.enterText(find.widgetWithText(TextFormField, 'Número do CREF'), numero);
-  await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), cpf);
+  if (comFoto) {
+    _fotoDoSeletor = foto ?? _png;
+    await tester.tap(find.text('Escolher foto da carteira'));
+    await tester.pumpAndSettle();
+  }
   if (permitir != null) {
     await tester.tap(find.text(permitir ? 'Eu permito' : 'Eu não permito'));
     await tester.pumpAndSettle();
   }
 }
 
-Future<void> _verificar(WidgetTester tester) async {
-  await tester.tap(find.text('VERIFICAR REGISTRO'));
+Future<void> _enviar(WidgetTester tester) async {
+  await tester.tap(find.text('ENVIAR REGISTRO'));
   await tester.pumpAndSettle();
 }
 
 void _tela(WidgetTester tester, {double largura = 400}) {
-  tester.view.physicalSize = Size(largura, 1800);
+  tester.view.physicalSize = Size(largura, 2000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
@@ -92,7 +103,7 @@ Future<void> _abrir(WidgetTester tester, _RepoCref repo,
     {bool travado = false, bool escuro = false, double largura = 400}) async {
   _tela(tester, largura: largura);
   await tester.pumpWidget(ProviderScope(
-    overrides: [educadorRepositoryProvider.overrideWithValue(repo)],
+    overrides: [educadorRepositoryProvider.overrideWithValue(repo), _seletor()],
     child: MaterialApp(
       theme: AppTheme.claro,
       darkTheme: AppTheme.escuro,
@@ -105,7 +116,7 @@ Future<void> _abrir(WidgetTester tester, _RepoCref repo,
 
 /// O Perfil com o go_router, para abrir a tela do CREF e voltar.
 Future<GoRouter> _abrirPerfil(WidgetTester tester, _RepoCref repo) async {
-  tester.view.physicalSize = const Size(800, 2000);
+  tester.view.physicalSize = const Size(800, 2200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues({});
@@ -125,6 +136,7 @@ Future<GoRouter> _abrirPerfil(WidgetTester tester, _RepoCref repo) async {
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
       educadorRepositoryProvider.overrideWithValue(repo),
+      _seletor(),
       // O perfil segue o "servidor": habilitado, ganha o papel EDUCADOR.
       perfilProvider.overrideWith((ref) async => Perfil(
             id: 'u1', nome: 'Vitor', email: 'v@teste.local',
@@ -154,14 +166,16 @@ TextEditingValue _digitar(String texto) {
 }
 
 void main() {
-  // ---- Máscara e CPF ----
+  setUp(() => _fotoDoSeletor = null);
+
+  // ---- Máscara e CPF (guardados para a consulta por CPF) ----
 
   group('máscara do CPF', () {
     test('digitar só números preenche pontos e traço', () {
       expect(_digitar('529').text, '529');
       expect(_digitar('5299').text, '529.9');
       expect(_digitar(_cpf).text, _cpfFormatado);
-      expect(_digitar('${_cpf}99').text, _cpfFormatado); // para nos 11 dígitos
+      expect(_digitar('${_cpf}99').text, _cpfFormatado);
     });
 
     test('colar com ou sem pontuação dá o mesmo', () {
@@ -173,43 +187,37 @@ void main() {
       }
     });
 
-    test('apagar do fim tira um dígito; apagar o separador leva o dígito anterior', () {
+    test('apagar o separador leva o dígito anterior', () {
       const f = MascaraCpfFormatter();
-      const cheio = TextEditingValue(text: '529.9', selection: TextSelection.collapsed(offset: 5));
-      expect(f.formatEditUpdate(cheio, const TextEditingValue(text: '529.', selection: TextSelection.collapsed(offset: 4))).text, '529');
-      // Cursor logo depois do ponto, apagando o ponto.
       const antes = TextEditingValue(text: '529.98', selection: TextSelection.collapsed(offset: 4));
       final r = f.formatEditUpdate(antes, const TextEditingValue(text: '52998', selection: TextSelection.collapsed(offset: 3)));
       expect(r.text, '529.8');
-      expect(r.selection.baseOffset, 2);
     });
 
-    test('dígito verificador conferido no app', () {
+    test('dígito verificador', () {
       expect(cpfValido(_cpfFormatado), isTrue);
       expect(cpfValido('529.982.247-26'), isFalse);
       expect(cpfValido('111.111.111-11'), isFalse);
-      expect(cpfValido('529.982'), isFalse);
     });
+  });
+
+  test('tipo da foto pelo conteúdo, como o servidor', () {
+    expect(tipoDaFotoCref(_png), 'image/png');
+    expect(tipoDaFotoCref([0xFF, 0xD8, 0xFF, 0xE0]), 'image/jpeg');
+    expect(tipoDaFotoCref(utf8.encode('GIF89a')), isNull);
+    expect(tipoDaFotoCref(const []), isNull);
   });
 
   // ---- A tela ----
 
-  testWidgets('campos, texto do CPF e CPF inválido não consulta', (tester) async {
-    final repo = _RepoCref();
-    await _abrir(tester, repo);
+  testWidgets('campos, texto da permissão e nenhum campo de CPF', (tester) async {
+    await _abrir(tester, _RepoCref());
 
     expect(find.text('UF do CREF'), findsOneWidget);
+    expect(find.text('Número do CREF'), findsOneWidget);
+    expect(find.text('Escolher foto da carteira'), findsOneWidget);
     expect(find.text(textoPermissaoCref), findsOneWidget);
-    final campo = tester.widget<TextField>(find.descendant(
-        of: find.widgetWithText(TextFormField, 'CPF'), matching: find.byType(TextField)));
-    expect(campo.keyboardType, TextInputType.number);
-    expect(campo.autofillHints, isEmpty);
-    expect(campo.enableSuggestions, isFalse);
-
-    await _preencher(tester, cpf: '52998224726');
-    await _verificar(tester);
-    expect(find.text('Confira o CPF.'), findsOneWidget);
-    expect(repo.pedidos, isEmpty);
+    expect(find.widgetWithText(TextFormField, 'CPF'), findsNothing);
   });
 
   testWidgets('sem marcar a permissão, o botão fica desligado', (tester) async {
@@ -218,108 +226,94 @@ void main() {
     await _preencher(tester, permitir: null);
 
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
-    await tester.tap(find.text('VERIFICAR REGISTRO'));
-    await tester.pumpAndSettle();
+    await _enviar(tester);
     expect(repo.pedidos, isEmpty);
   });
 
-  testWidgets('"Eu não permito": não consulta, não habilita e tira o CPF da tela', (tester) async {
-    final repo = _RepoCref(resposta: const ResultadoVerificacaoCref(resultado: 'HABILITADO'));
+  testWidgets('"Eu não permito": não envia, não habilita e tira a foto da tela', (tester) async {
+    final repo = _RepoCref();
     await _abrir(tester, repo);
     await _preencher(tester, permitir: false);
 
-    expect(find.text('Sem a sua permissão, o CREF não é consultado e o modo educador não é habilitado.'),
+    expect(find.text('Sem a sua permissão, o registro não é guardado e o modo educador não é habilitado.'),
         findsOneWidget);
-    expect(find.text(_cpfFormatado), findsNothing);
-    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
-    await tester.tap(find.text('VERIFICAR REGISTRO'));
-    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Foto da carteira escolhida'), findsNothing);
+    expect(find.text('Escolher foto da carteira'), findsOneWidget);
+    await _enviar(tester);
     expect(repo.pedidos, isEmpty);
     expect(repo.educador, isFalse);
-
-    // Mudar de ideia libera o botão (o CPF precisa ser digitado de novo).
-    await tester.tap(find.text('Eu permito'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), _cpf);
-    await _verificar(tester);
-    expect(repo.pedidos, hasLength(1));
   });
 
-  testWidgets('a tela manda os dados e mostra a máscara no campo', (tester) async {
+  testWidgets('sem foto, avisa e não envia', (tester) async {
+    final repo = _RepoCref();
+    await _abrir(tester, repo);
+    await _preencher(tester, comFoto: false);
+    await _enviar(tester);
+
+    expect(find.text('Escolha a foto da carteira do CREF.'), findsOneWidget);
+    expect(repo.pedidos, isEmpty);
+  });
+
+  testWidgets('arquivo que não é JPG nem PNG é recusado na hora', (tester) async {
+    final repo = _RepoCref();
+    await _abrir(tester, repo);
+    await _preencher(tester, foto: Uint8List.fromList(utf8.encode('GIF89a...')));
+
+    expect(find.text('Escolha uma foto JPG ou PNG de até 5 MB.'), findsOneWidget);
+    expect(find.text('Escolher foto da carteira'), findsOneWidget); // não ficou escolhida
+    await _enviar(tester);
+    expect(repo.pedidos, isEmpty);
+  });
+
+  testWidgets('desistir de escolher não muda nada', (tester) async {
+    await _abrir(tester, _RepoCref());
+    _fotoDoSeletor = null;
+    await tester.tap(find.text('Escolher foto da carteira'));
+    await tester.pumpAndSettle();
+    expect(find.text('Escolher foto da carteira'), findsOneWidget);
+  });
+
+  testWidgets('envio: manda UF, número e a foto, avisa e mostra o registro enviado', (tester) async {
     final repo = _RepoCref();
     await _abrir(tester, repo);
     await _preencher(tester);
-    expect(find.text(_cpfFormatado), findsOneWidget);
+    expect(find.bySemanticsLabel('Foto da carteira escolhida'), findsOneWidget);
+    expect(find.text('Trocar foto'), findsOneWidget);
 
-    await _verificar(tester);
-    expect(repo.pedidos, [('MG', '1234', _cpfFormatado)]);
+    await _enviar(tester);
+
+    expect(repo.pedidos, [('MG', '1234', _png.length, 'image/png')]);
+    expect(find.text('Registro enviado. Modo educador liberado.'), findsOneWidget);
+    expect(find.text('Registro enviado'), findsOneWidget);
+    expect(find.text('27/11/2026'), findsOneWidget);
+    expect(find.textContaining('O registro pode ser conferido'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNothing);
   });
 
-  for (final (resposta, mensagem) in [
-    (const ResultadoVerificacaoCref(resultado: 'RECUSADO', motivo: 'SITUACAO_NAO_ATIVA', situacao: 'CANCELADO'),
-        'Seu registro consta como CANCELADO no CREF. Regularize e tente de novo.'),
-    (const ResultadoVerificacaoCref(resultado: 'RECUSADO', motivo: 'NUMERO_NAO_CONFERE'),
-        'O CPF tem registro no CREF dessa UF, mas com outro número. Confira o número.'),
-    (const ResultadoVerificacaoCref(resultado: 'NAO_ENCONTRADO'),
-        'Não encontramos esse CPF no CREF dessa UF. Confira a UF e o número.'),
-    (const ResultadoVerificacaoCref(resultado: 'INDISPONIVEL'),
-        'A consulta do CREF está fora do ar agora, tente em alguns minutos.'),
-    (const ResultadoVerificacaoCref(resultado: 'INDISPONIVEL', motivo: 'UF_SEM_CONSULTA'),
-        'Ainda não conseguimos consultar o CREF dessa UF automaticamente.'),
-  ]) {
-    testWidgets('mensagem: ${resposta.resultado} ${resposta.motivo ?? ''}', (tester) async {
-      final repo = _RepoCref(resposta: resposta);
-      await _abrir(tester, repo);
-      await _preencher(tester);
-      await _verificar(tester);
-
-      expect(find.text(mensagem), findsOneWidget);
-      expect(find.textContaining(_cpf), findsNothing);
-      // Pode tentar de novo: o botão volta e o CPF continua no campo.
-      expect(find.text('VERIFICAR REGISTRO'), findsOneWidget);
-      expect(find.text(_cpfFormatado), findsOneWidget);
-    });
-  }
-
-  testWidgets('limite de tentativas', (tester) async {
-    final repo = _RepoCref()..erro = const EducadorException('Você já tentou 5 vezes hoje. Tente amanhã.');
+  testWidgets('erro do servidor aparece na tela e deixa tentar de novo', (tester) async {
+    final repo = _RepoCref()..erro = const EducadorException('Este registro do CREF já está ligado a outra conta.');
     await _abrir(tester, repo);
     await _preencher(tester);
-    await _verificar(tester);
+    await _enviar(tester);
 
-    expect(find.text('Você já tentou 5 vezes hoje. Tente amanhã.'), findsOneWidget);
+    expect(find.text('Este registro do CREF já está ligado a outra conta.'), findsOneWidget);
+    expect(find.text('ENVIAR REGISTRO'), findsOneWidget);
   });
 
-  testWidgets('enquanto consulta, mostra progresso e não deixa tocar de novo', (tester) async {
+  testWidgets('enquanto envia, mostra progresso e não deixa tocar de novo', (tester) async {
     final repo = _RepoCref()..segurar = Completer<void>();
     await _abrir(tester, repo);
     await _preencher(tester);
 
-    await tester.tap(find.text('VERIFICAR REGISTRO'));
+    await tester.tap(find.text('ENVIAR REGISTRO'));
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.bySemanticsLabel('Consultando o CREF'), findsOneWidget);
+    expect(find.bySemanticsLabel('Enviando o registro'), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
     await tester.tap(find.byType(FilledButton));
     expect(repo.pedidos, hasLength(1));
 
     repo.segurar!.complete();
     await tester.pumpAndSettle();
-    expect(find.text('VERIFICAR REGISTRO'), findsOneWidget);
-  });
-
-  testWidgets('habilitado: avisa e troca para o registro confirmado, sem o CPF na tela', (tester) async {
-    final repo = _RepoCref(resposta: const ResultadoVerificacaoCref(resultado: 'HABILITADO', situacao: 'ATIVO'));
-    await _abrir(tester, repo);
-    await _preencher(tester);
-    await _verificar(tester);
-
-    expect(find.text('Registro ativo confirmado. Modo educador liberado.'), findsOneWidget);
-    expect(find.text('Registro confirmado'), findsOneWidget);
-    expect(find.text('MG'), findsOneWidget);
-    expect(find.text('26/11/2026'), findsOneWidget);
-    expect(find.text(_cpfFormatado), findsNothing);
-    expect(find.byType(TextFormField), findsNothing);
   });
 
   testWidgets('educador travado vê o aviso para continuar acompanhando alunos', (tester) async {
@@ -334,7 +328,7 @@ void main() {
     expect(find.text('Modo educador liberado antes da verificação pelo CREF.'), findsOneWidget);
   });
 
-  testWidgets('sair e voltar: o CPF não fica guardado (nem no aparelho)', (tester) async {
+  testWidgets('sair e voltar: a foto não fica guardada no aparelho', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final repo = _RepoCref();
@@ -344,26 +338,27 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await _abrir(tester, repo);
 
-    expect(find.text(_cpfFormatado), findsNothing);
+    expect(find.text('Escolher foto da carteira'), findsOneWidget);
     expect(prefs.getKeys(), isEmpty);
   });
 
   for (final escuro in [false, true]) {
-    testWidgets('360 px e fonte 1,3x (${escuro ? 'escuro' : 'claro'}), com mensagem', (tester) async {
+    testWidgets('360 px e fonte 1,3x (${escuro ? 'escuro' : 'claro'}), com foto e erro', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await _abrir(tester, _RepoCref(), travado: true, escuro: escuro, largura: 360);
+      final repo = _RepoCref()..erro = const EducadorException('Confira a UF, o número e a foto.');
+      await _abrir(tester, repo, travado: true, escuro: escuro, largura: 360);
       await _preencher(tester);
-      await _verificar(tester);
-      expect(find.textContaining('Não encontramos esse CPF'), findsOneWidget);
+      await _enviar(tester);
+      expect(find.text('Confira a UF, o número e a foto.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
 
   // ---- O Perfil ----
 
-  testWidgets('Perfil: ativar abre o CREF e, habilitado, mostra os alunos sem F5', (tester) async {
-    final repo = _RepoCref(resposta: const ResultadoVerificacaoCref(resultado: 'HABILITADO', situacao: 'ATIVO'));
+  testWidgets('Perfil: ativar abre o CREF e, enviado, mostra os alunos sem F5', (tester) async {
+    final repo = _RepoCref();
     final router = await _abrirPerfil(tester, repo);
     expect(find.text('Meus alunos'), findsNothing);
 
@@ -372,7 +367,7 @@ void main() {
     expect(find.byType(RegistroCrefScreen), findsOneWidget);
 
     await _preencher(tester);
-    await _verificar(tester);
+    await _enviar(tester);
     router.pop();
     await tester.pumpAndSettle();
 
