@@ -1600,7 +1600,7 @@ O PO monta fichas em que alguns exercícios são feitos juntos, alternando, com 
 | E13: o descanso do bloco vale também depois da última rodada (hoje sim, como nas séries) e "Rodada feita" marca com os valores pré-preenchidos (hoje sim)? | PBI-102 | PO |
 | PBI-100: em qual navegador e aparelho a ficha mostrou o valor antigo? Foi no modo educador? | PBI-100 | PO |
 | PBI-105: salvar as páginas de resultado (CREF6 com o próprio CPF, o próprio CPF no CREF3/SC para o "não encontrado", nacional com o próprio CPF) para as fixtures; a nacional mostra a situação? | leitor Spiderware da PBI-106 | PO |
-| PBI-105: páginas de exemplo do Implanta (RJ ou RS, busca por CPF) | leitor Implanta da PBI-106 | PO |
+| PBI-105: o selo da Cloudflare aparece na consulta do CREF1/RJ e do CREF2/RS (como no CREF4/SP)? Se aparecer, RJ e RS ficam fora (passar pela verificação seria burlar uma proteção) | leitor Implanta da PBI-106 | PO |
 | PBI-105: SP só busca por número ou nome: fica sem habilitação automática (recomendado), aceita só o número, ou compara nome? | SP na PBI-106 | PO |
 | PBI-105: ES no CREF1 ou no CREF22, RN no CREF10 ou no CREF16? (o app usa CREF22 e CREF10); endereços das consultas dos CREFs 11, 12, 15, 18, 19 e 21 | PBI-106 | PO |
 | E12: os textos de privacidade (Só você vê e o aviso de compartilhamento) passam pelo texto jurídico do termo | PBI-92, 96 | PO |

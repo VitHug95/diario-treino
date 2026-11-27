@@ -97,6 +97,20 @@ public sealed class CrefTests
     }
 
     [Fact]
+    public void Formatos_vistos_nos_prints_do_po()
+    {
+        // Spiderware: "MG-" + seis dígitos; Implanta: "000000-G/SP". Números fictícios.
+        var spiderware = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("MG-012345", "ATIVO", "BACHAREL")));
+        var implanta = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("012345-G/SP", "ATIVO", "LICENCIADO/BACHAREL")));
+        var baixado = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("012345-G/SP", "BAIXADO", "BACHAREL")));
+
+        Assert.Equal(ResultadoCref.Habilitado, spiderware.Resultado);
+        Assert.Equal(ResultadoCref.Habilitado, implanta.Resultado);
+        Assert.Equal((ResultadoCref.Recusado, MotivoCref.SituacaoNaoAtiva, "BAIXADO"),
+            (baixado.Resultado, baixado.Motivo, baixado.Situacao));
+    }
+
+    [Fact]
     public void Ativo_com_outra_palavra_nao_e_ativo()
     {
         var d = DecisaoCref.Decidir("1234", Encontrado(new RegistroEncontrado("1234", "INATIVO", "BACHAREL")));
