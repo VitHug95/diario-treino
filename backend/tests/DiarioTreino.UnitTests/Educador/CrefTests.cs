@@ -157,13 +157,21 @@ public sealed class CrefTests
     public void Validador_recusa_formatos_e_nao_repete_o_valor()
     {
         var v = new VerificarCrefValidator();
-        Assert.True(v.Validate(new VerificarCrefRequest("mg", "001234", "529.982.247-25")).IsValid);
+        Assert.True(v.Validate(new VerificarCrefRequest("mg", "001234", "529.982.247-25", true)).IsValid);
 
-        var r = v.Validate(new VerificarCrefRequest("XX", "MG-12", "52998224726"));
+        var r = v.Validate(new VerificarCrefRequest("XX", "MG-12", "52998224726", true));
         Assert.Equal(3, r.Errors.Count);
         Assert.All(r.Errors, e => Assert.DoesNotContain("5299822472", e.ErrorMessage));
-        Assert.False(v.Validate(new VerificarCrefRequest("MG", "0000", CpfValido)).IsValid);
+        Assert.False(v.Validate(new VerificarCrefRequest("MG", "0000", CpfValido, true)).IsValid);
         Assert.False(v.Validate(new VerificarCrefRequest(null, null, null)).IsValid);
+
+        // "Eu não permito" (ou nada marcado): só esse erro, os dados estão certos.
+        foreach (bool? permite in new bool?[] { false, null })
+        {
+            var semPermissao = v.Validate(new VerificarCrefRequest("MG", "1234", CpfValido, permite));
+            var erro = Assert.Single(semPermissao.Errors);
+            Assert.Equal(nameof(VerificarCrefRequest.PermiteConsulta), erro.PropertyName);
+        }
     }
 
     // ---- Serviço ----
