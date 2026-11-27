@@ -288,6 +288,8 @@ void main() {
 
     expect(find.byType(MedidaEvolucaoScreen), findsOneWidget);
     expect(find.text('Cintura · João'), findsOneWidget);
+    // O selo do cadeado é do atleta: o educador não vê.
+    expect(find.byType(SeloCompartilhamento), findsNothing);
     expect(find.text('REGISTROS DO PERÍODO'), findsOneWidget);
   });
 

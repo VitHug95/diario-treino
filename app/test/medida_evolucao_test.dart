@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:diario_treino/core/relogio.dart';
+import 'package:diario_treino/features/medidas/compartilhamento_repository.dart';
 import 'package:diario_treino/features/medidas/medida_evolucao_screen.dart';
 import 'package:diario_treino/features/medidas/medidas_comandos.dart';
 import 'package:diario_treino/features/medidas/medidas_formato.dart';
@@ -64,11 +65,14 @@ class _RepoEvolucao extends MedidasRepository {
 // é 10/08, então o primeiro ponto está FORA de 90 dias e dentro de 1 ano.
 List<PontoMedida> _cintura() => [_p(8, 10, 87.0), _p(9, 25, 85.5), _p(11, 5, 84.0)];
 
-Future<ProviderScope> _escopo(MedidasRepository repo, Widget filho) async =>
+Future<ProviderScope> _escopo(MedidasRepository repo, Widget filho, {bool medidasCompartilhadas = false}) async =>
     ProviderScope(
       overrides: [
         medidasRepositoryProvider.overrideWithValue(repo),
         relogioProvider.overrideWithValue(_RelogioFixo()),
+        // O selo do cadeado (PBI-96), sem rede.
+        compartilhamentoCorporalProvider.overrideWith((ref) async =>
+            CompartilhamentoCorporal(dadosCorporais: false, medidas: medidasCompartilhadas)),
       ],
       child: filho,
     );
@@ -84,11 +88,13 @@ Future<void> _abrir(
   MedidasRepository repo, {
   TipoMedida tipo = TipoMedida.cintura,
   ThemeData? tema,
+  bool medidasCompartilhadas = false,
 }) async {
   _telaDeCelular(tester);
   await tester.pumpWidget(await _escopo(
     repo,
     MaterialApp(theme: tema ?? AppTheme.claro, home: MedidaEvolucaoScreen(tipo: tipo)),
+    medidasCompartilhadas: medidasCompartilhadas,
   ));
   await tester.pumpAndSettle();
 }
@@ -97,6 +103,16 @@ LineChartData _grafico(WidgetTester tester) =>
     tester.widget<LineChart>(find.byType(LineChart)).data;
 
 void main() {
+  testWidgets('Selo do cadeado das medidas (PBI-96, tela 26)', (tester) async {
+    final repo = _RepoEvolucao({TipoMedida.cintura: _cintura()});
+    await _abrir(tester, repo);
+    expect(find.text('Privado: só você vê'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await _abrir(tester, repo, medidasCompartilhadas: true);
+    expect(find.text('Compartilhado com o educador'), findsOneWidget);
+  });
+
   testWidgets('Abre no filtro de 90 dias com os pontos certos e os três cartões',
       (tester) async {
     final repo = _RepoEvolucao({TipoMedida.cintura: _cintura()});
