@@ -12,6 +12,10 @@ primary_region = 'gru'
 [env]
   ASPNETCORE_ENVIRONMENT = 'Production'
   ASPNETCORE_HTTP_PORTS = '8080'
+  # PBI-106: o modo educador exige o registro do CREF (número, UF e foto).
+  # Educador sem registro fica travado; o Vinicius entra pelo script do legado
+  # (docs/scripts/habilitar-educador-legado.sql). Para desligar, 'false'.
+  Educador__ExigirCref = 'true'
 
 [http_service]
   internal_port = 8080

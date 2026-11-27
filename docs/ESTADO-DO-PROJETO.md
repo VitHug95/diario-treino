@@ -137,7 +137,7 @@ Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
 - Habilitação do educador (PBI-106): tela "Registro profissional (CREF)" com UF,
   número e foto da carteira, e "Eu permito"; o modo educador é liberado na hora
   e a foto fica para conferência por script. Trava do educador sem registro.
-  Tudo atrás da chave `Educador:ExigirCref`, **desligada** até o PO ligar. A
+  Tudo atrás da chave `Educador:ExigirCref`, **ligada** no `backend/fly.toml`. A
   consulta por CPF ao site do CREF está guardada, sem uso.
 - Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
   (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
@@ -377,10 +377,10 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **PBI-106 · ligar a validação:** rodar `docs/scripts/habilitar-educador-legado.sql`
-   para o Vinicius, ligar `Educador:ExigirCref` (`Educador__ExigirCref = 'true'` no
-   `[env]` do `backend/fly.toml`, ou `fly secrets set`) e o PO enviar o próprio registro pela
-   tela. Conferir os envios com `docs/scripts/ver-registros-cref.sql` e
+7. **PBI-106 · depois do deploy da habilitação declarada:** a validação já vem
+   ligada (`Educador__ExigirCref = 'true'` no `backend/fly.toml`). Rodar
+   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius e o PO enviar o
+   próprio registro pela tela; até lá, os dois ficam travados. Conferir os envios com `docs/scripts/ver-registros-cref.sql` e
    `foto-cref.sql`; revogar com `revogar-educador.sql`. Os leitores do site do CREF
    (consulta por CPF) ficam para depois, se os prints/páginas permitirem.
 
