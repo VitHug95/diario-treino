@@ -11,6 +11,7 @@ import '../educador/corpo_do_aluno.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/theme_tokens.dart';
+import 'compartilhar_corpo_screen.dart';
 import 'medidas_formato.dart';
 import 'medidas_models.dart';
 import 'medidas_repository.dart';
@@ -72,6 +73,12 @@ class _MedidaEvolucaoScreenState extends ConsumerState<MedidaEvolucaoScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.margemTela),
           children: [
+            // Privacidade (PBI-96, tela 26): só na visão do atleta. A evolução,
+            // inclusive a do peso, é coberta pelo cadeado das medidas.
+            if (atletaId == null) ...[
+              const SeloCompartilhamento(parte: ParteDoCorpo.medidas),
+              const SizedBox(height: AppSpacing.x8),
+            ],
             _SeletorPeriodo(
               selecionado: _periodo,
               aoSelecionar:

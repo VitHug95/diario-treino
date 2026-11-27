@@ -219,7 +219,7 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 629 testes em `app/test/` (rodam no `flutter test`,
+- **Front (widget):** 630 testes em `app/test/` (rodam no `flutter test`,
   headless, com as bordas fakeadas; backend: 188 unitários e 299 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
@@ -388,9 +388,7 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
    retry do CI roda no mesmo banco).
 9. Teto do descanso nos alvos do exercício (hoje só ≥ 0; o bloco usa 0 a 600),
    depois de ver se há dado acima de 600 em produção.
-10. Selo "Privado" / "Compartilhado" na tela de evolução da medida (tela 26),
-    que o desenho da PBI-96 pedia e ficou de fora.
-11. Esconder "Salvar também como ficha" no treino livre quando o plano em uso é
+10. Esconder "Salvar também como ficha" no treino livre quando o plano em uso é
     do professor (hoje a API recusa com 403 e o app avisa depois de salvar).
 
 **Depois**
