@@ -134,10 +134,11 @@ Data do levantamento: 25/11/2026, depois do #150 (PBIs 95, 96 e 104) e com o
   PDF na tela do aluno.
 - Privacidade (PBI-87): observação privada do atleta e termo de consentimento
   (texto provisório). Ao sair de ATIVO, o educador perde o acesso sem apagar dados.
-- Habilitação pelo CREF (PBI-106, parte 1): tela "Registro profissional (CREF)"
-  e a trava do educador sem registro, atrás da chave `Educador:ExigirCref`,
-  desligada em produção até o leitor do site real existir. A consulta só acontece
-  com "Eu permito" marcado (texto sobre o uso dos dados pessoais).
+- Habilitação do educador (PBI-106): tela "Registro profissional (CREF)" com UF,
+  número e foto da carteira, e "Eu permito"; o modo educador é liberado na hora
+  e a foto fica para conferência por script. Trava do educador sem registro.
+  Tudo atrás da chave `Educador:ExigirCref`, **ligada** no `backend/fly.toml`. A
+  consulta por CPF ao site do CREF está guardada, sem uso.
 - Meus educadores (PBI-104): no Perfil, qualquer atleta vê quem o acompanha
   (vínculos ativos, com o "desde") e encerra cada acompanhamento, com
   confirmação. O educador também encerra, em "Meus alunos".
@@ -210,6 +211,7 @@ Migrations versionadas (todas aplicam do zero):
 | `20261113191412_SerieBloco` | PBI-102 | `serie_executada.bloco` e `posicao_no_bloco` |
 | `20261114042934_CompartilhamentoCorporal` | PBI-95 | `dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` em `usuario` (nulo = trancado) |
 | `20261126190636_CrefEducador` | PBI-106 | Tabelas `educador_cref` e `educador_cref_tentativa` (vazias) |
+| `20261127150458_CrefDeclarado` | PBI-106 | Origem `DECLARADA`, `educador_cref.declarado_em` e a tabela `educador_cref_foto` |
 
 As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 (só dados). As demais correções, o calendário (PBI-82), o E2E (PBI-26), o PDF
@@ -219,8 +221,8 @@ As PBIs 57 a 72 não mudaram o esquema; a PBI-77 trouxe a migration de reparo
 
 ## 7. Testes e CI
 
-- **Front (widget):** 630 testes em `app/test/` (rodam no `flutter test`,
-  headless, com as bordas fakeadas; backend: 188 unitários e 299 de integração), incluindo o fluxo de registro com o app inteiro,
+- **Front (widget):** 628 testes em `app/test/` (rodam no `flutter test`,
+  headless, com as bordas fakeadas; backend: 197 unitários e 315 de integração), incluindo o fluxo de registro com o app inteiro,
   o teste de um `ProviderScope` só para a invalidação e o teste de arquitetura.
 - **E2E (PBI-26):** `app/integration_test/fluxo_pbi26_test.dart` — dirige a árvore de
   widgets (`tester.enterText`, digita de verdade) contra a **stack real** no CI:
@@ -375,13 +377,12 @@ conjugados) estão na `main`, com as PBIs 95 e 96 (fecham o E12) e a PBI-104
 **Esperando o PO para começar**
 5. **PBI-34:** decidir (a) × (b) e implementar.
 6. **Cardio (PBI-27 a 30):** definição de zona com o Vinicius.
-7. **PBI-106, parte 2 (leitor do site do CREF):** o PO manda as três páginas de
-   resultado ([INVESTIGACAO-CREF](INVESTIGACAO-CREF.md), seção 5). Depois do
-   leitor: ligar `Educador:ExigirCref` em produção, rodar
-   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius; o PO se
-   verifica pela tela. Só os dois usam o modo educador hoje, então não há mais
-   ninguém a avisar. A parte 1 (banco, API, trava, tela com "Eu permito") já
-   está pronta, com a chave desligada.
+7. **PBI-106 · depois do deploy da habilitação declarada:** a validação já vem
+   ligada (`Educador__ExigirCref = 'true'` no `backend/fly.toml`). Rodar
+   `docs/scripts/habilitar-educador-legado.sql` para o Vinicius e o PO enviar o
+   próprio registro pela tela; até lá, os dois ficam travados. Conferir os envios com `docs/scripts/ver-registros-cref.sql` e
+   `foto-cref.sql`; revogar com `revogar-educador.sql`. Os leitores do site do CREF
+   (consulta por CPF) ficam para depois, se os prints/páginas permitirem.
 
 **Técnico (sem bloqueio)**
 8. E2E: deixar os fluxos independentes do banco de uma execução anterior (o

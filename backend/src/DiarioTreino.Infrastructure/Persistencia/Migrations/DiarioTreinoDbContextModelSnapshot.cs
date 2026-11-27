@@ -1497,6 +1497,10 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("consultado_em");
 
+                    b.Property<DateTimeOffset?>("DeclaradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("declarado_em");
+
                     b.Property<string>("Numero")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
@@ -1525,9 +1529,42 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
 
                     b.ToTable("educador_cref", null, t =>
                         {
-                            t.HasCheckConstraint("ck_educador_cref_automatica_completa", "origem = 'LEGADO' OR (uf IS NOT NULL AND numero IS NOT NULL AND situacao IS NOT NULL AND categoria IS NOT NULL AND consultado_em IS NOT NULL)");
+                            t.HasCheckConstraint("ck_educador_cref_automatica_completa", "origem <> 'AUTOMATICA' OR (uf IS NOT NULL AND numero IS NOT NULL AND situacao IS NOT NULL AND categoria IS NOT NULL AND consultado_em IS NOT NULL)");
 
-                            t.HasCheckConstraint("ck_educador_cref_origem", "origem IN ('AUTOMATICA','LEGADO')");
+                            t.HasCheckConstraint("ck_educador_cref_declarada_completa", "origem <> 'DECLARADA' OR (uf IS NOT NULL AND numero IS NOT NULL AND declarado_em IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_educador_cref_origem", "origem IN ('AUTOMATICA','LEGADO','DECLARADA')");
+                        });
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.FotoCarteiraCref", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("EnviadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviada_em");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.HasKey("UsuarioId");
+
+                    b.ToTable("educador_cref_foto", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_educador_cref_foto_tamanho", "octet_length(conteudo) BETWEEN 1 AND 5242880");
+
+                            t.HasCheckConstraint("ck_educador_cref_foto_tipo", "tipo_conteudo IN ('image/jpeg','image/png')");
                         });
                 });
 
@@ -2250,6 +2287,15 @@ namespace DiarioTreino.Infrastructure.Persistencia.Migrations
                     b.HasOne("DiarioTreino.Domain.Identidade.Usuario", null)
                         .WithOne()
                         .HasForeignKey("DiarioTreino.Domain.Educador.EducadorCref", "UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DiarioTreino.Domain.Educador.FotoCarteiraCref", b =>
+                {
+                    b.HasOne("DiarioTreino.Domain.Educador.EducadorCref", null)
+                        .WithOne()
+                        .HasForeignKey("DiarioTreino.Domain.Educador.FotoCarteiraCref", "UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

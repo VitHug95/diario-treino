@@ -31,6 +31,8 @@ public sealed class RepositorioEducadorCref : IRepositorioEducadorCref
 
     public void Adicionar(EducadorCref educador) => _db.EducadoresCref.Add(educador);
 
+    public void AdicionarFoto(FotoCarteiraCref foto) => _db.FotosCarteiraCref.Add(foto);
+
     public async Task<bool> TentarSalvarAsync(CancellationToken ct)
     {
         try

@@ -57,9 +57,13 @@ public sealed class CrefTests
     public void Ufs_sao_27_e_as_com_consulta_estao_entre_elas()
     {
         Assert.Equal(27, RegistroCref.Ufs.Count);
-        Assert.Equal(12, RegistroCref.UfsComConsulta.Count);
+        Assert.Equal(19, RegistroCref.UfsComConsulta.Count);
         Assert.All(RegistroCref.UfsComConsulta, uf => Assert.Contains(uf, RegistroCref.Ufs));
-        Assert.DoesNotContain("SP", RegistroCref.UfsComConsulta);
+        // SP tem consulta, mas sem busca por CPF; as outras ainda sem endereço.
+        foreach (var uf in new[] { "SP", "MS", "PE", "PI", "PA", "AP", "AL", "MA" })
+        {
+            Assert.DoesNotContain(uf, RegistroCref.UfsComConsulta);
+        }
     }
 
     // ---- Tabela de decisão ----
@@ -90,6 +94,20 @@ public sealed class CrefTests
         Assert.Equal(ResultadoCref.Recusado, d.Resultado);
         Assert.Equal(MotivoCref.SituacaoNaoAtiva, d.Motivo);
         Assert.Equal("CANCELADO", d.Situacao);
+    }
+
+    [Fact]
+    public void Formatos_vistos_nos_prints_do_po()
+    {
+        // Spiderware: "MG-" + seis dígitos; Implanta: "000000-G/SP". Números fictícios.
+        var spiderware = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("MG-012345", "ATIVO", "BACHAREL")));
+        var implanta = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("012345-G/SP", "ATIVO", "LICENCIADO/BACHAREL")));
+        var baixado = DecisaoCref.Decidir("12345", Encontrado(new RegistroEncontrado("012345-G/SP", "BAIXADO", "BACHAREL")));
+
+        Assert.Equal(ResultadoCref.Habilitado, spiderware.Resultado);
+        Assert.Equal(ResultadoCref.Habilitado, implanta.Resultado);
+        Assert.Equal((ResultadoCref.Recusado, MotivoCref.SituacaoNaoAtiva, "BAIXADO"),
+            (baixado.Resultado, baixado.Motivo, baixado.Situacao));
     }
 
     [Fact]
@@ -343,5 +361,95 @@ public sealed class CrefTests
 
         Assert.Equal(ResultadoCref.Habilitado, r.Resultado);
         Assert.Empty(c.Consulta.Chamadas);
+    }
+
+    // ---- Habilitação declarada: número, UF e foto (PBI-106, 27/11) ----
+
+    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46];
+    private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
+
+    [Fact]
+    public void Tipo_da_foto_pelo_conteudo()
+    {
+        Assert.Equal(FotoCarteiraCref.Jpeg, FotoCarteiraCref.TipoPelaAssinatura(Jpeg));
+        Assert.Equal(FotoCarteiraCref.Png, FotoCarteiraCref.TipoPelaAssinatura(Png));
+        Assert.Null(FotoCarteiraCref.TipoPelaAssinatura("GIF89a"u8));
+        Assert.Null(FotoCarteiraCref.TipoPelaAssinatura("%PDF-1.7"u8));
+        Assert.Null(FotoCarteiraCref.TipoPelaAssinatura([]));
+    }
+
+    [Fact]
+    public void Validador_do_envio_declarado()
+    {
+        var v = new DeclararCrefValidator();
+        Assert.True(v.Validate(new DeclararCrefRequest("mg", "012345", true)).IsValid);
+        Assert.Equal(3, v.Validate(new DeclararCrefRequest("XX", "MG-1", null)).Errors.Count);
+        var sem = Assert.Single(v.Validate(new DeclararCrefRequest("MG", "12345", false)).Errors);
+        Assert.Equal(nameof(DeclararCrefRequest.PermiteUso), sem.PropertyName);
+    }
+
+    [Fact]
+    public async Task Declarar_habilita_na_hora_com_registro_foto_e_papel_juntos()
+    {
+        var c = Montar();
+
+        var r = await c.Servico.DeclararAsync(c.Usuario.Id, "mg", "012345", Jpeg, CancellationToken.None);
+
+        Assert.Equal(ResultadoCref.Habilitado, r.Resultado);
+        var e = Assert.Single(c.Cref.Habilitados);
+        Assert.Equal(("MG", "12345", OrigemCref.Declarada, (DateTimeOffset?)Agora, (string?)null),
+            (e.Uf, e.Numero, e.Origem, e.DeclaradoEm, e.Situacao));
+        var f = Assert.Single(c.Cref.Fotos);
+        Assert.Equal((FotoCarteiraCref.Jpeg, Jpeg), (f.TipoConteudo, f.Conteudo));
+        Assert.Contains(c.Usuario.Papeis, p => p.Papel == Papeis.Educador);
+        Assert.Equal(1, c.Cref.Salvamentos);
+        Assert.Empty(c.Consulta.Chamadas); // nenhuma consulta ao site
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Foto_invalida_nao_grava_nada(int caso)
+    {
+        var c = Montar();
+        byte[] foto = caso switch
+        {
+            0 => [],
+            1 => "nao e imagem"u8.ToArray(),
+            _ => [.. Png, .. new byte[FotoCarteiraCref.TamanhoMaximo]],
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            c.Servico.DeclararAsync(c.Usuario.Id, "MG", "12345", foto, CancellationToken.None));
+        Assert.Empty(c.Cref.Habilitados);
+        Assert.Equal(0, c.Cref.Salvamentos);
+    }
+
+    [Fact]
+    public async Task Declarar_registro_de_outra_conta_da_409()
+    {
+        var c = Montar();
+        c.Cref.Habilitados.Add(new EducadorCref
+        {
+            UsuarioId = Guid.NewGuid(), Uf = "MG", Numero = "12345", Origem = OrigemCref.Declarada, DeclaradoEm = Agora,
+        });
+
+        await Assert.ThrowsAsync<ConflitoException>(() =>
+            c.Servico.DeclararAsync(c.Usuario.Id, "MG", "MG012345", Png, CancellationToken.None));
+        Assert.Empty(c.Cref.Fotos);
+    }
+
+    [Fact]
+    public async Task Declarar_ja_habilitado_nao_troca_nada()
+    {
+        var c = Montar();
+        c.Cref.Habilitados.Add(new EducadorCref { UsuarioId = c.Usuario.Id, Origem = OrigemCref.Legado });
+
+        var r = await c.Servico.DeclararAsync(c.Usuario.Id, "MG", "12345", Jpeg, CancellationToken.None);
+
+        Assert.Equal(ResultadoCref.Habilitado, r.Resultado);
+        Assert.Empty(c.Cref.Fotos);
+        Assert.Equal(0, c.Cref.Salvamentos);
     }
 }
