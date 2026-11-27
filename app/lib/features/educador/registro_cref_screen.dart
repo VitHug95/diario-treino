@@ -127,6 +127,10 @@ class _FormularioState extends ConsumerState<_Formulario> {
   final _numero = TextEditingController();
   final _cpf = TextEditingController();
   String? _uf;
+
+  /// "Eu permito" (true), "Eu não permito" (false) ou nada marcado (null).
+  /// Só com true o botão consulta; o servidor também exige.
+  bool? _permite;
   bool _consultando = false;
   String? _mensagem;
 
@@ -139,7 +143,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
   }
 
   Future<void> _verificar() async {
-    if (_consultando || !(_form.currentState?.validate() ?? false)) return;
+    if (_consultando || _permite != true || !(_form.currentState?.validate() ?? false)) return;
     final messenger = ScaffoldMessenger.of(context);
     final cores = AppColors.of(context);
     setState(() {
@@ -231,16 +235,45 @@ class _FormularioState extends ConsumerState<_Formulario> {
             validator: (v) => cpfValido(v) ? null : 'Confira o CPF.',
           ),
           const SizedBox(height: AppSpacing.x16),
-          Text(
-            'Usamos seu CPF só para consultar o seu registro no CREF. Não guardamos o CPF.',
-            style: AppText.bodyS.copyWith(color: cores.textSecondary),
+          Text(textoPermissaoCref, style: AppText.body.copyWith(color: cores.textStrong)),
+          const SizedBox(height: AppSpacing.x8),
+          // Nada marcado no começo: a escolha é sempre do usuário.
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: true, label: Text('Eu permito')),
+                ButtonSegment(value: false, label: Text('Eu não permito')),
+              ],
+              selected: {if (_permite != null) _permite!},
+              emptySelectionAllowed: true,
+              showSelectedIcon: false,
+              onSelectionChanged: _consultando
+                  ? null
+                  : (s) => setState(() {
+                        _permite = s.isEmpty ? null : s.first;
+                        _mensagem = null;
+                        // Sem permissão, o CPF digitado sai da tela.
+                        if (_permite == false) _cpf.clear();
+                      }),
+            ),
           ),
-          const SizedBox(height: AppSpacing.x12),
+          if (_permite == false) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                'Sem a sua permissão, o CREF não é consultado e o modo educador não é habilitado.',
+                style: AppText.bodyS.copyWith(color: cores.textSecondary),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.x16),
           SizedBox(
             width: double.infinity,
             height: AppSizes.botaoPrincipal,
             child: FilledButton(
-              onPressed: _consultando ? null : _verificar,
+              onPressed: _consultando || _permite != true ? null : _verificar,
               child: _consultando
                   ? Semantics(
                       label: 'Consultando o CREF',
@@ -279,6 +312,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
     );
   }
 }
+
+/// Aviso antes da permissão (PBI-106, pedido do PO em 26/11).
+const textoPermissaoCref =
+    'Ao se cadastrar como educador, suas informações pessoais (CPF, UF e número do '
+    'CREF) serão utilizadas para validar o seu registro no CREF. O CPF é enviado '
+    'só para essa consulta e não fica guardado no app.';
 
 /// CPF com 11 dígitos e os verificadores certos (a mesma conta do servidor),
 /// para não gastar consulta com um CPF que não existe.

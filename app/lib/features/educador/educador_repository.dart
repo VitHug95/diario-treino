@@ -82,7 +82,8 @@ class EducadorRepository {
     try {
       final resposta = await _dio.post<Map<String, dynamic>>(
         '/me/educador/cref/verificar',
-        data: {'uf': uf, 'numero': numero, 'cpf': cpf},
+        // Só chega aqui com "Eu permito" marcado na tela (PBI-106).
+        data: {'uf': uf, 'numero': numero, 'cpf': cpf, 'permiteConsulta': true},
       );
       return ResultadoVerificacaoCref.doJson(resposta.data!);
     } on DioException catch (e) {

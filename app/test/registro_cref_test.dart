@@ -63,13 +63,18 @@ class _RepoCref extends EducadorRepository {
   }
 }
 
-Future<void> _preencher(WidgetTester tester, {String uf = 'MG', String numero = '1234', String cpf = _cpf}) async {
+Future<void> _preencher(WidgetTester tester,
+    {String uf = 'MG', String numero = '1234', String cpf = _cpf, bool? permitir = true}) async {
   await tester.tap(find.byType(DropdownButtonFormField<String>));
   await tester.pumpAndSettle();
   await tester.tap(find.text(uf).last);
   await tester.pumpAndSettle();
   await tester.enterText(find.widgetWithText(TextFormField, 'Número do CREF'), numero);
   await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), cpf);
+  if (permitir != null) {
+    await tester.tap(find.text(permitir ? 'Eu permito' : 'Eu não permito'));
+    await tester.pumpAndSettle();
+  }
 }
 
 Future<void> _verificar(WidgetTester tester) async {
@@ -194,7 +199,7 @@ void main() {
     await _abrir(tester, repo);
 
     expect(find.text('UF do CREF'), findsOneWidget);
-    expect(find.text('Usamos seu CPF só para consultar o seu registro no CREF. Não guardamos o CPF.'), findsOneWidget);
+    expect(find.text(textoPermissaoCref), findsOneWidget);
     final campo = tester.widget<TextField>(find.descendant(
         of: find.widgetWithText(TextFormField, 'CPF'), matching: find.byType(TextField)));
     expect(campo.keyboardType, TextInputType.number);
@@ -205,6 +210,39 @@ void main() {
     await _verificar(tester);
     expect(find.text('Confira o CPF.'), findsOneWidget);
     expect(repo.pedidos, isEmpty);
+  });
+
+  testWidgets('sem marcar a permissão, o botão fica desligado', (tester) async {
+    final repo = _RepoCref();
+    await _abrir(tester, repo);
+    await _preencher(tester, permitir: null);
+
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
+    await tester.tap(find.text('VERIFICAR REGISTRO'));
+    await tester.pumpAndSettle();
+    expect(repo.pedidos, isEmpty);
+  });
+
+  testWidgets('"Eu não permito": não consulta, não habilita e tira o CPF da tela', (tester) async {
+    final repo = _RepoCref(resposta: const ResultadoVerificacaoCref(resultado: 'HABILITADO'));
+    await _abrir(tester, repo);
+    await _preencher(tester, permitir: false);
+
+    expect(find.text('Sem a sua permissão, o CREF não é consultado e o modo educador não é habilitado.'),
+        findsOneWidget);
+    expect(find.text(_cpfFormatado), findsNothing);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
+    await tester.tap(find.text('VERIFICAR REGISTRO'));
+    await tester.pumpAndSettle();
+    expect(repo.pedidos, isEmpty);
+    expect(repo.educador, isFalse);
+
+    // Mudar de ideia libera o botão (o CPF precisa ser digitado de novo).
+    await tester.tap(find.text('Eu permito'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), _cpf);
+    await _verificar(tester);
+    expect(repo.pedidos, hasLength(1));
   });
 
   testWidgets('a tela manda os dados e mostra a máscara no campo', (tester) async {

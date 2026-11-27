@@ -57,9 +57,13 @@ public sealed class CrefTests
     public void Ufs_sao_27_e_as_com_consulta_estao_entre_elas()
     {
         Assert.Equal(27, RegistroCref.Ufs.Count);
-        Assert.Equal(12, RegistroCref.UfsComConsulta.Count);
+        Assert.Equal(19, RegistroCref.UfsComConsulta.Count);
         Assert.All(RegistroCref.UfsComConsulta, uf => Assert.Contains(uf, RegistroCref.Ufs));
-        Assert.DoesNotContain("SP", RegistroCref.UfsComConsulta);
+        // SP tem consulta, mas sem busca por CPF; as outras ainda sem endereço.
+        foreach (var uf in new[] { "SP", "MS", "PE", "PI", "PA", "AP", "AL", "MA" })
+        {
+            Assert.DoesNotContain(uf, RegistroCref.UfsComConsulta);
+        }
     }
 
     // ---- Tabela de decisão ----
@@ -157,13 +161,21 @@ public sealed class CrefTests
     public void Validador_recusa_formatos_e_nao_repete_o_valor()
     {
         var v = new VerificarCrefValidator();
-        Assert.True(v.Validate(new VerificarCrefRequest("mg", "001234", "529.982.247-25")).IsValid);
+        Assert.True(v.Validate(new VerificarCrefRequest("mg", "001234", "529.982.247-25", true)).IsValid);
 
-        var r = v.Validate(new VerificarCrefRequest("XX", "MG-12", "52998224726"));
+        var r = v.Validate(new VerificarCrefRequest("XX", "MG-12", "52998224726", true));
         Assert.Equal(3, r.Errors.Count);
         Assert.All(r.Errors, e => Assert.DoesNotContain("5299822472", e.ErrorMessage));
-        Assert.False(v.Validate(new VerificarCrefRequest("MG", "0000", CpfValido)).IsValid);
+        Assert.False(v.Validate(new VerificarCrefRequest("MG", "0000", CpfValido, true)).IsValid);
         Assert.False(v.Validate(new VerificarCrefRequest(null, null, null)).IsValid);
+
+        // "Eu não permito" (ou nada marcado): só esse erro, os dados estão certos.
+        foreach (bool? permite in new bool?[] { false, null })
+        {
+            var semPermissao = v.Validate(new VerificarCrefRequest("MG", "1234", CpfValido, permite));
+            var erro = Assert.Single(semPermissao.Errors);
+            Assert.Equal(nameof(VerificarCrefRequest.PermiteConsulta), erro.PropertyName);
+        }
     }
 
     // ---- Serviço ----

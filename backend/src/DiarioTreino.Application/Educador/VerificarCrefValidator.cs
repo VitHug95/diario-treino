@@ -11,6 +11,10 @@ public sealed class VerificarCrefValidator : AbstractValidator<VerificarCrefRequ
 {
     public VerificarCrefValidator()
     {
+        RuleFor(r => r.PermiteConsulta)
+            .Equal(true)
+            .WithMessage("Sem a sua permissão, o CREF não é consultado e o modo educador não é habilitado.");
+
         RuleFor(r => r.Uf)
             .Must(RegistroCref.UfValida)
             .WithMessage("Escolha a UF do seu CREF.");
