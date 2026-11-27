@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/dados/invalidacao.dart';
@@ -43,6 +45,16 @@ class EducadorComandos {
     required String cpf,
   }) =>
       _mudar((r) => r.verificarCref(uf: uf, numero: numero, cpf: cpf));
+
+  /// Envia UF, número e foto da carteira (PBI-106, 27/11): o modo educador é
+  /// liberado na hora e o Perfil se atualiza por [Mudanca.vinculos].
+  Future<ResultadoVerificacaoCref> declararCref({
+    required String uf,
+    required String numero,
+    required Uint8List foto,
+    required String tipoFoto,
+  }) =>
+      _mudar((r) => r.declararCref(uf: uf, numero: numero, foto: foto, tipoFoto: tipoFoto));
 }
 
 final educadorComandosProvider =

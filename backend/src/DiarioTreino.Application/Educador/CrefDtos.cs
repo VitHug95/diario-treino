@@ -15,12 +15,20 @@ public sealed record VerificarCrefRequest(string? Uf, string? Numero, string? Cp
         $"VerificarCrefRequest {{ Uf = {Uf}, Numero = {Numero}, Cpf = ***, PermiteConsulta = {PermiteConsulta} }}";
 }
 
+/// <summary>
+/// Campos de <c>POST /me/educador/cref/declarar</c> (formulário com a foto). A
+/// foto vem à parte, como arquivo. <see cref="PermiteUso"/> é o "Eu permito" o
+/// uso do número, da UF e da foto para validar o registro.
+/// </summary>
+public sealed record DeclararCrefRequest(string? Uf, string? Numero, bool? PermiteUso);
+
 /// <summary>Resposta da verificação: nunca traz CPF nem nome.</summary>
 public sealed record VerificarCrefResposta(string Resultado, string? Motivo, string? Situacao);
 
 /// <summary>Registro guardado do próprio usuário.</summary>
 public sealed record RegistroCrefResposta(
-    string? Uf, string? Numero, string? Situacao, string? Categoria, string Origem, DateTimeOffset? ConsultadoEm);
+    string? Uf, string? Numero, string? Situacao, string? Categoria, string Origem, DateTimeOffset? ConsultadoEm,
+    DateTimeOffset? DeclaradoEm = null);
 
 /// <summary>
 /// <c>GET /me/educador/cref</c>: se a verificação é exigida (chave da PBI-106) e

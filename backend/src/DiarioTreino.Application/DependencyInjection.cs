@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ServicoCompartilhamentoCorporal>();
         services.AddScoped<ServicoCref>();
         services.AddScoped<IValidator<VerificarCrefRequest>, VerificarCrefValidator>();
+        services.AddScoped<IValidator<DeclararCrefRequest>, DeclararCrefValidator>();
         services.AddScoped<IValidator<DefinirCompartilhamentoRequest>, DefinirCompartilhamentoValidator>();
 
         services.AddScoped<IValidator<CriarExercicioRequest>, CriarExercicioValidator>();

@@ -36,6 +36,11 @@ internal sealed class RepositorioEducadorCrefFake : IRepositorioEducadorCref
 
     public void Adicionar(EducadorCref educador) => _pendentes.Add(educador);
 
+    public List<FotoCarteiraCref> Fotos { get; } = [];
+    private readonly List<FotoCarteiraCref> _fotosPendentes = [];
+
+    public void AdicionarFoto(FotoCarteiraCref foto) => _fotosPendentes.Add(foto);
+
     public Task<bool> TentarSalvarAsync(CancellationToken ct)
     {
         Salvamentos++;
@@ -43,10 +48,13 @@ internal sealed class RepositorioEducadorCrefFake : IRepositorioEducadorCref
         {
             _pendentes.Clear();
             _tentativasPendentes.Clear();
+            _fotosPendentes.Clear();
             return Task.FromResult(false);
         }
         Habilitados.AddRange(_pendentes);
         Tentativas.AddRange(_tentativasPendentes);
+        Fotos.AddRange(_fotosPendentes);
+        _fotosPendentes.Clear();
         _pendentes.Clear();
         _tentativasPendentes.Clear();
         return Task.FromResult(true);

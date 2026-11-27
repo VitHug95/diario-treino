@@ -222,6 +222,7 @@ fechados sem merge.
 | (PR dos docs do CREF) | PBI-105, 106 | Registro das PBIs 105 e 106 (habilitar o educador pelo CREF, sem aprovação manual) e a primeira passada da investigação em `INVESTIGACAO-CREF.md`, sem nenhuma busca. Decisão pendente. |
 | (PR da PBI-106, parte 1) | PBI-106 | Habilitação do educador pelo CREF, menos o leitor do site real, atrás da chave `Educador:ExigirCref` (desligada em produção). Back: migration `CrefEducador`, CPF validado localmente e nunca guardado, tabela de decisão, limite de 5 em 24 h, 409, `GET /me/educador/cref` e `POST /me/educador/cref/verificar`, trava do educador sem registro (403 `educador-nao-habilitado`) no acesso, no convite e na lista de alunos, rota antiga sem conceder o papel. Script do legado em `docs/scripts/`. Front: tela "Registro profissional (CREF)" com máscara do CPF, o aviso sobre o uso dos dados pessoais e a escolha "Eu permito" / "Eu não permito" (o servidor também exige a permissão), e o Perfil com o educador travado. |
 | (PR da consulta do CREF) | PBI-106 | Lista dos 22 CREFs (PO): consulta por CPF levantada para 19 UFs, SP fora (só busca por número ou nome). Infraestrutura da consulta: configuração por UF no `appsettings.json`, cliente HTTP com tempo limite, `User-Agent`, sem logs e com limite de 2 consultas por site, despacho para o leitor de cada sistema. Os leitores ainda não existem: a consulta continua indisponível. |
+| (PR da habilitação declarada) | PBI-106 | Habilitação do educador com UF, número e foto da carteira do CREF, liberada na hora (decisão do PO, 27/11), atrás da chave `Educador:ExigirCref`. Migration `CrefDeclarado`, `POST /me/educador/cref/declarar`, scripts para ver, tirar a foto e revogar. Tela com a foto, o texto de permissão novo e "Eu permito". A consulta por CPF fica guardada. Registro do que os prints do PO mostraram. |
 
 ---
 
@@ -247,6 +248,7 @@ fechados sem merge.
 | `20261113191412_SerieBloco` | PBI-102 | Colunas `serie_executada.bloco` e `posicao_no_bloco` (nulas), com CHECK "os dois juntos, posição 1 a 4". Não mexe nas séries existentes. |
 | `20261114042934_CompartilhamentoCorporal` | PBI-95 | Colunas `dados_corporais_compartilhados_em` e `medidas_compartilhadas_em` em `usuario` (`timestamptz` nulas; nulo = trancado). Só `AddColumn`: todo mundo começa trancado. |
 | `20261126190636_CrefEducador` | PBI-106 | Tabelas `educador_cref` (habilitação, PK `usuario_id`, CHECK de origem e de preenchimento, único `(uf, numero)`) e `educador_cref_tentativa` (limite de tentativas). Cascata do usuário. Não cria linha para ninguém. |
+| `20261127150458_CrefDeclarado` | PBI-106 | Origem `DECLARADA` no CHECK de `educador_cref`, coluna `declarado_em` e tabela `educador_cref_foto` (foto da carteira, JPG ou PNG até 5 MB, cascata do registro). Não mexe nas linhas existentes. |
 
 ## Infraestrutura
 

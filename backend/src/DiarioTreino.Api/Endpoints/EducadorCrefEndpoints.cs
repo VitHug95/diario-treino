@@ -2,7 +2,9 @@ using DiarioTreino.Api.Autenticacao;
 using DiarioTreino.Application.Comum;
 using DiarioTreino.Application.Educador;
 using DiarioTreino.Application.Identidade;
+using DiarioTreino.Domain.Educador;
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DiarioTreino.Api.Endpoints;
 
@@ -59,6 +61,55 @@ public static class EducadorCrefEndpoints
         })
         .WithName("VerificarCrefEducador")
         .WithSummary("Consulta o CREF por CPF e habilita o modo educador se o registro estiver ativo");
+
+        // Habilitação declarada (PBI-106, 27/11): UF, número e foto da carteira,
+        // em multipart/form-data. A foto não vai para log (o log de requisições
+        // não lê corpo) nem volta em resposta. A API usa token Bearer, não
+        // cookie, então o antiforgery não se aplica.
+        grupo.MapPost("/declarar", async (
+            [FromForm] string? uf,
+            [FromForm] string? numero,
+            [FromForm] bool? permiteUso,
+            IFormFile? foto,
+            HttpContext http,
+            ServicoPerfil perfilServico,
+            ServicoCref servico,
+            IValidator<DeclararCrefRequest> validator,
+            CancellationToken ct) =>
+        {
+            var validacao = await validator.ValidateAsync(new DeclararCrefRequest(uf, numero, permiteUso), ct);
+            if (!validacao.IsValid) return Results.ValidationProblem(validacao.ToDictionary());
+
+            if (foto is null || foto.Length == 0 || foto.Length > FotoCarteiraCref.TamanhoMaximo)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["foto"] = ["Envie uma foto JPG ou PNG de até 5 MB."],
+                });
+            }
+
+            var perfil = await PerfilAtual.ResolverAsync(http, perfilServico, ct);
+            if (perfil is null) return TokenInvalido();
+
+            using var memoria = new MemoryStream((int)foto.Length);
+            await foto.CopyToAsync(memoria, ct);
+
+            try
+            {
+                return Results.Ok(await servico.DeclararAsync(perfil.Id, uf!, numero!, memoria.ToArray(), ct));
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["foto"] = [ex.Message] });
+            }
+            catch (ConflitoException ex)
+            {
+                return Results.Problem(title: ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
+        })
+        .DisableAntiforgery()
+        .WithName("DeclararCrefEducador")
+        .WithSummary("Habilita o modo educador com UF, número e foto da carteira do CREF");
 
         return app;
     }

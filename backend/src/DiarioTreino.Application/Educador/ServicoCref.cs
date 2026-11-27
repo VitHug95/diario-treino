@@ -47,7 +47,7 @@ public sealed class ServicoCref
                 ? null
                 : new RegistroCrefResposta(
                     registro.Uf, registro.Numero, registro.Situacao, registro.Categoria,
-                    registro.Origem, registro.ConsultadoEm));
+                    registro.Origem, registro.ConsultadoEm, registro.DeclaradoEm));
     }
 
     /// <summary>
@@ -142,6 +142,71 @@ public sealed class ServicoCref
             decisao.Resultado,
             decisao.Motivo,
             decisao.Situacao is null ? null : Cortar(decisao.Situacao, 30));
+    }
+
+    /// <summary>
+    /// Habilitação declarada (PBI-106, decisão do PO em 27/11): o educador envia
+    /// UF, número e a foto da carteira do CREF, e o modo educador é liberado na
+    /// hora. Não há consulta ao site; a foto fica como prova para o PO conferir
+    /// depois (por script) e revogar se não bater. O formato e a permissão já
+    /// foram conferidos pelo <see cref="DeclararCrefValidator"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Foto vazia, grande demais ou que não é JPG/PNG (400).</exception>
+    /// <exception cref="ConflitoException">O registro já habilitou outra conta (409).</exception>
+    public async Task<VerificarCrefResposta> DeclararAsync(
+        Guid usuarioId, string uf, string numero, byte[] foto, CancellationToken ct)
+    {
+        if (foto.Length == 0 || foto.Length > FotoCarteiraCref.TamanhoMaximo)
+        {
+            throw new ArgumentException("Envie uma foto JPG ou PNG de até 5 MB.");
+        }
+        var tipo = FotoCarteiraCref.TipoPelaAssinatura(foto)
+            ?? throw new ArgumentException("Envie uma foto JPG ou PNG de até 5 MB.");
+
+        var ufNormalizada = uf.Trim().ToUpperInvariant();
+        var numeroNormalizado = RegistroCref.Normalizar(numero);
+
+        var atual = await _cref.ObterAsync(usuarioId, ct);
+        if (atual is not null)
+        {
+            return new VerificarCrefResposta(ResultadoCref.Habilitado, null, null);
+        }
+
+        if (await _cref.RegistroUsadoPorOutroAsync(ufNormalizada, numeroNormalizado, usuarioId, ct))
+        {
+            throw new ConflitoException("Este registro do CREF já está ligado a outra conta.");
+        }
+
+        var usuario = await _usuarios.ObterPorIdAsync(usuarioId, ct)
+            ?? throw new RecursoNaoEncontradoException();
+        var agora = _relogio.GetUtcNow();
+        _cref.Adicionar(new EducadorCref
+        {
+            UsuarioId = usuarioId,
+            Uf = ufNormalizada,
+            Numero = numeroNormalizado,
+            Origem = OrigemCref.Declarada,
+            DeclaradoEm = agora,
+        });
+        _cref.AdicionarFoto(new FotoCarteiraCref
+        {
+            UsuarioId = usuarioId,
+            Conteudo = foto,
+            TipoConteudo = tipo,
+            EnviadaEm = agora,
+        });
+        if (!usuario.Papeis.Any(p => p.Papel == Papeis.Educador))
+        {
+            usuario.Papeis.Add(new UsuarioPapel { UsuarioId = usuarioId, Papel = Papeis.Educador });
+        }
+
+        // Registro, foto e papel numa transação só.
+        if (!await _cref.TentarSalvarAsync(ct))
+        {
+            throw new ConflitoException("Este registro do CREF já está ligado a outra conta.");
+        }
+
+        return new VerificarCrefResposta(ResultadoCref.Habilitado, null, null);
     }
 
     /// <summary>
