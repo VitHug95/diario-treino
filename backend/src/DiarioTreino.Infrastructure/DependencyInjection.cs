@@ -48,7 +48,20 @@ public static class DependencyInjection
         // o leitor do site real existir: ligada antes, ninguém novo se habilitaria.
         services.AddSingleton(new ConfiguracaoEducador(
             bool.TryParse(configuration["Educador:ExigirCref"], out var exigirCref) && exigirCref));
-        services.AddSingleton<IConsultaCref, ConsultaCrefNaoConfigurada>();
+        // Consulta real: configuração por UF (Cref:Consultas) e um leitor por
+        // sistema (ILeitorCref). Sem leitor registrado para o sistema, a consulta
+        // responde "indisponível", que nunca recusa.
+        var opcoesCref = OpcoesConsultaCref.Ler(configuration);
+        services.AddSingleton(opcoesCref);
+        services.AddHttpClient(OpcoesConsultaCref.NomeDoCliente, http =>
+            {
+                http.Timeout = opcoesCref.TempoLimite;
+                http.DefaultRequestHeaders.UserAgent.ParseAdd(opcoesCref.UserAgent);
+            })
+            // Os logs padrão do HttpClient gravam a URL; uma consulta por GET
+            // levaria o CPF para o log. Nenhum log deste cliente.
+            .RemoveAllLoggers();
+        services.AddSingleton<IConsultaCref, ConsultaCrefPorUf>();
         services.AddSingleton(TimeProvider.System);
 
         // Geração de PDF do progresso (PBI-89). A licença Community do QuestPDF

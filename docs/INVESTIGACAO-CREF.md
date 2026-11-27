@@ -193,6 +193,8 @@ CPF e número trocados por valores fictícios) antes de qualquer commit.
 
 ## 6. Contrato do adaptador (para a PBI-106)
 
+Já implementado (sem leitor): `ConsultaCrefPorUf` lê `Cref:Consultas:{UF}` (`Sistema` e `Endereco`, só https), aplica as regras de uso da seção 5 e chama o `ILeitorCref` do sistema. Falta um leitor `Spiderware` e um `Implanta`, cada um com as fixtures das páginas salvas.
+
 ```
 IConsultaCref.ConsultarPorCpfAsync(uf, cpf, ct) -> ResultadoConsultaCref
   Encontrado(registros: [{ numero, situacao, categoria }])  // nome nunca sai do adaptador
