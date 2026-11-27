@@ -75,11 +75,21 @@ pela regra da PBI-106** (CPF + número). Precisa ser confirmado na tela.
      dono conhecido; **não** usar CPF de terceiro real).
 3. Repetir só a abertura da página (sem buscar) nas outras nove regionais, para
    confirmar o mesmo formulário e captcha.
-4. **No nacional,** no navegador: aceita CPF? Cobre SP, RJ e RS?
+4. **No nacional,** no navegador: aceita CPF? Mostra a situação? (SP, RJ e RS têm consulta própria, seção 3.1.)
 5. **Com o PO:** a lista de categorias que habilitam. Só `BACHAREL` foi visto; o
    sistema CONFEF tem outras (por exemplo licenciado e provisionado), e o PO decide
    quais valem para usar o modo educador.
 6. **Com o PO:** o texto sobre o CPF ser enviado ao CREF (risco 1).
+
+## 3.1 SP, RJ e RS (informado pelo PO em 26/11)
+
+SP (CREF4), RJ (CREF1) e RS (CREF2) **têm consulta própria**. Pela busca na
+web, os três usam outro sistema, o **Implanta** ("Serviços Online", em
+`cref-sp.implanta.net.br` e `cref-rj.implanta.net.br`; o CREF2/RS manda o
+autoatendimento pelo domínio `implanta.net.br`). Ou seja: não é o mesmo
+formulário Spiderware das outras dez e pede um **segundo leitor**, com páginas
+de exemplo próprias. Falta confirmar o endereço exato da consulta pública de cada
+um, se aceita busca por CPF e se mostra a situação.
 
 ## 4. Respostas do PO (26/11)
 
@@ -106,9 +116,11 @@ páginas sem autorização expressa para acesso por programa.
 - **Habilitação automática** nas UFs das dez consultas regionais da lista (SC, MG,
   DF, PR, PB, RN, BA, GO, TO, MT, SE e ES), depois de cada uma passar pelo teste do
   formulário (seção 3, item 3). A BA fica de fora se a Cloudflare barrar.
-- **Nacional:** só entra se mostrar a situação. Se não mostrar, os 15 estados
-  fora da lista (SP, RJ e RS entre eles) **não habilitam** até alguém levantar a
-  consulta regional de cada um. Contornar bloqueio de navegador não é opção.
+- **SP, RJ e RS:** entram com o segundo leitor (Implanta, seção 3.1), quando houver
+  as páginas de exemplo deles.
+- **Nacional:** só entra se mostrar a situação. Se não mostrar, os 12 estados que
+  sobram **não habilitam** até alguém levantar a consulta regional de cada um.
+  Contornar bloqueio de navegador não é opção.
 - **Regras de uso:** uma consulta por tentativa do usuário (duas chamadas HTTP:
   abrir e enviar o formulário), no máximo 5 tentativas por usuário em 24 h,
   tempo limite de 10 s, sem novas tentativas automáticas, no máximo 2 consultas
@@ -120,8 +132,14 @@ escrever o leitor nem as fixtures. O que basta, sem dado de terceiro:
 
 1. Na consulta do CREF6/MG, o PO busca **Profissional + CPF/CNPJ** com o próprio
    CPF e salva a página do resultado (Ctrl+S, "página completa").
-2. Repete com um **CPF válido inventado** (resultado "não encontrado").
+2. O próprio CPF numa regional Spiderware onde ele não tem registro (por exemplo
+   o CREF3/SC), para a página de "não encontrado", sem usar CPF de ninguém.
 3. Repete na **nacional** com o próprio CPF (para ver se há situação).
+4. **Implanta (SP, RJ e RS):** o endereço da consulta pública de cada um e duas
+   páginas salvas num deles, uma com um registro encontrado e uma de "não
+   encontrado". Como o PO é de MG, o registro encontrado precisa ser de quem
+   aceitar emprestar os dados (por exemplo o Vinicius, se for de um desses
+   estados); senão, só a página de "não encontrado" e o formulário.
 
 Os arquivos ficam fora do repositório; daqui saem fixtures **anonimizadas** (nome,
 CPF e número trocados por valores fictícios) antes de qualquer commit.
